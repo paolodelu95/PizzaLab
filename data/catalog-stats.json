@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-09-25",
+  "total": 159,
+  "brands": 15,
+  "withW": 94,
+  "withProtein": 85,
+  "usable": 134,
+  "perBrand": {
+    "Barilla": 1,
+    "Caputo": 9,
+    "Divella": 5,
+    "Garofalo": 5,
+    "Le 5 Stagioni": 32,
+    "Molini Pivetti": 17,
+    "Molino Casillo": 9,
+    "Molino Dallagiovanna": 11,
+    "Molino Grassi": 1,
+    "Molino Rossetto": 6,
+    "Molino Spadoni": 27,
+    "Molino Vigevano": 18,
+    "Mulino Padano": 13,
+    "Petra": 2,
+    "Polselli": 3
+  }
+}

@@ -1,0 +1,31 @@
+import { useState } from 'react';
+import { ArrowUpRight, Check, MagnifyingGlass, Plus, Grains as Wheat } from '@phosphor-icons/react';
+import type { Flour } from '../domain/types';
+import { NumberField } from './Fields';
+export function FlourLibrary({flours,onSelect,onAdd,selectedId}: {flours:Flour[];onSelect:(f:Flour)=>void;onAdd:(f:Flour)=>void;selectedId:string}) {
+  const [query,setQuery]=useState(''); const [brand,setBrand]=useState(''); const [onlyW,setOnlyW]=useState(false);
+  const [custom,setCustom]=useState(false); const [name,setName]=useState(''); const [customBrand,setCustomBrand]=useState('');
+  const [w,setW]=useState(280); const [protein,setProtein]=useState(12); const [type,setType]=useState('00');
+  const [expanded,setExpanded]=useState<string|null>(null);
+  const brands = [...new Set(flours.map(f=>f.brand))].sort();
+  const filtered=flours.filter(f=>(!brand||f.brand===brand)&&(!onlyW||f.w!==null)&&`${f.brand} ${f.name} ${f.type}`.toLowerCase().includes(query.toLowerCase()));
+  return <>
+    <div className="page-heading"><div><span className="eyebrow">LA DISPENSA</span><h1>Si parte dalla farina.</h1><p>Conosci quello che metti nell’impasto.</p></div><button className="button secondary" onClick={()=>setCustom(!custom)}><Plus/> La tua farina</button></div>
+    <div className="catalog-intro"><Wheat size={30}/><div><strong>{flours.length} farine · {brands.length} marchi</strong><p>Schede dei produttori consultate il 25 settembre 2026. Nessuna classifica di vendita: i dati pubblici non permettono di stabilirla.</p></div></div>
+    {custom && <form className="panel custom-form" onSubmit={e=>{e.preventDefault();if(!name.trim()||!Number.isFinite(w)||w<50||w>500||!Number.isFinite(protein)||protein<0||protein>30)return;onAdd({id:`custom-${crypto.randomUUID()}`,brand:customBrand.trim()||'La mia dispensa',name:name.trim(),type,w:[w,w],protein,proteinBasis:'Etichetta inserita dall’utente',pl:null,source:'',checkedAt:new Date().toISOString().slice(0,10),kind:'wheat',usable:true,note:'Dati inseriti dall’utente, non verificati. Solo grano tenero senza lievito aggiunto.'});setCustom(false);setName('');}}>
+      <h2>Aggiungi dalla confezione</h2><p>Per farine di grano tenero senza lievito aggiunto. Copia i valori dichiarati, senza ricavare W dalle proteine.</p>
+      <div className="field-grid"><label className="field">Nome<input required maxLength={80} value={name} onChange={e=>setName(e.target.value)} placeholder="Nome della farina"/></label><label className="field">Marchio<input maxLength={60} value={customBrand} onChange={e=>setCustomBrand(e.target.value)} placeholder="Il molino"/></label><label className="field">Tipo<select value={type} onChange={e=>setType(e.target.value)}>{['00','0','1','2','Integrale'].map(t=><option key={t}>{t}</option>)}</select></label><NumberField label="Forza dichiarata" value={w} onChange={setW} min={50} max={500} unit="W"/><NumberField label="Proteine" value={protein} onChange={setProtein} min={0} max={30} step={0.1} unit="%"/></div>
+      <button className="button primary" type="submit">Aggiungi al catalogo</button>
+    </form>}
+    <div className="catalog-filters"><div className="search"><MagnifyingGlass/><input aria-label="Cerca farina" placeholder="Cerca Caputo, Garofalo, Nuvola…" value={query} onChange={e=>setQuery(e.target.value)}/></div><select aria-label="Filtra per marchio" value={brand} onChange={e=>setBrand(e.target.value)}><option value="">Tutti i marchi</option>{brands.map(b=><option key={b}>{b}</option>)}</select><label className="check-label"><input type="checkbox" checked={onlyW} onChange={e=>setOnlyW(e.target.checked)}/> Solo con W dichiarato</label></div>
+    <div className="results-count" role="status">{filtered.length} risultati · “n.d.” significa dato non disponibile</div>
+    <div className="flour-list">{filtered.map(f=><article className="flour-row" key={f.id}>
+      <div className="flour-avatar"><Wheat size={26}/></div><div className="flour-main"><span className="eyebrow">{f.brand}</span><h3><button className="text-button" aria-expanded={expanded===f.id} onClick={()=>setExpanded(expanded===f.id?null:f.id)}>{f.name}</button></h3><p>Tipo {f.type} {!f.usable && '· Solo consultazione'}</p></div>
+      <div className="flour-stat"><small>FORZA</small><strong>{f.w ? `${f.w[0]}${f.w[1]!==f.w[0]?`–${f.w[1]}`:''}`:'n.d.'}</strong><span>W</span></div>
+      <div className="flour-stat protein"><small>PROTEINE</small><strong>{f.protein!==null?`${f.protein.toLocaleString('it-IT')}%`:'n.d.'}</strong><span>{f.proteinBasis.includes('secca')?'su s.s.':'dichiarate'}</span></div>
+      <button className={`button ${selectedId===f.id?'selected':'secondary'} use-flour`} disabled={!f.usable} onClick={()=>onSelect(f)}>{selectedId===f.id?<><Check/> Scelta</>:'Usa'}</button>
+      {expanded===f.id&&<div className="flour-detail"><p>{f.note || 'Valori trascritti dalla scheda pubblica del produttore. Verifica sempre confezione e lotto acquistati.'}</p><p>Proteine: {f.proteinBasis}. Elasticità P/L: {f.pl||'non disponibile'}. Consultazione: {f.checkedAt}.</p>{f.source?<a href={f.source} target="_blank" rel="noreferrer">Apri la fonte ufficiale <ArrowUpRight/></a>:<span>Dati personali, non verificati dal produttore.</span>}</div>}
+    </article>)}</div>
+    {!filtered.length&&<div className="empty-state"><MagnifyingGlass size={40}/><h2>Nessuna farina trovata</h2><p>Prova un altro nome o rimuovi i filtri.</p><button className="button secondary" onClick={()=>{setQuery('');setBrand('');setOnlyW(false);}}>Azzera filtri</button></div>}
+  </>;
+}
