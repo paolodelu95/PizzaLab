@@ -4,13 +4,18 @@ Companion Android in italiano per la pizza fatta in casa. Interfaccia React/Type
 
 ## Cosa fa
 
-- Sette stili: napoletana, contemporanea, romana tonda, teglia, pala, padellino e focaccia.
+- Dodici stili: napoletana, contemporanea, romana tonda, teglia, pala, padellino, focaccia, New York, Detroit, pinsa, sfincione e tonda da forno domestico.
 - Dosi per numero/peso dei panetti o superficie delle teglie; idratazione, sale, olio, lievito fresco o secco istantaneo.
 - Puntata, permanenza in frigo e appretto indipendenti; temperatura ambiente, frigo e forno modificabili.
-- Miscela di due farine con quote regolabili, forza indicativa e gestione dei dati mancanti.
+- Miscela fino a quattro farine con quote regolabili, grammi separati, forza media indicativa, farine dedicate al prefermento e miscele riutilizzabili.
+- Grafici reattivi per confrontare l’idratazione con la zona dello stile e la dose di lievito con le ore combinate, tenendo conto delle temperature impostate.
+- Impasto diretto, poolish e biga con ingredienti separati, temperatura, durata, stato di maturità e ottimizzazione del picco.
+- Temperatura dell’acqua con fattore 3 e correzione per impasto a mano, planetaria, spirale o robot riscaldante.
+- Lievito automatico o manuale, profilo di fermentazione, punteggi di lavorabilità/alveolatura/sapore/coerenza e modalità data o durata.
+- Otto profili forno generici, temperatura effettiva e indicazioni di preriscaldamento.
 - Tabella di marcia a ritroso dalla cottura, compresi impastamento e preriscaldamento.
 - Avvisi su farina debole, idratazione, tempi lunghi, caldo, frigo caldo, appretto breve, forno poco caldo e dosi di lievito difficili da pesare.
-- Diario persistente, checklist delle fasi, stelle e appunti; farine personali.
+- Diario persistente, checklist, stelle, appunti, misure reali di temperatura con avvisi, statistiche personali, condivisione ed esportazione JSON; farine personali.
 - Promemoria locali Android su un solo piano attivo: attivarne un altro sostituisce quelli precedenti. Cancellare il piano attivo rimuove i suoi promemoria.
 
 ## Avvio
@@ -80,7 +85,7 @@ npm run build
 
 I test end-to-end usano Microsoft Edge installato localmente, con viewport desktop e Pixel 7. Per altri ambienti, modificare `channel` in `playwright.config.ts` oppure installare Chromium con Playwright.
 
-Il modello è per **impasto diretto con lievito di birra**. Biga, poolish, lievito madre e impasti senza glutine non hanno un calcolo dedicato. W non viene ricavato dalle proteine. La forza delle miscele è soltanto una media ponderata orientativa. La dose di lievito è euristica e non è stata calibrata mediante prove di panificazione. Dettagli e formula in [`docs/MODELLO.md`](docs/MODELLO.md).
+Il modello gestisce **impasto diretto, poolish e biga con lievito di birra**. Il lievito madre e gli impasti senza glutine non hanno un calcolo dedicato. W non viene ricavato dalle proteine. La forza delle miscele è soltanto una media ponderata orientativa e non permette di ricavare da sola l’assorbimento reale. Maturità e dose di lievito sono stime euristiche e non sono state calibrate mediante prove di panificazione. Dettagli e formule in [`docs/MODELLO.md`](docs/MODELLO.md).
 
 ## Struttura e dati personali
 

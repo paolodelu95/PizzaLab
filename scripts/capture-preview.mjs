@@ -10,6 +10,8 @@ try{
     await page.getByRole('heading',{name:/La prossima pizza/}).waitFor();
     await page.screenshot({path:`docs/screenshots/${name}-impasto.png`});
     if(name==='android'){
+      await page.getByRole('button',{name:'Poolish'}).click();
+      await page.locator('.advanced-planner').screenshot({path:'docs/screenshots/android-laboratorio.png'});
       await page.getByRole('button',{name:'Farine',exact:true}).click();
       await page.getByRole('textbox',{name:'Cerca farina'}).fill('Caputo');
       await page.screenshot({path:'docs/screenshots/android-farine.png'});

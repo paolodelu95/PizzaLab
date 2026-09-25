@@ -1,0 +1,75 @@
+.advanced-planner { display: grid; gap: 0; }
+.advanced-block { border-top: 1px solid var(--line); padding: 22px 0; }
+.advanced-block:last-child { padding-bottom: 0; }
+.advanced-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; color: #718269; font-size: 10px; }
+.advanced-heading > div { display: flex; align-items: center; gap: 8px; color: #405f43; }
+.advanced-heading svg { width: 18px; height: 18px; }
+.advanced-heading strong { font-size: 12px; }
+.method-toggle.three { grid-template-columns: repeat(3, 1fr); }
+.maturity-row { margin-top: 18px; display: grid; grid-template-columns: 115px 1fr auto; gap: 14px; align-items: center; }
+.maturity-row > div:first-child { display: grid; gap: 4px; }
+.maturity-row span { color: #84917e; font-size: 8px; letter-spacing: 1px; }
+.maturity-row strong { color: #4f6d4b; font-size: 13px; text-transform: capitalize; }
+.maturity-track { height: 8px; border-radius: 8px; overflow: hidden; background: linear-gradient(90deg,#ece4cc 0 45%,#dbe9cf 45% 78%,#efd8c8 78%); }
+.maturity-track span { display: block; height: 100%; border-radius: 8px; background: #638254; }
+.maturity-row .button { min-height: 36px; padding: 8px 11px; font-size: 9px; }
+.preferment-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.preferment-split > div { padding: 13px; background: #f5f7f1; border-radius: 8px; display: grid; gap: 6px; }
+.preferment-split span { text-transform: capitalize; font-size: 9px; color: #7d8c76; }
+.preferment-split strong { font-size: 10px; line-height: 1.6; font-weight: 550; color: #4d604b; }
+.water-temp { border-radius: 9px; background: #eaf1e5; color: #496a4a; min-height: 72px; padding: 12px; display: grid; grid-template-columns: auto 1fr; gap: 3px 9px; align-items: center; }
+.water-temp svg { grid-row: 1 / 3; width: 23px; height: 23px; }
+.water-temp span { font-size: 9px; }
+.water-temp strong { font-size: 20px; font-weight: 550; }
+.oven-hint { display: flex; gap: 10px; margin-top: 15px; padding: 13px; background: #f6f6f0; border-radius: 8px; color: #7a876f; }
+.oven-hint svg { width: 19px; height: 19px; margin-top: 2px; }
+.oven-hint p { font-size: 10px; line-height: 1.65; }
+.oven-hint strong { display: block; color: #566951; margin-bottom: 3px; }
+.duration-result { display: flex; gap: 13px; align-items: center; padding: 17px; border-radius: 9px; background: #edf2e7; color: #52704d; }
+.duration-result svg { width: 24px; height: 24px; }
+.duration-result div { display: grid; gap: 5px; }
+.duration-result span { font-size: 9px; color: #788773; }
+.duration-result strong { font-size: 14px; }
+.score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 17px 20px; }
+.score > div:first-child { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+.score span { text-transform: capitalize; font-size: 10px; color: #788774; }
+.score strong { font-size: 12px; color: #4c6747; }
+.score > div:last-child { height: 6px; background: #eaeee5; border-radius: 5px; overflow: hidden; }
+.score > div:last-child span { display: block; height: 100%; border-radius: 5px; background: #7f9a69; }
+.terrain { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 22px; }
+.terrain svg { width: 100%; margin-top: 5px; overflow: visible; }
+.terrain-young { fill: #f0eee2; }.terrain-peak { fill: #dfead8; }.terrain-late { fill: #f1dfd8; }
+.terrain-path { fill: none; stroke: #486e4e; stroke-width: 2.5; stroke-linecap: round; }
+.terrain-bake { stroke: #344f3d; stroke-width: 1.5; stroke-dasharray: 3 2; }
+.terrain text { font-size: 7px; fill: #657761; }
+.terrain-labels { display: grid; grid-template-columns: 59% 25% 16%; font-size: 8px; color: #86917f; margin-top: -1px; }
+.terrain-labels span:nth-child(2) { text-align: center; }.terrain-labels span:last-child { text-align: right; }
+.terrain > p { display: flex; gap: 7px; align-items: flex-start; font-size: 10px; margin-top: 18px; line-height: 1.65; }
+.terrain > p svg { width: 15px; height: 15px; flex: 0 0 auto; margin-top: 1px; color: #789268; }
+.blend-manager { margin-top: 20px; padding-top: 18px; border-top: 1px dashed #dfe5da; }
+.blend-manager > div:first-child { display: flex; align-items: center; gap: 10px; }
+.blend-manager > div:first-child > svg { width: 21px; height: 21px; color: #718966; }
+.blend-manager > div:first-child > div { display: grid; gap: 4px; flex: 1; }
+.blend-manager strong { font-size: 11px; }.blend-manager span { font-size: 9px; color: #82907c; }
+.blend-manager .button { min-height: 37px; padding: 8px 11px; font-size: 9px; }
+.saved-blends { display: grid; gap: 7px; margin-top: 13px; }
+.saved-blends > div { display: flex; align-items: stretch; background: #f5f7f1; border-radius: 8px; }
+.saved-blends button:first-child { display: grid; gap: 4px; flex: 1; padding: 11px 12px; text-align: left; }
+.saved-blends button:last-child { width: 40px; color: #8b8375; }.saved-blends svg { width: 16px; }
+.heading-actions { display: flex; gap: 9px; flex-wrap: wrap; }
+.insights { margin-bottom: 32px; }
+.insight-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 11px; }
+.insight-cards article { display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; align-items: center; padding: 17px; border: 1px solid var(--line); border-radius: 11px; background: #fafbf8; }
+.insight-cards svg { grid-row: 1 / 3; width: 25px; height: 25px; color: #7c936b; }
+.insight-cards span { font-size: 9px; color: #819078; }.insight-cards strong { font-size: 19px; font-weight: 550; color: #435f45; }
+.insight-charts { display: grid; grid-template-columns: 1.45fr 1fr; gap: 12px; margin-top: 12px; }
+.insight-charts article { border: 1px solid var(--line); border-radius: 11px; padding: 18px; background: white; }
+.insight-charts article > div { display: flex; gap: 8px; align-items: center; color: #526c50; font-size: 11px; }.insight-charts article > div svg { width: 18px; }
+.insight-charts svg { width: 100%; max-height: 125px; }.insight-charts line { stroke: #dfe5dc; }.insight-charts polyline { fill: none; stroke: #6c8b60; stroke-width: 2.5; }.insight-charts circle { fill: #48694c; }
+.personal-record { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+.personal-record > svg { width: 28px; height: 28px; color: #9a8a4f; margin-bottom: 13px; }.personal-record > span { font-size: 9px; color: #84917d; }.personal-record > strong { font-size: 21px; margin: 7px 0; color: #4b6549; }.personal-record > p { font-size: 10px; }
+.temperature-log { padding-top: 17px; }.temperature-entry { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }.temperature-entry .button { min-height: 46px; }.temperature-readings { display: grid; gap: 7px; margin-top: 14px; }.temperature-readings > div { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 8px; background: #f5f7f1; }.temperature-readings > div.has-warning { background: #faf0dc; }.temperature-readings > div > svg { width: 19px; height: 19px; color: #698060; }.temperature-readings > div > div { display: grid; gap: 4px; flex: 1; }.temperature-readings strong { font-size: 11px; text-transform: capitalize; }.temperature-readings span { font-size: 9px; color: #82907d; }.temperature-readings small { color: #8a6d31; font-size: 9px; }.temperature-readings small svg { width: 12px; }.temperature-readings button { width: 34px; height: 34px; color: #8a8679; }.temperature-log > p { font-size: 9px; margin-top: 12px; }
+@media(max-width:640px){.maturity-row{grid-template-columns:1fr auto}.maturity-track{grid-column:1 / 3;grid-row:2}.preferment-split,.score-grid{grid-template-columns:1fr}.advanced-heading>span{max-width:135px;text-align:right}.water-temp{min-height:76px}}
+@media(max-width:800px){.insight-cards{grid-template-columns:1fr 1fr}.insight-charts{grid-template-columns:1fr}.heading-actions{width:100%}.heading-actions .button{flex:1}}
+@media(max-width:420px){.insight-cards{grid-template-columns:1fr 1fr}.insight-cards article{padding:13px}.blend-manager>div:first-child{flex-wrap:wrap}.blend-manager .button{width:100%}}
+@media(max-width:640px){.temperature-entry{grid-template-columns:1fr 1fr}.temperature-entry .button{grid-column:1 / 3;width:100%}}

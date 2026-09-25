@@ -8,9 +8,14 @@ test('calculate, save, annotate, persist and delete a recipe',async({page})=>{
   await expect(page.getByRole('heading',{name:'Prova teglia',exact:true})).toBeVisible();
   await page.getByLabel('Appunti per la prossima volta').fill('Fondo croccante, ripetere.');
   await page.getByRole('button',{name:'4 stelle per Prova teglia'}).click();
+  await page.getByText('Temperature reali e controllo scostamenti').click();
+  await page.getByLabel('Punto di misura').selectOption('frigo');await page.getByLabel('Temperatura misurata').fill('8');await page.getByRole('button',{name:'Registra'}).click();
+  await expect(page.getByText('Frigo più caldo del piano')).toBeVisible();
   await page.waitForFunction(()=>localStorage.getItem('CapacitorStorage.pizzamico-state-v1')?.includes('Fondo croccante'));
   await page.reload();await page.getByRole('button',{name:/Diario/}).click();
   await expect(page.getByLabel('Appunti per la prossima volta')).toHaveValue('Fondo croccante, ripetere.');
+  await page.getByText('Temperature reali e controllo scostamenti').click();
+  await expect(page.getByText('8 °C',{exact:false})).toBeVisible();
   await page.getByRole('button',{name:'Attiva piano e promemoria'}).click();await expect(page.getByRole('status')).toContainText('browser');
   await page.getByRole('button',{name:'Elimina Prova teglia'}).click();await page.getByRole('button',{name:'Elimina piano',exact:true}).click();
   await expect(page.getByText('La prima pagina è tutta tua.')).toBeVisible();
@@ -30,4 +35,31 @@ test('invalid fields block saving and hot/weak dough produces warnings',async({p
   await page.getByLabel('Peso del panetto',{exact:true}).fill('0');await expect(page.getByText('Controlla questi valori')).toBeVisible();await expect(page.getByRole('button',{name:'Salva il piano'})).toHaveCount(0);
   await page.getByLabel('Peso del panetto',{exact:true}).fill('260');await page.getByRole('button',{name:'Tutto fuori frigo'}).click();await expect(page.getByLabel('Riposo in frigo',{exact:true})).toHaveValue('0');
   await page.getByRole('button',{name:'Impara',exact:true}).click();await expect(page.getByRole('heading',{name:'Mani in pasta, idee chiare.'})).toBeVisible();
+});
+test('mixes three flours and shows hydration and yeast charts',async({page})=>{
+  await page.goto('/');
+  await page.getByText('Ingredienti e miscela fino a quattro farine').click();
+  await page.getByLabel('Seconda farina').selectOption({index:2});
+  await page.getByLabel('Quota seconda farina').fill('25');
+  await page.getByLabel('Terza farina').selectOption({index:3});
+  await page.getByLabel('Quota terza farina').fill('20');
+  await expect(page.getByText(/terza\. W medio indicativo/)).toBeVisible();
+  await expect(page.locator('.hydration-chart')).toBeVisible();
+  await expect(page.locator('.yeast-chart')).toBeVisible();
+  await page.getByRole('button',{name:'Salva questa'}).click();
+  await expect(page.getByText('Miscele salvate')).toBeVisible();
+});
+test('preferment, water temperature, manual yeast and oven profile work together',async({page})=>{
+  await page.goto('/');
+  await page.getByRole('button',{name:'Contemporanea'}).click();
+  await page.getByRole('button',{name:'Poolish'}).click();
+  await expect(page.getByText('al picco',{exact:true})).toBeVisible();
+  await expect(page.getByText('Acqua consigliata')).toBeVisible();
+  await page.getByRole('button',{name:'Manuale'}).click();
+  await page.getByLabel('Lievito fresco sulla farina').fill('0.12');
+  await page.getByLabel('Tipo di forno').selectOption('portable-gas');
+  await expect(page.getByLabel('Temperatura effettiva')).toHaveValue('500');
+  await page.getByRole('button',{name:'Comincio adesso'}).click();
+  await expect(page.getByText('Impasta ora, prima infornata prevista')).toBeVisible();
+  await expect(page.getByText('Percorso di fermentazione')).toBeVisible();
 });

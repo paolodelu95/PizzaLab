@@ -7,14 +7,21 @@ export const styles: PizzaStyle[] = [
   { id: 'pala', name: 'Alla pala', subtitle: 'Leggera, allungata, da condividere.', hydration: 78, hydrationRange: [70, 85], ballWeight: 500, salt: 2.5, oil: 2, cold: 24, bulk: 2, proof: 4, minW: 300, oven: 300, bake: 'Circa 7–12 minuti su pietra o acciaio ben preriscaldati.', tip: 'Spolvera il banco, allarga senza sgonfiare e controlla che l’impasto scorra sulla pala prima di condire.', pan: false },
   { id: 'padellino', name: 'Al padellino', subtitle: 'Alta e soffice, con la base dorata.', hydration: 65, hydrationRange: [60, 72], ballWeight: 250, salt: 2.5, oil: 3, cold: 12, bulk: 2, proof: 4, minW: 240, oven: 250, bake: 'Circa 12–18 minuti in padellino unto, controllando la base.', tip: 'Fai l’ultima lievitazione nel padellino unto. Le dosi sono per padellini di circa 20 cm.', pan: false },
   { id: 'focaccia', name: 'Focaccia', subtitle: 'Morbida, dorata, con un filo d’olio.', hydration: 70, hydrationRange: [62, 80], ballWeight: 720, salt: 2.3, oil: 4, cold: 12, bulk: 2, proof: 3, minW: 240, oven: 230, bake: 'Circa 20–30 minuti; controlla il colore e la cottura della base.', tip: 'Termina la lievitazione in teglia. Forma i buchi con dita unte; olio e salamoia in superficie sono extra rispetto all’impasto.', pan: true },
+  { id: 'new-york', name: 'New York', subtitle: 'Pieghevole, saporita, dal bordo dorato.', hydration: 64, hydrationRange: [60, 68], ballWeight: 340, salt: 2.5, oil: 3, cold: 24, bulk: 1, proof: 2, minW: 270, oven: 300, bake: 'Circa 5–8 minuti su pietra o acciaio.', tip: 'Stendi a circa 35 cm, lascia un bordo contenuto e cuoci su acciaio ben saturo di calore.', pan: false },
+  { id: 'detroit', name: 'Detroit', subtitle: 'Alta, croccante e caramellata ai bordi.', hydration: 72, hydrationRange: [68, 78], ballWeight: 650, salt: 2.4, oil: 3, cold: 18, bulk: 2, proof: 3, minW: 270, oven: 260, bake: 'Circa 12–18 minuti in teglia metallica.', tip: 'Porta il formaggio fino ai bordi della teglia ben unta per ottenere la crosta caramellata.', pan: true },
+  { id: 'pinsa', name: 'Pinsa romana', subtitle: 'Leggera, croccante fuori e soffice dentro.', hydration: 80, hydrationRange: [72, 85], ballWeight: 500, salt: 2.5, oil: 2, cold: 48, bulk: 1, proof: 4, minW: 300, oven: 300, bake: 'Circa 7–12 minuti, anche con precottura.', tip: 'L’alta idratazione richiede pieghe, delicatezza e una farina adatta; la miscela tradizionale può includere riso e soia.', pan: false },
+  { id: 'sfincione', name: 'Sfincione', subtitle: 'Soffice, spesso e ricco di condimento.', hydration: 68, hydrationRange: [62, 75], ballWeight: 800, salt: 2.3, oil: 4, cold: 8, bulk: 2, proof: 3, minW: 230, oven: 240, bake: 'Circa 20–30 minuti in teglia.', tip: 'Lascia l’impasto ben rilassato in teglia e considera il peso del condimento nella gestione della cottura.', pan: true },
+  { id: 'tonda-casa', name: 'Tonda al forno di casa', subtitle: 'Pensata per pietra o acciaio domestico.', hydration: 65, hydrationRange: [60, 72], ballWeight: 250, salt: 2.5, oil: 2, cold: 18, bulk: 2, proof: 3, minW: 240, oven: 280, bake: 'Circa 4–8 minuti alla massima temperatura disponibile.', tip: 'Preriscalda a lungo la superficie di cottura e usa il grill nella fase finale se serve colore sopra.', pan: false },
 ];
 export function localDateTime(date: Date): string {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0,16);
 }
 export function defaultConfig(): DoughConfig {
   const date = new Date(); date.setDate(date.getDate() + 2); date.setHours(20,0,0,0);
-  return { styleId: 'napoletana', flourId: 'caputo-pizzeria', secondFlourId: '', secondFlourPercent: 0,
+  return { styleId: 'napoletana', flourId: 'caputo-pizzeria', secondFlourId: '', secondFlourPercent: 0, thirdFlourId: '', thirdFlourPercent: 0, fourthFlourId: '', fourthFlourPercent: 0,
     count: 4, ballWeight: 260, panWidth: 30, panLength: 40, panDensity: 0.6,
-    hydration: 63, salt: 2.8, oil: 0, yeast: 'fresh', bulkHours: 2, coldHours: 18, proofHours: 4,
+    hydration: 63, salt: 2.8, oil: 0, sugar: 0, malt: 0, yeast: 'fresh', yeastMode: 'auto', manualYeastPercent: 0.1,
+    preferment: 'none', prefermentPercent: 20, prefermentHours: 12, prefermentTemp: 20, prefermentFlourId: '',
+    mixer: 'hand', flourTemp: 20, desiredDoughTemp: 24, planMode: 'date', ovenType: 'high-temp-electric', bulkHours: 2, coldHours: 18, proofHours: 4,
     roomTemp: 22, fridgeTemp: 4, ovenTemp: 450, bakeAt: localDateTime(date) };
 }

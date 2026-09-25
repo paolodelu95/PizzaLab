@@ -12,3 +12,4 @@ test-results/
 *.tsbuildinfo
 *.jks
 *.keystore
+artifacts/*.apk

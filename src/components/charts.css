@@ -1,0 +1,17 @@
+.strength-marker {
+  position: absolute;
+  top: -3px;
+  height: 18px;
+  border-left: 1px dashed #987a48;
+}
+
+.strength-marker b {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 7px;
+  font-weight: 500;
+  color: #987a48;
+}
