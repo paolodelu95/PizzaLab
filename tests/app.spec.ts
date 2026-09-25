@@ -32,7 +32,7 @@ test('flour search, source details, custom flour and no overflow',async({page})=
 });
 test('invalid fields block saving and hot/weak dough produces warnings',async({page})=>{
   await page.goto('/');await page.getByLabel('Temperatura ambiente',{exact:true}).fill('30');await expect(page.getByText('In cucina fa caldo',{exact:true})).toBeVisible();
-  await page.getByLabel('Peso del panetto',{exact:true}).fill('0');await expect(page.getByText('Controlla questi valori')).toBeVisible();await expect(page.getByRole('button',{name:'Salva il piano'})).toHaveCount(0);
+  await page.getByLabel('Peso del panetto',{exact:true}).fill('0');await page.getByLabel('Peso del panetto',{exact:true}).blur();await expect(page.getByText('Controlla questi valori')).toBeVisible();await expect(page.getByRole('button',{name:'Salva il piano'})).toHaveCount(0);
   await page.getByLabel('Peso del panetto',{exact:true}).fill('260');await page.getByRole('button',{name:'Tutto fuori frigo'}).click();await expect(page.getByLabel('Riposo in frigo',{exact:true})).toHaveValue('0');
   await page.getByRole('button',{name:'Impara',exact:true}).click();await expect(page.getByRole('heading',{name:'Mani in pasta, idee chiare.'})).toBeVisible();
 });
@@ -69,12 +69,13 @@ test('temperature editing stays mounted and autolyse and mixer guidance are expl
   const flourTemp=page.getByLabel('Temperatura farina',{exact:true});
   await flourTemp.fill('');
   await expect(flourTemp).toBeVisible();
-  await flourTemp.fill('18');
+  await flourTemp.pressSequentially('18');
   await expect(page.getByText('Acqua consigliata')).toBeVisible();
   const roomTemp=page.getByLabel('Temperatura ambiente',{exact:true});
   await roomTemp.fill('');
   await expect(roomTemp).toBeVisible();
-  await roomTemp.fill('24');
+  await roomTemp.pressSequentially('24');
+  await expect(page.getByText('FARINA TOTALE')).toBeVisible();
   await page.getByRole('button',{name:'Aggiungi autolisi'}).click();
   await expect(page.getByText('ACQUA DI RISERVA')).toBeVisible();
   await expect(page.getByText('Autolisi breve',{exact:true}).last()).toBeVisible();

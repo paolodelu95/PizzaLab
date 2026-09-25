@@ -1,12 +1,19 @@
 import { Minus, Plus } from '@phosphor-icons/react';
 import { useEffect, useId, useState } from 'react';
+
+export function parseNumberDraft(draft:string,min:number,max:number) {
+  if(draft.trim()==='')return null;
+  const parsed=Number(draft);
+  return Number.isFinite(parsed)&&parsed>=min&&parsed<=max?parsed:null;
+}
+
 export function NumberField({ label, value, onChange, min, max, step=1, unit, hint }: {
   label: string; value: number; onChange: (v:number)=>void; min:number; max:number; step?:number; unit?:string; hint?:string;
 }) {
   const id = useId();
   const [draft,setDraft]=useState(String(value));
   useEffect(()=>{if(Number.isFinite(value))setDraft(String(value));},[value]);
-  return <div className="field"><label htmlFor={id}>{label}</label><div className="number-input"><input id={id} type="number" inputMode="decimal" min={min} max={max} step={step} value={draft} onChange={e=>{const next=e.target.value;setDraft(next);if(next.trim()!==''&&Number.isFinite(Number(next)))onChange(Number(next));}} onBlur={()=>{if(draft.trim()===''||!Number.isFinite(Number(draft)))setDraft(String(value));}}/>{unit && <span>{unit}</span>}</div>{hint && <small>{hint}</small>}</div>;
+  return <div className="field"><label htmlFor={id}>{label}</label><div className="number-input"><input id={id} type="number" inputMode="decimal" min={min} max={max} step={step} value={draft} onChange={e=>{const next=e.target.value;setDraft(next);const parsed=parseNumberDraft(next,min,max);if(parsed!==null)onChange(parsed);}} onBlur={()=>{const parsed=Number(draft);if(draft.trim()===''||!Number.isFinite(parsed))setDraft(String(value));else if(parsed<min||parsed>max)onChange(parsed);}}/>{unit && <span>{unit}</span>}</div>{hint && <small>{hint}</small>}</div>;
 }
 export function Stepper({label,value,onChange,min,max,step=1,unit=''}: {label:string;value:number;onChange:(v:number)=>void;min:number;max:number;step?:number;unit?:string}) {
   return <div className="field"><span className="field-label">{label}</span><div className="stepper"><button aria-label={`Riduci ${label.toLowerCase()}`} disabled={value<=min} onClick={()=>onChange(Math.max(min,value-step))}><Minus/></button><span>{value} <small>{unit}</small></span><button aria-label={`Aumenta ${label.toLowerCase()}`} disabled={value>=max} onClick={()=>onChange(Math.min(max,value+step))}><Plus/></button></div></div>;
