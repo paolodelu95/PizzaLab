@@ -1,4 +1,5 @@
 import { styles } from './styles';
+import { mixerProfiles } from '../data/mixers';
 import type { Advice, DoughConfig, Flour, Stage } from './types';
 export const MODEL_VERSION = 'direct-v1';
 export function validateConfig(c: DoughConfig): string[] {
@@ -14,22 +15,25 @@ export function validateConfig(c: DoughConfig): string[] {
     ['fourthFlourPercent',0,100,'Percentuale quarta farina'], ['manualYeastPercent',0.001,5,'Lievito manuale'],
     ['prefermentPercent',5,80,'Farina nel prefermento'], ['prefermentHours',3,36,'Durata prefermento'],
     ['prefermentTemp',8,32,'Temperatura prefermento'], ['flourTemp',5,35,'Temperatura farina'],
-    ['desiredDoughTemp',18,30,'Temperatura obiettivo impasto'],
+    ['desiredDoughTemp',18,30,'Temperatura obiettivo impasto'], ['autolyseWaterPercent',30,95,'Acqua nell’autolisi'],
+    ['autolyseMinutes',10,60,'Durata autolisi'], ['starterPercent',5,50,'Dose lievito madre'], ['starterHydration',40,150,'Idratazione lievito madre'],
   ];
   for (const [key,min,max,name] of ranges) {
     const n = c[key]; if (typeof n !== 'number' || !Number.isFinite(n) || n < min || n > max) errors.push(`${name}: inserisci un valore tra ${min} e ${max}.`);
   }
   if (!Number.isInteger(c.count)) errors.push('La quantità deve essere intera.');
   if (!styles.some(s => s.id === c.styleId)) errors.push('Scegli uno stile valido.');
-  if (!['fresh','instant'].includes(c.yeast)) errors.push('Tipo di lievito non valido.');
+  if (!['fresh','instant','sourdough','licoli'].includes(c.yeast)) errors.push('Tipo di lievito non valido.');
   if (c.secondFlourPercent + c.thirdFlourPercent + c.fourthFlourPercent > 100) errors.push('Le quote delle farine aggiuntive non possono superare il 100%.');
   if (!['auto','manual'].includes(c.yeastMode)) errors.push('Modalità del lievito non valida.');
   if (!['none','poolish','biga'].includes(c.preferment)) errors.push('Prefermento non valido.');
   if (!['hand','stand','spiral','thermomix'].includes(c.mixer)) errors.push('Metodo di impasto non valido.');
+  if (typeof c.autolyse !== 'boolean') errors.push('Impostazione autolisi non valida.');
   if (c.preferment !== 'none') {
     const prefermentHydration = c.preferment === 'poolish' ? 100 : 50;
     if (c.prefermentPercent * prefermentHydration / 100 > c.hydration) errors.push('Il prefermento richiede più acqua di quella disponibile nella ricetta. Riduci la sua percentuale o aumenta l’idratazione.');
   }
+  if (['sourdough','licoli'].includes(c.yeast) && c.preferment !== 'none') errors.push('Con lievito madre o licoli usa il metodo diretto: il lievito naturale è già un prefermento.');
   if (c.bulkHours + c.coldHours + c.proofHours < 2) errors.push('Prevedi almeno 2 ore totali di fermentazione.');
   if (c.bulkHours + c.proofHours < 1) errors.push('Prevedi almeno un’ora complessiva a temperatura ambiente.');
   if (!Number.isFinite(new Date(c.bakeAt).getTime())) errors.push('Imposta giorno e ora della cottura.');
@@ -70,19 +74,28 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
   const roomRate = 2 ** ((c.roomTemp - 22)/10);
   const coldRate = 0.08 * 2 ** ((c.fridgeTemp - 4)/5);
   const equivalentHours = (c.bulkHours + c.proofHours)*roomRate + c.coldHours*coldRate;
+  const naturalStarter=['sourdough','licoli'].includes(c.yeast);
   const rawFreshPercent = 0.18 * (8/equivalentHours)**0.85 * (1 + (c.salt-2.5)*0.08);
   const freshPercent = c.yeastMode === 'manual' ? c.manualYeastPercent*(c.yeast==='instant'?3:1) : Math.max(0.02, Math.min(3,rawFreshPercent));
-  const yeastPercent = c.yeastMode === 'manual' ? c.manualYeastPercent : c.yeast === 'instant' ? freshPercent/3 : freshPercent;
+  const yeastPercent = naturalStarter ? c.starterPercent : c.yeastMode === 'manual' ? c.manualYeastPercent : c.yeast === 'instant' ? freshPercent/3 : freshPercent;
   const unitWeight = style.pan ? c.panWidth*c.panLength*c.panDensity : c.ballWeight;
   const total = c.count * unitWeight;
-  const flourGrams = total/(1+c.hydration/100+c.salt/100+c.oil/100+c.sugar/100+c.malt/100+yeastPercent/100);
+  const flourGrams = total/(1+c.hydration/100+c.salt/100+c.oil/100+c.sugar/100+c.malt/100+(naturalStarter?0:yeastPercent/100));
   const water = flourGrams*c.hydration/100; const salt = flourGrams*c.salt/100;
   const oil = flourGrams*c.oil/100; const sugar = flourGrams*c.sugar/100; const malt = flourGrams*c.malt/100; const yeast = flourGrams*yeastPercent/100;
+  const starterHydration=naturalStarter?c.starterHydration/100:0;
+  const starterFlour=naturalStarter?yeast/(1+starterHydration):0;
+  const starterWater=naturalStarter?yeast-starterFlour:0;
+  const flourToWeigh=flourGrams-starterFlour;
+  const waterToWeigh=water-starterWater;
+  if(naturalStarter&&(flourToWeigh<=0||waterToWeigh<0)) return {ok:false as const,errors:['La dose o l’idratazione del lievito madre supera farina o acqua disponibili.']};
   const prefermentHydration = c.preferment === 'poolish' ? 100 : c.preferment === 'biga' ? 50 : 0;
   const prefermentFlourGrams = c.preferment === 'none' ? 0 : flourGrams*c.prefermentPercent/100;
   const prefermentWater = prefermentFlourGrams*prefermentHydration/100;
   const prefermentYeast = c.preferment === 'none' ? 0 : Math.min(yeast*.8,prefermentFlourGrams*.002);
-  const mainFlour = flourGrams-prefermentFlourGrams; const mainWater=water-prefermentWater; const mainYeast=yeast-prefermentYeast;
+  const mainFlour = flourToWeigh-prefermentFlourGrams; const mainWater=waterToWeigh-prefermentWater; const mainYeast=yeast-prefermentYeast;
+  const autolyseWater = c.autolyse ? mainWater*c.autolyseWaterPercent/100 : 0;
+  const reservedWater = c.autolyse ? mainWater-autolyseWater : mainWater;
   const prefermentActivity = c.preferment === 'none' ? 0 : c.prefermentHours*2**((c.prefermentTemp-20)/10);
   const prefermentTarget = c.preferment === 'biga' ? 16 : 12;
   const prefermentProgress = c.preferment === 'none' ? 0 : prefermentActivity/prefermentTarget;
@@ -108,10 +121,12 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
   if (c.bulkHours+c.proofHours > 16) add('long-room','warning','Molte ore fuori frigo','Con tempi così lunghi la stima del lievito è meno affidabile. Monitora volume, elasticità e temperatura; non aspettare l’orario se l’impasto sta cedendo.');
   if (c.ovenTemp < 380 && ['napoletana','contemporanea'].includes(c.styleId)) add('oven','warning','Adatta la cottura al forno di casa','Questo stile nasce per forni molto caldi. Preriscalda bene pietra o acciaio e prolunga la cottura controllando la base: il risultato sarà diverso.');
   if (c.salt < 1.5) add('low-salt','warning','Poco sale nell’impasto','Il sale contribuisce a struttura e controllo della fermentazione. Con questa dose verifica più spesso la crescita.');
-  if (yeast < 0.1) add('scale','warning','Dose difficile da pesare','Serve una bilancia da 0,01 g. In alternativa prepara una sospensione 1:9 di lievito e acqua e usane dieci volte la dose, sottraendo l’acqua usata da quella totale.');
-  if (c.yeastMode === 'auto' && rawFreshPercent !== freshPercent) add('model-limit','warning','Al limite del modello','La dose è stata limitata all’intervallo del calcolatore. Modifica durata o temperatura: questo piano necessita di una prova pratica.');
-  if (c.yeastMode === 'manual') add('manual-yeast','info','Dose di lievito manuale','Gli orari restano fissi. Usa il grafico di fermentazione e controlla il volume: la dose inserita può anticipare o ritardare il picco.');
+  if (!naturalStarter&&yeast < 0.1) add('scale','warning','Dose difficile da pesare','Serve una bilancia da 0,01 g. In alternativa prepara una sospensione 1:9 di lievito e acqua e usane dieci volte la dose, sottraendo l’acqua usata da quella totale.');
+  if (!naturalStarter&&c.yeastMode === 'auto' && rawFreshPercent !== freshPercent) add('model-limit','warning','Al limite del modello','La dose è stata limitata all’intervallo del calcolatore. Modifica durata o temperatura: questo piano necessita di una prova pratica.');
+  if (!naturalStarter&&c.yeastMode === 'manual') add('manual-yeast','info','Dose di lievito manuale','Gli orari restano fissi. Usa il grafico di fermentazione e controlla il volume: la dose inserita può anticipare o ritardare il picco.');
+  if (naturalStarter) add('natural-starter','info','Lievito naturale: osserva la crescita','La vitalità cambia da un rinfresco all’altro. Usa una coltura al picco e considera gli orari una traccia: volume, elasticità e profumo vengono prima dell’orologio.');
   if (c.preferment !== 'none' && prefermentProgress > 1.2) add('preferment-ripe','warning','Prefermento oltre il picco','Accorcia la durata, abbassa la temperatura o usa il comando Ottimizza. Odore pungente e struttura ceduta indicano che è troppo maturo.');
+  if (c.hydration >= 72 && !c.autolyse) add('autolyse','info','Valuta un’autolisi breve','Un riposo iniziale di farina e parte dell’acqua facilita l’assorbimento. Puoi attivarlo nel Laboratorio impasto e tenere l’acqua restante per il lievito e il bassinage.');
   if (waterTemp <= 2 || waterTemp >= 45) add('water-temperature','warning','Temperatura dell’acqua fuori dal campo pratico','Il metodo del fattore 3 ha raggiunto il limite del calcolatore. Correggi temperatura ambiente, farina o impasto obiettivo.');
   if (secondShare > 0 || thirdShare > 0 || fourthShare > 0) add('blend','info','La forza della miscela è indicativa','Il W visualizzato è una media ponderata di orientamento: la risposta reale di una miscela non è necessariamente lineare e l’assorbimento va verificato durante l’impasto.');
   if (activeFlours.some(item => item.flour.kind === 'blend') || prefermentFlour?.kind === 'blend') add('special-flour','warning','Miscela speciale','Verifica ingredienti e dosi sulla confezione. Cereali, malto e pasta acida possono modificare assorbimento e fermentazione.');
@@ -123,23 +138,45 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
     sapore:score(45+Math.min(35,hours*.7)+(c.preferment!=='none'?15:0)),
     coerenza:score(100-Math.abs(c.hydration-style.hydration)*3-(w!==null&&w<style.minW?25:0)),
   };
-  const blendAllocation=c.preferment!=='none'&&prefermentFlour?mainFlour:flourGrams;
-  return { ok: true as const, total, unitWeight, flour: flourGrams, firstFlour: blendAllocation*firstShare, secondFlour: blendAllocation*secondShare, thirdFlour: blendAllocation*thirdShare, fourthFlour: blendAllocation*fourthShare, water, salt, oil, sugar, malt, yeast, yeastPercent, equivalentHours, hours, w, advice, style, waterTemp, scores, preferment:{ flour:prefermentFlourGrams, water:prefermentWater, yeast:prefermentYeast, mainFlour, mainWater, mainYeast, hydration:prefermentHydration, progress:prefermentProgress, maturity:prefermentMaturity, flourName:prefermentFlour?`${prefermentFlour.brand} ${prefermentFlour.name}`:null } };
+  const blendAllocation=c.preferment!=='none'||naturalStarter?mainFlour:flourGrams;
+  const mainFlourBreakdown=activeFlours.map(({flour:component,share})=>({id:component.id,name:`${component.brand} · ${component.name}`,grams:blendAllocation*share,percent:share*100}));
+  const flourMap=new Map<string,{id:string;name:string;grams:number;percent:number}>();
+  for(const {flour:component,share} of activeFlours){const grams=blendAllocation*share;const old=flourMap.get(component.id);flourMap.set(component.id,{id:component.id,name:`${component.brand} · ${component.name}`,grams:(old?.grams??0)+grams,percent:0});}
+  const actualPrefermentFlour=c.preferment!=='none'?(prefermentFlour??flour!):null;
+  if(actualPrefermentFlour){const old=flourMap.get(actualPrefermentFlour.id);flourMap.set(actualPrefermentFlour.id,{id:actualPrefermentFlour.id,name:`${actualPrefermentFlour.brand} · ${actualPrefermentFlour.name}`,grams:(old?.grams??0)+prefermentFlourGrams,percent:0});}
+  if(naturalStarter){const old=flourMap.get(flour!.id);flourMap.set(flour!.id,{id:flour!.id,name:`${flour!.brand} · ${flour!.name}`,grams:(old?.grams??0)+starterFlour,percent:0});}
+  const flourBreakdown=[...flourMap.values()].map(item=>({...item,percent:item.grams/flourGrams*100}));
+  return { ok: true as const, total, unitWeight, flour: flourGrams, flourToWeigh, firstFlour: blendAllocation*firstShare, secondFlour: blendAllocation*secondShare, thirdFlour: blendAllocation*thirdShare, fourthFlour: blendAllocation*fourthShare, flourBreakdown, mainFlourBreakdown, water, waterToWeigh, salt, oil, sugar, malt, yeast, yeastPercent, equivalentHours, hours, w, advice, style, waterTemp, scores, starter:{active:naturalStarter,grams:yeast,flour:starterFlour,water:starterWater,hydration:c.starterHydration}, autolyse:{flour:mainFlour,water:autolyseWater,reservedWater,minutes:c.autolyseMinutes}, preferment:{ flour:prefermentFlourGrams, water:prefermentWater, yeast:prefermentYeast, mainFlour, mainWater, mainYeast, hydration:prefermentHydration, progress:prefermentProgress, maturity:prefermentMaturity, flourName:actualPrefermentFlour?`${actualPrefermentFlour.brand} · ${actualPrefermentFlour.name}`:null } };
 }
-export function buildTimeline(c: DoughConfig): Stage[] {
+export function buildTimeline(c: DoughConfig, flours?: Flour[]): Stage[] {
   if (validateConfig(c).length) return [];
+  const calculation=flours?calculate(c,flours):null;
+  const r=calculation?.ok?calculation:null;
   const bake = new Date(c.bakeAt).getTime();
   const hour = 3600000;
-  let cursor = bake - (c.bulkHours+c.coldHours+c.proofHours)*hour - 20*60000;
+  let cursor = bake - (c.bulkHours+c.coldHours+c.proofHours)*hour - 20*60000 - (c.autolyse?c.autolyseMinutes*60000:0);
   const stages: Stage[] = [];
   const add = (id:string,title:string,duration:number,detail:string) => {
     stages.push({id,title,at:new Date(cursor).toISOString(),until:new Date(cursor+duration).toISOString(),detail}); cursor += duration;
   };
   if (c.preferment !== 'none') {
     cursor -= c.prefermentHours*hour;
-    add('preferment',`Prepara il ${c.preferment}`,c.prefermentHours*hour,`Mescola la quota di farina e acqua del ${c.preferment}, aggiungi il lievito previsto e lascia maturare a ${c.prefermentTemp} °C.`);
+    const prefermentDetail=r?`Mescola ${Math.round(r.preferment.flour)} g di ${r.preferment.flourName??r.flourBreakdown[0]?.name??'farina'}, ${Math.round(r.preferment.water)} g d’acqua e ${r.preferment.yeast.toLocaleString('it-IT',{maximumFractionDigits:2})} g di lievito. Copri e lascia maturare ${c.prefermentHours} ore a ${c.prefermentTemp} °C; usalo quando è gonfio e aromatico, prima che ceda.`:`Mescola la quota di farina e acqua del ${c.preferment}, aggiungi il lievito previsto e lascia maturare a ${c.prefermentTemp} °C.`;
+    add('preferment',`Prepara il ${c.preferment}`,c.prefermentHours*hour,prefermentDetail);
   }
-  add('mix','Prepara l’impasto',20*60000,'Pesa gli ingredienti. Unisci farina, acqua e lievito; incorpora il prefermento, il sale e gli altri ingredienti previsti. Lavora fino a ottenere una struttura omogenea.');
+  if(c.autolyse){
+    const division=r&&r.mainFlourBreakdown.length>1?` Prepara prima la miscela per l’impasto finale: ${r.mainFlourBreakdown.map(item=>`${Math.round(item.grams)} g ${item.name}`).join(' + ')}.`:'';
+    const grams=r?` Mescola ${Math.round(r.autolyse.flour)} g di farina con ${Math.round(r.autolyse.water)} g d’acqua (${c.autolyseWaterPercent}% dell’acqua disponibile nell’impasto finale).`:'';
+    add('autolyse','Autolisi breve',c.autolyseMinutes*60000,`${division}${grams} Non aggiungere ancora lievito, sale o grassi. Copri e lascia riposare: la massa deve risultare grezza, senza cercare l’incordatura.`);
+  }
+  const flourDetail=r?r.mainFlourBreakdown.map(item=>`${Math.round(item.grams)} g ${item.name}`).join(' + '):'le farine previste';
+  const mixingDetail=r
+    ? c.autolyse
+      ? `Sciogli ${r.preferment.mainYeast.toLocaleString('it-IT',{maximumFractionDigits:2})} g di lievito nei ${Math.round(r.autolyse.reservedWater)} g d’acqua tenuti da parte. Avvia la lavorazione dell’autolisi e incorpora la soluzione poco alla volta. Aggiungi ${r.salt.toLocaleString('it-IT',{maximumFractionDigits:1})} g di sale quando l’impasto prende struttura${r.oil>0?`, poi ${r.oil.toLocaleString('it-IT',{maximumFractionDigits:1})} g di olio a filo`:''}. Controlla che l’impasto finale sia vicino a ${c.desiredDoughTemp} °C.`
+      : `Pesa ${flourDetail}, ${Math.round(r.preferment.mainWater)} g d’acqua e ${r.preferment.mainYeast.toLocaleString('it-IT',{maximumFractionDigits:2})} g di lievito. Mescola prima acqua, lievito e farine${c.preferment!=='none'?' e incorpora il prefermento maturo':''}; aggiungi ${r.salt.toLocaleString('it-IT',{maximumFractionDigits:1})} g di sale quando non resta farina asciutta${r.oil>0?`, poi ${r.oil.toLocaleString('it-IT',{maximumFractionDigits:1})} g di olio`:''}. Lavora fino a una massa liscia ed elastica, senza superare ${c.desiredDoughTemp} °C.`
+    : 'Pesa separatamente tutte le farine e gli altri ingredienti. Unisci acqua, lievito e farine; incorpora l’eventuale prefermento, poi sale e grassi. Lavora fino a ottenere una struttura omogenea.';
+  const machineDetail=c.mixer==='stand'?(()=>{const profile=mixerProfiles.find(item=>item.id===c.mixerProfileId)??mixerProfiles[0];return ` Usa il ${profile.tool.toLowerCase()}: ${profile.start.toLowerCase()}, poi ${profile.knead.toLowerCase()}. Per la chiusura: ${profile.finish.toLowerCase()}.`;})():c.mixer==='spiral'?' In spirale parti in prima velocità; passa in seconda solo dopo che l’impasto ha preso struttura e controlla spesso la temperatura.':c.mixer==='thermomix'?' Procedi con brevi cicli in modalità impasto, intervallati da pause: il robot scalda rapidamente la massa.':' A mano alterna impastamento e pause di 5–10 minuti; usa pieghe in ciotola finché la massa diventa elastica.';
+  add('mix','Impasta e sviluppa la struttura',20*60000,mixingDetail+machineDetail);
   if (c.bulkHours > 0) add('bulk','Riposo in massa',c.bulkHours*hour,`Copri l’impasto a ${c.roomTemp} °C. Se serve struttura, fai una piega dopo circa 30 minuti. Osserva la crescita.`);
   if (c.coldHours > 0) add('cold','Metti in frigorifero',c.coldHours*hour,`Riponi in un contenitore coperto a ${c.fridgeTemp} °C, con spazio per crescere. L’impasto non si raffredda istantaneamente.`);
   const pan = styles.find(s=>s.id===c.styleId)?.pan || c.styleId==='padellino';

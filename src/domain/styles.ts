@@ -20,8 +20,9 @@ export function defaultConfig(): DoughConfig {
   const date = new Date(); date.setDate(date.getDate() + 2); date.setHours(20,0,0,0);
   return { styleId: 'napoletana', flourId: 'caputo-pizzeria', secondFlourId: '', secondFlourPercent: 0, thirdFlourId: '', thirdFlourPercent: 0, fourthFlourId: '', fourthFlourPercent: 0,
     count: 4, ballWeight: 260, panWidth: 30, panLength: 40, panDensity: 0.6,
-    hydration: 63, salt: 2.8, oil: 0, sugar: 0, malt: 0, yeast: 'fresh', yeastMode: 'auto', manualYeastPercent: 0.1,
+    hydration: 63, salt: 2.8, oil: 0, sugar: 0, malt: 0, yeast: 'fresh', yeastMode: 'auto', manualYeastPercent: 0.1, starterPercent: 20, starterHydration: 100,
     preferment: 'none', prefermentPercent: 20, prefermentHours: 12, prefermentTemp: 20, prefermentFlourId: '',
-    mixer: 'hand', flourTemp: 20, desiredDoughTemp: 24, planMode: 'date', ovenType: 'high-temp-electric', bulkHours: 2, coldHours: 18, proofHours: 4,
+    autolyse: false, autolyseWaterPercent: 70, autolyseMinutes: 30,
+    mixer: 'hand', mixerProfileId: 'generic-planetary', flourTemp: 20, desiredDoughTemp: 24, planMode: 'date', ovenType: 'high-temp-electric', bulkHours: 2, coldHours: 18, proofHours: 4,
     roomTemp: 22, fridgeTemp: 4, ovenTemp: 450, bakeAt: localDateTime(date) };
 }

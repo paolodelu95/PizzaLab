@@ -13,3 +13,4 @@ test-results/
 *.jks
 *.keystore
 artifacts/*.apk
+*.apk

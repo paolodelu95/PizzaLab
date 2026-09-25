@@ -3,13 +3,14 @@ import { defaultConfig } from '../domain/styles';
 import { validateConfig } from '../domain/calculator';
 import type { StoredState } from '../domain/types';
 const KEY = 'pizzamico-state-v1';
-export const emptyState = (): StoredState => ({ version: 1, config: defaultConfig(), recipes: [], activeId: null, customFlours: [], savedBlends: [] });
+export const emptyState = (): StoredState => ({ version: 1, config: defaultConfig(), recipes: [], activeId: null, customFlours: [], savedBlends: [], equipmentProfiles: [] });
 export async function readState(): Promise<StoredState> {
   const { value } = await Preferences.get({ key: KEY });
   if (!value) return emptyState();
   const parsed = JSON.parse(value) as StoredState;
   if (parsed.version !== 1 || !parsed.config || !Array.isArray(parsed.recipes) || !Array.isArray(parsed.customFlours)) throw new Error('Archivio non riconosciuto');
   parsed.savedBlends = Array.isArray(parsed.savedBlends) ? parsed.savedBlends : [];
+  parsed.equipmentProfiles = Array.isArray(parsed.equipmentProfiles) ? parsed.equipmentProfiles : [];
   // Keep plans created by versions that supported two flours only.
   parsed.config = { ...defaultConfig(), ...parsed.config };
   parsed.recipes = parsed.recipes.map(recipe => recipe?.config
@@ -19,6 +20,7 @@ export async function readState(): Promise<StoredState> {
   parsed.recipes = parsed.recipes.filter(r => r && typeof r.id === 'string' && r.config && !validateConfig(r.config).length && Array.isArray(r.completedStages) && typeof r.notes === 'string' && typeof r.name === 'string' && Number.isFinite(r.rating));
   parsed.customFlours = parsed.customFlours.filter(f => f && typeof f.id === 'string' && typeof f.name === 'string' && typeof f.brand === 'string' && (f.w === null || (Array.isArray(f.w) && f.w.length === 2 && f.w.every(n => Number.isFinite(n) && n >= 50 && n <= 500))));
   parsed.savedBlends = parsed.savedBlends.filter(b => b && typeof b.id === 'string' && typeof b.name === 'string' && Array.isArray(b.components) && b.components.length >= 2 && b.components.length <= 4);
+  parsed.equipmentProfiles = parsed.equipmentProfiles.filter(p => p && typeof p.id === 'string' && typeof p.name === 'string' && ['hand','stand','spiral','thermomix'].includes(p.mixer));
   if (!parsed.recipes.some(r => r.id === parsed.activeId)) parsed.activeId = null;
   return parsed;
 }
