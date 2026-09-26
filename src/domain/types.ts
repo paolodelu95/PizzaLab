@@ -80,8 +80,14 @@ export interface DoughConfig {
   ovenTemp: number;
   bakeMinutes: number;
   ovenRack: "bottom" | "lower-middle" | "middle" | "upper-middle" | "top";
-  crustBrowning: "light" | "golden" | "dark";
-  crumbBake: "soft" | "balanced" | "dry";
+  bakeSurface:
+    | "biscotto"
+    | "stone"
+    | "steel"
+    | "light-pan"
+    | "dark-pan"
+    | "perforated-pan"
+    | "cast-iron";
   bakeAt: string;
 }
 export interface Advice {
@@ -116,6 +122,8 @@ export interface EquipmentProfile {
   mixerProfileId: string;
   ovenType: string;
   ovenTemp: number;
+  ovenRack?: DoughConfig["ovenRack"];
+  bakeSurface?: DoughConfig["bakeSurface"];
   panWidth: number;
   panLength: number;
   createdAt: string;

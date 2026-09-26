@@ -226,14 +226,13 @@ export function bakingDefaults(
   styleId: string,
 ): Pick<
   DoughConfig,
-  "bakeMinutes" | "ovenRack" | "crustBrowning" | "crumbBake"
+  "bakeMinutes" | "ovenRack" | "bakeSurface"
 > {
   if (["napoletana", "contemporanea"].includes(styleId))
     return {
       bakeMinutes: 2,
       ovenRack: "middle",
-      crustBrowning: "golden",
-      crumbBake: "soft",
+      bakeSurface: "biscotto",
     };
   if (
     ["teglia", "focaccia", "detroit", "sfincione", "padellino"].includes(
@@ -243,16 +242,14 @@ export function bakingDefaults(
     return {
       bakeMinutes: styleId === "focaccia" || styleId === "sfincione" ? 25 : 16,
       ovenRack: "lower-middle",
-      crustBrowning: "golden",
-      crumbBake: "soft",
+      bakeSurface: "dark-pan",
     };
   return {
     bakeMinutes: ["romana", "new-york", "tonda-casa"].includes(styleId)
       ? 6
       : 10,
     ovenRack: "upper-middle",
-    crustBrowning: "golden",
-    crumbBake: "balanced",
+    bakeSurface: "stone",
   };
 }
 export function defaultConfig(): DoughConfig {

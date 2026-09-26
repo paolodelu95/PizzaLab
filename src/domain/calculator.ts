@@ -2,6 +2,180 @@ import { styles } from "./styles";
 import { mixerProfiles } from "../data/mixers";
 import type { Advice, DoughConfig, Flour, Stage } from "./types";
 export const MODEL_VERSION = "direct-v1";
+
+export const bakeSurfaceLabels: Record<DoughConfig["bakeSurface"], string> = {
+  biscotto: "Biscotto refrattario",
+  stone: "Pietra refrattaria",
+  steel: "Acciaio",
+  "light-pan": "Teglia chiara",
+  "dark-pan": "Teglia scura",
+  "perforated-pan": "Teglia forata",
+  "cast-iron": "Ghisa",
+};
+
+export interface BakeOutcome {
+  crustScore: number;
+  crumbScore: number;
+  baseScore: number;
+  crustLabel: string;
+  crumbLabel: string;
+  baseLabel: string;
+  recommendedMin: number;
+  recommendedMax: number;
+  summary: string;
+  warnings: string[];
+}
+
+const clampScore = (value: number) => Math.max(0, Math.min(100, value));
+
+function bakeScores(c: DoughConfig, minutes = c.bakeMinutes) {
+  const style = styles.find((item) => item.id === c.styleId) ?? styles[0];
+  const defaults =
+    style.id === "napoletana" || style.id === "contemporanea"
+      ? 2
+      : ["teglia", "padellino", "detroit"].includes(style.id)
+        ? 16
+        : ["focaccia", "sfincione"].includes(style.id)
+          ? 25
+          : ["romana", "new-york", "tonda-casa"].includes(style.id)
+            ? 6
+            : 10;
+  const surfacePower: Record<DoughConfig["bakeSurface"], number> = {
+    biscotto: 0.88,
+    stone: 1,
+    steel: 1.28,
+    "light-pan": 0.9,
+    "dark-pan": 1.13,
+    "perforated-pan": 1.2,
+    "cast-iron": 1.25,
+  };
+  const rackTop: Record<DoughConfig["ovenRack"], number> = {
+    bottom: -10,
+    "lower-middle": -5,
+    middle: 0,
+    "upper-middle": 8,
+    top: 14,
+  };
+  const rackBottom: Record<DoughConfig["ovenRack"], number> = {
+    bottom: 14,
+    "lower-middle": 8,
+    middle: 0,
+    "upper-middle": -7,
+    top: -13,
+  };
+  const thickness = style.pan
+    ? Math.max(0.7, c.panDensity / 0.6)
+    : Math.max(0.72, Math.pow(c.ballWeight / style.ballWeight, 0.6));
+  const exposure =
+    (Math.max(0.08, minutes) / defaults) *
+    Math.exp((c.ovenTemp - style.oven) / 135) /
+    thickness;
+  const heat = Math.log(Math.max(0.08, exposure));
+  const extraWater = c.hydration - style.hydration;
+  const fanBoost = c.ovenType.includes("fan") ? 5 : 0;
+  return {
+    crustScore: clampScore(
+      52 +
+        heat * 35 +
+        rackTop[c.ovenRack] -
+        extraWater * 0.72 +
+        c.sugar * 2.2 +
+        c.malt * 5 +
+        c.oil * 0.45 +
+        fanBoost,
+    ),
+    crumbScore: clampScore(
+      54 + heat * 38 - extraWater * 1.05 + fanBoost * 0.65,
+    ),
+    baseScore: clampScore(
+      51 +
+        Math.log(Math.max(0.08, exposure * surfacePower[c.bakeSurface])) * 38 +
+        rackBottom[c.ovenRack] -
+        extraWater * 0.3,
+    ),
+  };
+}
+
+export function estimateBakeOutcome(c: DoughConfig): BakeOutcome {
+  const scores = bakeScores(c);
+  const crustLabel =
+    scores.crustScore < 28
+      ? "Pallida"
+      : scores.crustScore < 42
+        ? "Chiara"
+        : scores.crustScore < 70
+          ? "Dorata"
+          : scores.crustScore < 84
+            ? "Intensa"
+            : "Rischio bruciatura";
+  const crumbLabel =
+    scores.crumbScore < 27
+      ? "Ancora cruda"
+      : scores.crumbScore < 42
+        ? "Molto umida"
+        : scores.crumbScore < 70
+          ? "Cotta e soffice"
+          : scores.crumbScore < 84
+            ? "Asciutta"
+            : "Troppo asciutta";
+  const baseLabel =
+    scores.baseScore < 30
+      ? "Pallido"
+      : scores.baseScore < 43
+        ? "Poco cotto"
+        : scores.baseScore < 72
+          ? "Dorato"
+          : scores.baseScore < 86
+            ? "Croccante"
+            : "Rischio bruciatura";
+  const candidates: number[] = [];
+  const step = c.ovenTemp >= 350 ? 0.05 : 0.25;
+  for (let time = step; time <= 60; time += step) {
+    const point = bakeScores(c, time);
+    if (
+      point.crustScore >= 42 &&
+      point.crustScore <= 66 &&
+      point.crumbScore >= 42 &&
+      point.crumbScore <= 68 &&
+      point.baseScore >= 40 &&
+      point.baseScore <= 70
+    )
+      candidates.push(time);
+  }
+  const fallback = Math.max(0.5, c.bakeMinutes);
+  const recommendedMin = candidates.length ? candidates[0] : fallback * 0.9;
+  const recommendedMax = candidates.length
+    ? candidates[candidates.length - 1]
+    : fallback * 1.1;
+  const warnings: string[] = [];
+  if (scores.crumbScore < 42)
+    warnings.push("La mollica potrebbe restare umida: aumenta il tempo o riduci lo spessore.");
+  if (scores.crustScore > 83)
+    warnings.push("La superficie può scurire prima che il centro sia pronto: abbassa il ripiano.");
+  if (scores.baseScore > 85)
+    warnings.push("Il fondo rischia di bruciare: riduci il calore dal basso o usa un supporto meno conduttivo.");
+  if (scores.baseScore < 40)
+    warnings.push("Il fondo riceve poco calore: preriscalda bene il supporto o abbassa il ripiano.");
+  const balanced =
+    scores.crustScore >= 42 &&
+    scores.crustScore <= 66 &&
+    scores.crumbScore >= 42 &&
+    scores.crumbScore <= 68 &&
+    scores.baseScore >= 40 &&
+    scores.baseScore <= 70;
+  return {
+    ...scores,
+    crustLabel,
+    crumbLabel,
+    baseLabel,
+    recommendedMin,
+    recommendedMax,
+    summary: balanced
+      ? "Equilibrio previsto: crosta colorita, mollica cotta e fondo ben sviluppato."
+      : "Regola tempo, altezza o supporto finché i tre indicatori entrano nella zona ideale.",
+    warnings,
+  };
+}
 export function validateConfig(c: DoughConfig): string[] {
   const errors: string[] = [];
   const ranges: [keyof DoughConfig, number, number, string][] = [
@@ -68,10 +242,18 @@ export function validateConfig(c: DoughConfig): string[] {
     )
   )
     errors.push("Posizione nel forno non valida.");
-  if (!["light", "golden", "dark"].includes(c.crustBrowning))
-    errors.push("Doratura non valida.");
-  if (!["soft", "balanced", "dry"].includes(c.crumbBake))
-    errors.push("Cottura della mollica non valida.");
+  if (
+    ![
+      "biscotto",
+      "stone",
+      "steel",
+      "light-pan",
+      "dark-pan",
+      "perforated-pan",
+      "cast-iron",
+    ].includes(c.bakeSurface)
+  )
+    errors.push("Supporto di cottura non valido.");
   if (typeof c.autolyse !== "boolean")
     errors.push("Impostazione autolisi non valida.");
   if (c.preferment !== "none") {
@@ -589,6 +771,7 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
   }));
   return {
     ok: true as const,
+    bakeOutcome: estimateBakeOutcome(c),
     total,
     unitWeight,
     flour: flourGrams,
@@ -771,29 +954,20 @@ export function buildTimeline(c: DoughConfig, flours?: Flour[]): Stage[] {
     "upper-middle": "medio-alto",
     top: "più alto",
   };
-  const crustLabels: Record<DoughConfig["crustBrowning"], string> = {
-    light: "chiara",
-    golden: "dorata",
-    dark: "intensa",
-  };
-  const crumbLabels: Record<DoughConfig["crumbBake"], string> = {
-    soft: "soffice e umida",
-    balanced: "cotta ma morbida",
-    dry: "più asciutta e croccante",
-  };
+  const bakeOutcome = estimateBakeOutcome(c);
   stages.push({
     id: "preheat",
     title: "Preriscalda il forno",
     at: new Date(bake - 45 * 60000).toISOString(),
     until: new Date(bake).toISOString(),
-    detail: `Imposta ${c.ovenTemp} °C e prepara il ripiano ${rackLabels[c.ovenRack]}. Circa 45 minuti sono un promemoria: segui le indicazioni del tuo forno e della pietra o dell’acciaio.`,
+    detail: `Imposta ${c.ovenTemp} °C, prepara il ripiano ${rackLabels[c.ovenRack]} e preriscalda bene ${bakeSurfaceLabels[c.bakeSurface].toLowerCase()}. Circa 45 minuti sono un promemoria: segui le indicazioni del tuo forno e del supporto.`,
   });
   stages.push({
     id: "bake",
     title: "Si inforna!",
     at: new Date(bake).toISOString(),
     until: new Date(bake + c.bakeMinutes * 60000).toISOString(),
-    detail: `Cuoci circa ${c.bakeMinutes} min a ${c.ovenTemp} °C sul ripiano ${rackLabels[c.ovenRack]}. Obiettivo: crosta ${crustLabels[c.crustBrowning]} e mollica ${crumbLabels[c.crumbBake]}. ${styles.find((s) => s.id === c.styleId)!.tip}`,
+    detail: `Cuoci circa ${c.bakeMinutes} min a ${c.ovenTemp} °C sul ripiano ${rackLabels[c.ovenRack]}. Previsione: crosta ${bakeOutcome.crustLabel.toLowerCase()}, mollica ${bakeOutcome.crumbLabel.toLowerCase()} e fondo ${bakeOutcome.baseLabel.toLowerCase()}. ${styles.find((s) => s.id === c.styleId)!.tip}`,
   });
   return stages.sort(
     (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),

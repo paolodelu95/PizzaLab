@@ -10,6 +10,9 @@ test("calculate, save, annotate, persist and delete a recipe", async ({
   await page.getByRole("button", { name: "In teglia Da condividere" }).click();
   await page.getByLabel("Larghezza teglia", { exact: true }).fill("30");
   await page.getByLabel("Lunghezza teglia", { exact: true }).fill("40");
+  await page.getByRole("button", { name: /Passa a lievitazione/ }).click();
+  await expect(page.getByRole("button", { name: /^2 Lievitazione/ })).toHaveAttribute("aria-current", "step");
+  await page.getByRole("button", { name: /Passa a cottura/ }).click();
   await page.getByLabel("Nome del piano").fill("Prova teglia");
   await page.getByRole("button", { name: "Salva il piano" }).click();
   await expect(
@@ -244,18 +247,20 @@ test("searches generic flours and compensates an integer yeast dose", async ({
     page.getByText("Dose realmente pesabile", { exact: true }),
   ).toBeVisible();
 });
-test("plans crust browning, crumb and oven height", async ({ page }) => {
+test("predicts crust, crumb and base from the baking setup", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: /^3 Cottura/ }).click();
   await expect(
-    page.getByRole("heading", { name: "Doratura e mollica" }),
+    page.getByRole("heading", { name: "Simulatore di cottura" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Intensa" }).click();
-  await page.getByRole("button", { name: "Soffice", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Risultato previsto" })).toBeVisible();
+  const initialCrust = await page.locator(".prediction-result.crust small").textContent();
   await page.getByRole("button", { name: "Alto", exact: true }).click();
-  await page.getByLabel("Tempo indicativo").fill("7");
-  await expect(page.getByText(/7 min · 450 °C · ripiano alto/)).toBeVisible();
-  await expect(page.getByText(/finitura breve e intensa/)).toBeVisible();
+  await page.getByRole("button", { name: "Acciaio", exact: true }).click();
+  await page.getByLabel("Tempo di cottura").fill("3");
+  await expect(page.getByText(/3 min · 450 °C · ripiano alto/)).toBeVisible();
+  await expect(page.locator(".prediction-result.crust small")).not.toHaveText(initialCrust ?? "");
+  await expect(page.getByText(/Finestra consigliata/)).toBeVisible();
 });
 test("reserves enough room-temperature time for every fold and keeps toppings separate", async ({
   page,

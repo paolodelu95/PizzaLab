@@ -27,7 +27,12 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { catalog } from "./data/catalog";
-import { buildTimeline, calculate, validateConfig } from "./domain/calculator";
+import {
+  bakeSurfaceLabels,
+  buildTimeline,
+  calculate,
+  validateConfig,
+} from "./domain/calculator";
 import {
   bakingDefaults,
   defaultConfig,
@@ -54,6 +59,7 @@ import { ScaleMode, type ScaleItem } from "./components/ScaleMode";
 import { BakingPlanner } from "./components/BakingPlanner";
 import { emptyState, readState, writeState } from "./services/storage";
 import { cancelReminders, scheduleReminders } from "./services/notifications";
+import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
 type Tab = "impasto" | "farine" | "condimenti" | "diario" | "guida";
 type PlannerStage = "dough" | "fermentation" | "baking";
@@ -203,6 +209,14 @@ export default function App() {
       config: normalizeDuration({ ...s.config, ...patch }),
     }));
   }
+  function goToPlannerStage(stage: PlannerStage) {
+    setPlannerStage(stage);
+    requestAnimationFrame(() =>
+      document
+        .getElementById("planner-steps")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+  }
   function changeStyle(id: string) {
     const style = styles.find((s) => s.id === id)!;
     setState((s) => {
@@ -291,6 +305,8 @@ export default function App() {
           mixerProfileId: c.mixerProfileId,
           ovenType: c.ovenType,
           ovenTemp: c.ovenTemp,
+          ovenRack: c.ovenRack,
+          bakeSurface: c.bakeSurface,
           panWidth: c.panWidth,
           panLength: c.panLength,
           createdAt: new Date().toISOString(),
@@ -306,6 +322,8 @@ export default function App() {
       mixerProfileId: p.mixerProfileId,
       ovenType: p.ovenType,
       ovenTemp: p.ovenTemp,
+      ovenRack: p.ovenRack ?? c.ovenRack,
+      bakeSurface: p.bakeSurface ?? c.bakeSurface,
       panWidth: p.panWidth,
       panLength: p.panLength,
     });
@@ -318,7 +336,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.4.1",
+            version: "0.5.0",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -527,7 +545,7 @@ export default function App() {
           }}
         >
           <span className="brand-icon">
-            <Pizza weight="fill" size={25} />
+            <img src={pizzaLabLogo} alt="" />
           </span>
           <span>
             Pizza<span className="brand-amico">Lab</span>
@@ -708,7 +726,7 @@ export default function App() {
                   </button>
                 </div>
               )}
-              <nav className="planner-steps" aria-label="Fasi di progettazione">
+              <nav id="planner-steps" className="planner-steps" aria-label="Fasi di progettazione">
                 {(
                   [
                     ["dough", "1", "Impasto", "Dosi e metodo", Wheat],
@@ -719,14 +737,14 @@ export default function App() {
                       "Tempi e lievito",
                       Clock,
                     ],
-                    ["baking", "3", "Cottura", "Crosta e mollica", Fire],
+                    ["baking", "3", "Cottura", "Anteprima dinamica", Fire],
                   ] as const
                 ).map(([id, number, label, detail, Icon]) => (
                   <button
                     key={id}
                     className={plannerStage === id ? "active" : ""}
                     aria-current={plannerStage === id ? "step" : undefined}
-                    onClick={() => setPlannerStage(id)}
+                    onClick={() => goToPlannerStage(id)}
                   >
                     <span>{number}</span>
                     <Icon />
@@ -1283,6 +1301,33 @@ export default function App() {
                       </div>
                     </section>
                   )}
+                  {plannerStage === "dough" && (
+                    <button className="journey-next" onClick={() => goToPlannerStage("fermentation")}>
+                      <span><small>PASSAGGIO 2</small><strong>Passa a lievitazione</strong></span>
+                      <ArrowRight />
+                    </button>
+                  )}
+                  {plannerStage === "fermentation" && (
+                    <button className="journey-next" onClick={() => goToPlannerStage("baking")}>
+                      <span><small>PASSAGGIO 3</small><strong>Passa a cottura</strong></span>
+                      <ArrowRight />
+                    </button>
+                  )}
+                  {plannerStage === "baking" && (
+                    <section className="panel final-save-panel">
+                      <span className="eyebrow">PIANO COMPLETO</span>
+                      <h2>Pronto per il tuo diario</h2>
+                      <p>Salva dosi, lievitazione e previsione di cottura in un unico piano.</p>
+                      <label className="field recipe-name">
+                        Nome del piano
+                        <input maxLength={80} value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder="Es. La pizza del sabato" />
+                      </label>
+                      <button className="button primary full final-save-button" disabled={loadError || !result.ok} onClick={() => void saveRecipe()}>
+                        <BookmarkSimple /> Salva il piano <ArrowRight />
+                      </button>
+                      <small>Lo ritrovi nel diario, anche offline.</small>
+                    </section>
+                  )}
                 </div>
                 <aside className="recipe-sidebar" id="recipe-summary">
                   <div className="recipe-sheet">
@@ -1417,18 +1462,7 @@ export default function App() {
                             Cottura · {c.bakeMinutes} min a {c.ovenTemp} °C
                           </strong>
                           <span>
-                            Crosta{" "}
-                            {c.crustBrowning === "light"
-                              ? "chiara"
-                              : c.crustBrowning === "golden"
-                                ? "dorata"
-                                : "intensa"}{" "}
-                            · mollica{" "}
-                            {c.crumbBake === "soft"
-                              ? "soffice"
-                              : c.crumbBake === "balanced"
-                                ? "equilibrata"
-                                : "asciutta"}
+                            Crosta {result.bakeOutcome.crustLabel.toLowerCase()} · mollica {result.bakeOutcome.crumbLabel.toLowerCase()} · fondo {result.bakeOutcome.baseLabel.toLowerCase()}
                           </span>
                           <small>
                             Posizione nel forno:{" "}
@@ -1441,7 +1475,7 @@ export default function App() {
                                   : c.ovenRack === "upper-middle"
                                     ? "medio-alta"
                                     : "alta"}
-                            .
+                            {" "}· {bakeSurfaceLabels[c.bakeSurface]}.
                           </small>
                         </div>
                         <div className="total-weight">
@@ -1469,25 +1503,6 @@ export default function App() {
                             <Play /> Guida
                           </button>
                         </div>
-                        <label className="field recipe-name">
-                          Nome del piano
-                          <input
-                            maxLength={80}
-                            value={recipeName}
-                            onChange={(e) => setRecipeName(e.target.value)}
-                            placeholder="Es. La pizza del sabato"
-                          />
-                        </label>
-                        <button
-                          className="button primary full"
-                          disabled={loadError}
-                          onClick={() => void saveRecipe()}
-                        >
-                          <BookmarkSimple /> Salva il piano <ArrowRight />
-                        </button>
-                        <p className="save-hint">
-                          Lo ritrovi nel diario, anche offline.
-                        </p>
                       </>
                     ) : (
                       <div className="notice warning" role="alert">

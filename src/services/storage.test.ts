@@ -17,8 +17,7 @@ describe("storage migrations", () => {
     const {
       bakeMinutes: _a,
       ovenRack: _b,
-      crustBrowning: _c,
-      crumbBake: _d,
+      bakeSurface: _c,
       foldCount: _e,
       foldIntervalMinutes: _f,
       ...legacyConfig
@@ -61,6 +60,7 @@ describe("storage migrations", () => {
     });
     expect(migrated.recipes[0].config.hydration).toBe(68);
     expect(migrated.recipes[0].config.ovenRack).toBe(current.ovenRack);
+    expect(migrated.recipes[0].config.bakeSurface).toBe(current.bakeSurface);
     expect(migrated.activeId).toBe("pizza-attiva");
 
     await writeState(migrated);

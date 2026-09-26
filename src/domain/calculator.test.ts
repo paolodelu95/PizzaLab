@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildTimeline, calculate, validateConfig } from "./calculator";
+import {
+  buildTimeline,
+  calculate,
+  estimateBakeOutcome,
+  validateConfig,
+} from "./calculator";
 import { defaultConfig, styles } from "./styles";
 import type { DoughConfig, Flour } from "./types";
 const flour: Flour = {
@@ -373,6 +378,39 @@ describe("advanced planning", () => {
     expect(r.waterToWeigh + r.starter.water).toBeCloseTo(r.water);
     expect(r.flour + r.water + r.salt + r.oil + r.sugar + r.malt).toBeCloseTo(
       r.total,
+    );
+  });
+});
+
+describe("baking prediction", () => {
+  it("increases crust and crumb cooking as bake time grows", () => {
+    const short = estimateBakeOutcome(config({ bakeMinutes: 1 }));
+    const long = estimateBakeOutcome(config({ bakeMinutes: 3 }));
+    expect(long.crustScore).toBeGreaterThan(short.crustScore);
+    expect(long.crumbScore).toBeGreaterThan(short.crumbScore);
+  });
+
+  it("models rack height and conductive supports independently", () => {
+    const low = estimateBakeOutcome(config({ ovenRack: "bottom" }));
+    const high = estimateBakeOutcome(config({ ovenRack: "top" }));
+    const steel = estimateBakeOutcome(config({ bakeSurface: "steel" }));
+    const stone = estimateBakeOutcome(config({ bakeSurface: "stone" }));
+    expect(high.crustScore).toBeGreaterThan(low.crustScore);
+    expect(low.baseScore).toBeGreaterThan(high.baseScore);
+    expect(steel.baseScore).toBeGreaterThan(stone.baseScore);
+  });
+
+  it("requires more energy to set a more hydrated crumb", () => {
+    const normal = estimateBakeOutcome(config({ hydration: 63 }));
+    const wet = estimateBakeOutcome(config({ hydration: 75 }));
+    expect(wet.crumbScore).toBeLessThan(normal.crumbScore);
+  });
+
+  it("provides an ordered recommended bake window", () => {
+    const prediction = estimateBakeOutcome(config());
+    expect(prediction.recommendedMin).toBeGreaterThan(0);
+    expect(prediction.recommendedMax).toBeGreaterThanOrEqual(
+      prediction.recommendedMin,
     );
   });
 });
