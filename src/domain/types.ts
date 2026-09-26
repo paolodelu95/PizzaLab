@@ -15,7 +15,7 @@ export interface DoughConfig {
   fourthFlourId: string; fourthFlourPercent: number;
   count: number; ballWeight: number; panWidth: number; panLength: number; panDensity: number;
   hydration: number; salt: number; oil: number; sugar: number; malt: number; yeast: 'fresh' | 'instant' | 'sourdough' | 'licoli';
-  yeastMode: 'auto' | 'manual'; manualYeastPercent: number;
+  yeastMode: 'auto' | 'weighable' | 'manual'; manualYeastPercent: number; weighableYeastGrams: number;
   starterPercent: number; starterHydration: number;
   preferment: 'none' | 'poolish' | 'biga'; prefermentPercent: number; prefermentHours: number;
   prefermentTemp: number; prefermentFlourId: string;

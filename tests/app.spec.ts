@@ -26,7 +26,7 @@ test('flour search, source details, custom flour and no overflow',async({page})=
   await page.getByRole('button',{name:'W 260',exact:true}).click();await expect(page.getByRole('link',{name:'Apri la fonte ufficiale'})).toHaveAttribute('href',/pasta-garofalo/);
   await page.getByRole('button',{name:'La tua farina'}).click();await page.getByRole('textbox',{name:'Nome',exact:true}).fill('Farina di prova');await page.getByRole('textbox',{name:'Marchio',exact:true}).fill('Personale');await page.getByRole('button',{name:'Aggiungi al catalogo'}).click();
   await page.getByRole('textbox',{name:'Cerca farina'}).fill('Farina di prova');await expect(page.locator('.flour-row')).toHaveCount(1);
-  await page.getByRole('button',{name:'Usa',exact:true}).click();await expect(page.getByRole('combobox',{name:'La tua farina',exact:true})).toHaveValue(/^custom-/);
+  await page.getByRole('button',{name:'Usa',exact:true}).click();await expect(page.getByRole('button',{name:'La tua farina',exact:true})).toContainText('Farina di prova');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
   await page.screenshot({path:`test-results/planner-${test.info().project.name}.png`,fullPage:true});
 });
@@ -39,9 +39,13 @@ test('invalid fields block saving and hot/weak dough produces warnings',async({p
 test('mixes three flours and shows hydration and yeast charts',async({page})=>{
   await page.goto('/');
   await page.getByText('Ingredienti e miscela fino a quattro farine').click();
-  await page.getByLabel('Seconda farina').selectOption({index:2});
+  await page.getByRole('button',{name:'Seconda farina',exact:true}).click();
+  await page.getByRole('textbox',{name:'Cerca per seconda farina'}).fill('tipo 1');
+  await page.getByRole('button',{name:/Farina generica Tipo 1/}).click();
   await page.getByLabel('Quota seconda farina').fill('25');
-  await page.getByLabel('Terza farina').selectOption({index:3});
+  await page.getByRole('button',{name:'Terza farina',exact:true}).click();
+  await page.getByRole('textbox',{name:'Cerca per terza farina'}).fill('semola rimacinata');
+  await page.getByRole('button',{name:/Farina generica Semola rimacinata/}).click();
   await page.getByLabel('Quota terza farina').fill('20');
   await expect(page.locator('.w-average')).toContainText('W medio indicativo');
   await expect(page.locator('.flour-breakdown > div')).toHaveCount(3);
@@ -56,7 +60,7 @@ test('preferment, water temperature, manual yeast and oven profile work together
   await page.getByRole('button',{name:'Poolish'}).click();
   await expect(page.getByText('al picco',{exact:true})).toBeVisible();
   await expect(page.getByText('Acqua consigliata')).toBeVisible();
-  await page.getByRole('button',{name:'Manuale'}).click();
+  await page.getByRole('button',{name:'Percentuale'}).click();
   await page.getByLabel('Lievito fresco sulla farina').fill('0.12');
   await page.getByLabel('Tipo di forno').selectOption('portable-gas');
   await expect(page.getByLabel('Temperatura effettiva')).toHaveValue('500');
@@ -100,4 +104,17 @@ test('mobile workflow exposes starter, scale, guide, toppings, equipment and res
   await page.getByRole('button',{name:'Chiudi modalità guidata'}).click();
   await page.getByRole('button',{name:'Impara',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Pronto soccorso impasto'})).toBeVisible();
+});
+test('searches generic flours and compensates an integer yeast dose',async({page})=>{
+  await page.goto('/');
+  await page.getByRole('button',{name:'La tua farina',exact:true}).click();
+  await page.getByRole('textbox',{name:'Cerca per la tua farina'}).fill('semola rimacinata');
+  await page.getByRole('button',{name:/Farina generica Semola rimacinata/}).click();
+  await expect(page.getByRole('button',{name:'La tua farina',exact:true})).toContainText('Semola rimacinata');
+  await page.getByRole('button',{name:'Grammi interi'}).click();
+  await page.getByLabel('Lievito fresco da pesare').fill('2');
+  await expect(page.getByText('STIMA AUTOMATICA')).toBeVisible();
+  await expect(page.getByText(/userai 2 g/)).toBeVisible();
+  await page.getByRole('button',{name:'Applica tempi compensati'}).click();
+  await expect(page.getByText('Dose realmente pesabile')).toBeVisible();
 });
