@@ -1,4 +1,4 @@
-package it.pizzamico.app;
+package it.pizzalab.app;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -40,6 +40,7 @@ export function AdvancedPlanner({
     mixerProfiles.find((item) => item.id === c.mixerProfileId) ??
     mixerProfiles[0];
   const naturalStarter = ["sourdough", "licoli"].includes(c.yeast);
+  const minimumFoldMinutes = c.foldCount * c.foldIntervalMinutes;
   const optimizePreferment = () => {
     const target = c.preferment === "biga" ? 16 : 12;
     onUpdate({
@@ -252,6 +253,71 @@ export function AdvancedPlanner({
                   </div>
                 </div>
               </>
+            )}
+          </div>
+
+          <div className="advanced-block folds-block">
+            <div className="advanced-heading">
+              <div>
+                <Timer />
+                <strong>Pieghe di rinforzo</strong>
+              </div>
+              <span>Programmate durante la puntata</span>
+            </div>
+            <div className="field-grid">
+              <NumberField
+                label="Numero di pieghe"
+                value={c.foldCount}
+                onChange={(value) => {
+                  const foldCount = Math.round(value);
+                  onUpdate({
+                    foldCount,
+                    bulkHours: Math.max(
+                      c.bulkHours,
+                      (foldCount * c.foldIntervalMinutes) / 60,
+                    ),
+                  });
+                }}
+                min={0}
+                max={8}
+                step={1}
+              />
+              <NumberField
+                label="Intervallo tra le pieghe"
+                value={c.foldIntervalMinutes}
+                onChange={(foldIntervalMinutes) =>
+                  onUpdate({
+                    foldIntervalMinutes,
+                    bulkHours: Math.max(
+                      c.bulkHours,
+                      (c.foldCount * foldIntervalMinutes) / 60,
+                    ),
+                  })
+                }
+                min={15}
+                max={60}
+                step={5}
+                unit="min"
+              />
+            </div>
+            {c.foldCount > 0 && (
+              <div className="folds-summary">
+                <strong>
+                  Puntata minima: {fmt(minimumFoldMinutes / 60, 2)} ore
+                </strong>
+                <span>
+                  {c.foldCount} {c.foldCount === 1 ? "piega" : "pieghe"} · ai
+                  minuti{" "}
+                  {Array.from(
+                    { length: c.foldCount },
+                    (_, index) => (index + 1) * c.foldIntervalMinutes,
+                  ).join(", ")}
+                </span>
+                <small>
+                  PizzaLab non permette di mettere l’impasto in frigo prima
+                  dell’ultima piega.
+                </small>
+              </div>
             )}
           </div>
 

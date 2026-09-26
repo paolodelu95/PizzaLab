@@ -26,7 +26,7 @@ test("calculate, save, annotate, persist and delete a recipe", async ({
   await expect(page.getByText("Frigo più caldo del piano")).toBeVisible();
   await page.waitForFunction(() =>
     localStorage
-      .getItem("CapacitorStorage.pizzamico-state-v1")
+      .getItem("CapacitorStorage.pizzalab-state-v1")
       ?.includes("Fondo croccante"),
   );
   await page.reload();
@@ -197,8 +197,11 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
   await expect(
     page.getByText(/Le quantità di farina e acqua da pesare/),
   ).toBeVisible();
-  await page.getByRole("button", { name: /^4 Condimenti/ }).click();
+  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Condimento" })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Il tuo impasto", exact: true })
+    .click();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
   await expect(
     page.getByRole("heading", { name: "La tua attrezzatura" }),
@@ -237,7 +240,9 @@ test("searches generic flours and compensates an integer yeast dose", async ({
   await expect(page.getByText("STIMA AUTOMATICA")).toBeVisible();
   await expect(page.getByText(/userai 2 g/)).toBeVisible();
   await page.getByRole("button", { name: "Applica tempi compensati" }).click();
-  await expect(page.getByText("Dose realmente pesabile", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Dose realmente pesabile", { exact: true }),
+  ).toBeVisible();
 });
 test("plans crust browning, crumb and oven height", async ({ page }) => {
   await page.goto("/");
@@ -251,4 +256,27 @@ test("plans crust browning, crumb and oven height", async ({ page }) => {
   await page.getByLabel("Tempo indicativo").fill("7");
   await expect(page.getByText(/7 min · 450 °C · ripiano alto/)).toBeVisible();
   await expect(page.getByText(/finitura breve e intensa/)).toBeVisible();
+});
+test("reserves enough room-temperature time for every fold and keeps toppings separate", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.getByLabel("Puntata fuori frigo", { exact: true }).fill("1");
+  await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await page.getByLabel("Numero di pieghe").fill("3");
+  await expect(page.getByText("Puntata minima: 1,5 ore")).toBeVisible();
+  await expect(page.getByText(/minuti 30, 60, 90/)).toBeVisible();
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  const bulk = page.getByLabel("Puntata fuori frigo", { exact: true });
+  await expect(bulk).toHaveValue("1.5");
+  await bulk.fill("1");
+  await bulk.blur();
+  await expect(bulk).toHaveValue("1.5");
+  await expect(page.getByText("Piega 3 di 3", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Condimenti." }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Condimento" })).toBeVisible();
 });

@@ -292,6 +292,8 @@ export function defaultConfig(): DoughConfig {
     autolyse: false,
     autolyseWaterPercent: 70,
     autolyseMinutes: 30,
+    foldCount: 0,
+    foldIntervalMinutes: 30,
     mixer: "hand",
     mixerProfileId: "generic-planetary",
     flourTemp: 20,

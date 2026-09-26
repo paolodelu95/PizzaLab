@@ -36,6 +36,8 @@ export function validateConfig(c: DoughConfig): string[] {
     ["autolyseMinutes", 10, 60, "Durata autolisi"],
     ["starterPercent", 5, 50, "Dose lievito madre"],
     ["starterHydration", 40, 150, "Idratazione lievito madre"],
+    ["foldCount", 0, 8, "Numero di pieghe"],
+    ["foldIntervalMinutes", 15, 60, "Intervallo tra le pieghe"],
   ];
   for (const [key, min, max, name] of ranges) {
     const n = c[key];
@@ -44,6 +46,8 @@ export function validateConfig(c: DoughConfig): string[] {
   }
   if (!Number.isInteger(c.count))
     errors.push("La quantità deve essere intera.");
+  if (!Number.isInteger(c.foldCount))
+    errors.push("Il numero di pieghe deve essere intero.");
   if (!styles.some((s) => s.id === c.styleId))
     errors.push("Scegli uno stile valido.");
   if (!["fresh", "instant", "sourdough", "licoli"].includes(c.yeast))
@@ -83,6 +87,10 @@ export function validateConfig(c: DoughConfig): string[] {
     );
   if (c.bulkHours + c.coldHours + c.proofHours < 2)
     errors.push("Prevedi almeno 2 ore totali di fermentazione.");
+  if (c.bulkHours * 60 < c.foldCount * c.foldIntervalMinutes)
+    errors.push(
+      `La puntata deve durare almeno ${c.foldCount * c.foldIntervalMinutes} minuti per completare tutte le pieghe.`,
+    );
   if (c.bulkHours + c.proofHours < 1)
     errors.push("Prevedi almeno un’ora complessiva a temperatura ambiente.");
   if (!Number.isFinite(new Date(c.bakeAt).getTime()))
@@ -714,13 +722,30 @@ export function buildTimeline(c: DoughConfig, flours?: Flour[]): Stage[] {
     20 * 60000,
     mixingDetail + machineDetail,
   );
-  if (c.bulkHours > 0)
+  if (c.bulkHours > 0) {
+    const bulkStart = cursor;
     add(
       "bulk",
       "Riposo in massa",
       c.bulkHours * hour,
-      `Copri l’impasto a ${c.roomTemp} °C. Se serve struttura, fai una piega dopo circa 30 minuti. Osserva la crescita.`,
+      c.foldCount > 0
+        ? `Copri l’impasto a ${c.roomTemp} °C. Durante la puntata esegui ${c.foldCount} ${c.foldCount === 1 ? "piega" : "pieghe"}, una ogni ${c.foldIntervalMinutes} minuti, poi lascia rilassare la massa.`
+        : `Copri l’impasto a ${c.roomTemp} °C e osserva la crescita.`,
     );
+    for (let index = 1; index <= c.foldCount; index++) {
+      const foldAt = bulkStart + index * c.foldIntervalMinutes * 60000;
+      stages.push({
+        id: `fold-${index}`,
+        title: `Piega ${index} di ${c.foldCount}`,
+        at: new Date(foldAt).toISOString(),
+        until: new Date(foldAt).toISOString(),
+        detail:
+          index === c.foldCount
+            ? "Esegui l’ultima piega con delicatezza, copri e lascia riposare fino alla fine della puntata."
+            : "Esegui una piega di rinforzo, copri di nuovo l’impasto e attendi il prossimo intervallo.",
+      });
+    }
+  }
   if (c.coldHours > 0)
     add(
       "cold",

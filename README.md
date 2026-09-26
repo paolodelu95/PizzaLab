@@ -31,7 +31,7 @@ Aprire `http://127.0.0.1:5173`. Il browser permette di provare tutti i flussi e 
 
 ## Android
 
-Richiede JDK 21, SDK Android 36 e Build Tools 36.0.0. Minimo Android 7 / API 24. ID applicazione: `it.pizzamico.app`.
+Richiede JDK 21, SDK Android 36 e Build Tools 36.0.0. Minimo Android 7 / API 24. ID applicazione: `it.pizzalab.app`.
 
 ```sh
 npm run android:sync

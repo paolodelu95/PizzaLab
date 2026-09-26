@@ -55,11 +55,12 @@ import { BakingPlanner } from "./components/BakingPlanner";
 import { emptyState, readState, writeState } from "./services/storage";
 import { cancelReminders, scheduleReminders } from "./services/notifications";
 
-type Tab = "impasto" | "farine" | "diario" | "guida";
-type PlannerStage = "dough" | "fermentation" | "baking" | "toppings";
+type Tab = "impasto" | "farine" | "condimenti" | "diario" | "guida";
+type PlannerStage = "dough" | "fermentation" | "baking";
 const nav = [
   { id: "impasto", label: "Il tuo impasto", icon: CookingPot },
   { id: "farine", label: "Farine", icon: Wheat },
+  { id: "condimenti", label: "Condimenti", icon: Pizza },
   { id: "diario", label: "Diario", icon: Notebook },
   { id: "guida", label: "Impara", icon: BookOpen },
 ] as const;
@@ -317,7 +318,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.4.0",
+            version: "0.4.1",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -719,7 +720,6 @@ export default function App() {
                       Clock,
                     ],
                     ["baking", "3", "Cottura", "Crosta e mollica", Fire],
-                    ["toppings", "4", "Condimenti", "Quantità e ordine", Pizza],
                   ] as const
                 ).map(([id, number, label, detail, Icon]) => (
                   <button
@@ -1047,12 +1047,25 @@ export default function App() {
                         <NumberField
                           label="Puntata fuori frigo"
                           value={c.bulkHours}
-                          onChange={(v) => update("bulkHours", v)}
-                          min={0}
+                          onChange={(v) =>
+                            update(
+                              "bulkHours",
+                              Math.max(
+                                v,
+                                (c.foldCount * c.foldIntervalMinutes) / 60,
+                              ),
+                            )
+                          }
+                          min={(c.foldCount * c.foldIntervalMinutes) / 60}
                           max={24}
-                          step={0.5}
+                          step={0.25}
+                          clampToRange
                           unit="ore"
-                          hint="Primo riposo, in massa"
+                          hint={
+                            c.foldCount > 0
+                              ? `Minimo ${fmt((c.foldCount * c.foldIntervalMinutes) / 60, 2)} ore per completare le pieghe`
+                              : "Primo riposo, in massa"
+                          }
                         />
                         <NumberField
                           label="Riposo in frigo"
@@ -1150,7 +1163,7 @@ export default function App() {
                         )}
                     </section>
                   )}
-                  {result.ok && plannerStage !== "toppings" && (
+                  {result.ok && (
                     <AdvancedPlanner
                       config={c}
                       flours={flours}
@@ -1179,9 +1192,6 @@ export default function App() {
                   )}
                   {plannerStage === "baking" && (
                     <BakingPlanner config={c} onUpdate={updateMany} />
-                  )}
-                  {result.ok && plannerStage === "toppings" && (
-                    <ToppingPlanner config={c} result={result} />
                   )}
                   {plannerStage === "fermentation" && (
                     <section className="panel">
@@ -1387,8 +1397,8 @@ export default function App() {
                             </small>
                           </div>
                         )}
-                      {c.preferment !== "none" && (
-                        <div className="phase-note">
+                        {c.preferment !== "none" && (
+                          <div className="phase-note">
                             <strong>
                               {c.preferment} · {result.preferment.maturity}
                             </strong>
@@ -1400,20 +1410,41 @@ export default function App() {
                               {fmt(result.preferment.yeast, 2)} g lievito nel
                               prefermento.
                             </small>
+                          </div>
+                        )}
+                        <div className="phase-note baking-note">
+                          <strong>
+                            Cottura · {c.bakeMinutes} min a {c.ovenTemp} °C
+                          </strong>
+                          <span>
+                            Crosta{" "}
+                            {c.crustBrowning === "light"
+                              ? "chiara"
+                              : c.crustBrowning === "golden"
+                                ? "dorata"
+                                : "intensa"}{" "}
+                            · mollica{" "}
+                            {c.crumbBake === "soft"
+                              ? "soffice"
+                              : c.crumbBake === "balanced"
+                                ? "equilibrata"
+                                : "asciutta"}
+                          </span>
+                          <small>
+                            Posizione nel forno:{" "}
+                            {c.ovenRack === "bottom"
+                              ? "bassa"
+                              : c.ovenRack === "lower-middle"
+                                ? "medio-bassa"
+                                : c.ovenRack === "middle"
+                                  ? "centrale"
+                                  : c.ovenRack === "upper-middle"
+                                    ? "medio-alta"
+                                    : "alta"}
+                            .
+                          </small>
                         </div>
-                      )}
-                      <div className="phase-note baking-note">
-                        <strong>
-                          Cottura · {c.bakeMinutes} min a {c.ovenTemp} °C
-                        </strong>
-                        <span>
-                          Crosta {c.crustBrowning === "light" ? "chiara" : c.crustBrowning === "golden" ? "dorata" : "intensa"} · mollica {c.crumbBake === "soft" ? "soffice" : c.crumbBake === "balanced" ? "equilibrata" : "asciutta"}
-                        </span>
-                        <small>
-                          Posizione nel forno: {c.ovenRack === "bottom" ? "bassa" : c.ovenRack === "lower-middle" ? "medio-bassa" : c.ovenRack === "middle" ? "centrale" : c.ovenRack === "upper-middle" ? "medio-alta" : "alta"}.
-                        </small>
-                      </div>
-                      <div className="total-weight">
+                        <div className="total-weight">
                           <span>Impasto totale</span>
                           <strong>{fmt(result.total)} g</strong>
                         </div>
@@ -1529,6 +1560,43 @@ export default function App() {
                 setMessage("Farina personale aggiunta.");
               }}
             />
+          )}
+          {tab === "condimenti" && (
+            <>
+              <div className="page-heading toppings-heading">
+                <div>
+                  <span className="eyebrow">DOPO L’IMPASTO, IL GUSTO</span>
+                  <h1>Condimenti.</h1>
+                  <p>
+                    Quantità, bilanciamento e ordine di aggiunta in uno spazio
+                    dedicato.
+                  </p>
+                </div>
+                <div className="heading-illustration" aria-hidden="true">
+                  <Pizza weight="duotone" />
+                  <span>
+                    Parti dal tuo stile
+                    <br />e completa la pizza.
+                  </span>
+                </div>
+              </div>
+              {result.ok ? (
+                <div className="standalone-toppings">
+                  <ToppingPlanner config={c} result={result} />
+                </div>
+              ) : (
+                <div className="notice warning">
+                  <Warning />
+                  <div>
+                    <strong>Prima completa l’impasto</strong>
+                    <p>
+                      Le quantità dei condimenti dipendono dal numero e dalla
+                      dimensione delle pizze.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
           {tab === "guida" && (
             <>

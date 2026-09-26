@@ -64,6 +64,8 @@ export interface DoughConfig {
   autolyse: boolean;
   autolyseWaterPercent: number;
   autolyseMinutes: number;
+  foldCount: number;
+  foldIntervalMinutes: number;
   mixer: "hand" | "stand" | "spiral" | "thermomix";
   mixerProfileId: string;
   flourTemp: number;
