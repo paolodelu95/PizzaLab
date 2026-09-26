@@ -265,6 +265,8 @@ test("predicts crust, crumb and base from the baking setup", async ({ page }) =>
 test("offers classic toppings and guides a starter to maturity", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await expect(page.getByLabel("Diametro")).toHaveValue("32");
+  await expect(page.locator(".topping-area")).toContainText("3217 cm²");
   await page.getByLabel("Cerca pizza o ingrediente").fill("diavola");
   await page.getByRole("button", { name: /Diavola/ }).click();
   await expect(page.getByText("Salame piccante", { exact: true })).toBeVisible();
@@ -285,6 +287,24 @@ test("offers classic toppings and guides a starter to maturity", async ({ page }
   await expect(page.getByText("Lievito maturo", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("3/3", { exact: true })).toBeVisible();
   await expect(page.getByText("Dove lo conservi?")).toBeVisible();
+});
+test("scales toppings from round and tray dimensions", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  const tomato = page.locator(".topping-ingredients > div").filter({ hasText: "Pomodoro" });
+  await expect(tomato).toContainText("300 g");
+  await page.getByLabel("Diametro").fill("40");
+  await expect(tomato).toContainText("469 g");
+
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "In teglia Da condividere" }).click();
+  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await expect(page.getByLabel("Larghezza")).toHaveValue("30");
+  await expect(page.getByLabel("Lunghezza")).toHaveValue("40");
+  await page.getByRole("button", { name: "Riduci numero di teglie" }).click();
+  await page.getByRole("button", { name: "Riduci numero di teglie" }).click();
+  await expect(page.locator(".topping-area")).toContainText("2400 cm²");
+  await expect(page.locator(".topping-ingredients > div").filter({ hasText: "Pomodoro" })).toContainText("225 g");
 });
 test("selects gluten-free mixes and manages multiple named starters", async ({ page }) => {
   await page.goto("/");
@@ -335,4 +355,30 @@ test("reserves enough room-temperature time for every fold and keeps toppings se
     page.getByRole("heading", { name: "Condimenti." }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Condimenti classici" })).toBeVisible();
+});
+
+test("stays responsive across small phones, large phones and tablets", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "One viewport matrix is sufficient");
+  const viewports = [
+    { width: 320, height: 700 },
+    { width: 360, height: 780 },
+    { width: 430, height: 900 },
+    { width: 640, height: 900 },
+    { width: 768, height: 1024 },
+    { width: 1024, height: 768 },
+  ];
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    for (const section of ["Farine", "Condimenti", "Lievito madre", "Diario", "Impara"]) {
+      await page.getByRole("button", { name: section, exact: true }).click();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      if (section === "Condimenti" && [320, 768].includes(viewport.width))
+        await page.screenshot({ path: `test-results/responsive-condimenti-${viewport.width}.png`, fullPage: true });
+    }
+    const navBox = await page.locator(".sidebar").boundingBox();
+    expect(navBox).not.toBeNull();
+    expect(navBox!.x).toBeGreaterThanOrEqual(0);
+    expect(navBox!.x + navBox!.width).toBeLessThanOrEqual(viewport.width + 1);
+  }
 });

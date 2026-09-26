@@ -2,6 +2,7 @@ import { CookingPot, MagnifyingGlass, Pizza, Sparkle } from "@phosphor-icons/rea
 import { useMemo, useState } from "react";
 import type { calculate } from "../domain/calculator";
 import type { DoughConfig } from "../domain/types";
+import { NumberField, Stepper } from "./Fields";
 
 type GoodResult = Extract<ReturnType<typeof calculate>, { ok: true }>;
 type Ingredient = { name: string; grams: number; stage?: "prima" | "fine" | "fuori" };
@@ -31,14 +32,26 @@ const presets: Record<string, PizzaPreset> = {
   patate: { name: "Patate e rosmarino", category: "Bianche", description: "Sottile, profumata e croccante.", ingredients: [{ name: "Patate", grams: 95 }, { name: "Fiordilatte", grams: 45 }, { name: "Rosmarino", grams: 1 }, { name: "Olio EVO", grams: 6 }], order: "Affetta le patate sottilissime, sciacquale e asciugale. Non sovrapporle troppo per garantire la cottura." },
 };
 
+const rectangularStyles = new Set(["teglia", "pala", "focaccia", "detroit", "pinsa", "sfincione"]);
+const diameterForStyle = (styleId: string) =>
+  styleId === "padellino" ? 20 : styleId === "new-york" ? 35 : 32;
+
 export function ToppingPlanner({ config, result }: { config: DoughConfig; result: GoodResult }) {
   const [preset, setPreset] = useState("margherita");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Tutte");
+  const [pieces, setPieces] = useState(config.count);
+  const [diameter, setDiameter] = useState(diameterForStyle(config.styleId));
+  const [width, setWidth] = useState(config.panWidth);
+  const [length, setLength] = useState(config.panLength);
   const selected = presets[preset];
-  const scale = result.style.pan
-    ? (config.panWidth * config.panLength * config.count) / 800
-    : config.count * Math.pow(config.ballWeight / 260, 0.65);
+  const rectangular = rectangularStyles.has(config.styleId);
+  const areaPerPiece = rectangular
+    ? width * length
+    : Math.PI * Math.pow(diameter / 2, 2);
+  const referenceArea = rectangular ? 800 : Math.PI * 16 * 16;
+  const totalArea = areaPerPiece * pieces;
+  const scale = totalArea / referenceArea;
   const filtered = useMemo(
     () => Object.entries(presets).filter(([, item]) =>
       (category === "Tutte" || item.category === category) &&
@@ -49,6 +62,15 @@ export function ToppingPlanner({ config, result }: { config: DoughConfig; result
   return (
     <section className="panel topping-planner">
       <div className="panel-title"><span className="section-icon"><CookingPot /></span><div><h2>Condimenti classici</h2><p>Ricette ordinate, grammature adattate e momento giusto per ogni ingrediente.</p></div></div>
+      <section className="topping-size-card">
+        <div className="topping-size-copy"><span className="eyebrow">DIMENSIONE REALE · {result.style.name.toUpperCase()}</span><h3>{rectangular ? "Quanto misura ogni teglia?" : "Quanto è grande ogni pizza?"}</h3><p>Le quantità cambiano in proporzione alla superficie, non soltanto al peso del panetto.</p></div>
+        <div className={`topping-size-fields ${rectangular ? "rectangular" : "round"}`}>
+          {rectangular ? <><NumberField label="Larghezza" value={width} onChange={setWidth} min={10} max={100} step={1} unit="cm" clampToRange /><NumberField label="Lunghezza" value={length} onChange={setLength} min={10} max={150} step={1} unit="cm" clampToRange /></> : <NumberField label="Diametro" value={diameter} onChange={setDiameter} min={15} max={60} step={1} unit="cm" clampToRange />}
+          <Stepper label={rectangular ? "Numero di teglie" : "Numero di pizze"} value={pieces} onChange={setPieces} min={1} max={30} />
+        </div>
+        <div className={`topping-shape ${rectangular ? "rectangle" : "circle"}`} aria-hidden="true"><span>{rectangular ? `${width} × ${length}` : `Ø ${diameter}`}<small>cm</small></span></div>
+        <div className="topping-area"><span>Superficie totale</span><strong>{Math.round(totalArea).toLocaleString("it-IT")} cm²</strong><small>{pieces > 1 ? `${Math.round(areaPerPiece).toLocaleString("it-IT")} cm² ciascuna` : "una pizza o teglia"}</small></div>
+      </section>
       <div className="topping-toolbar">
         <label className="topping-search"><MagnifyingGlass /><input aria-label="Cerca pizza o ingrediente" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cerca Diavola, funghi, bufala…" /></label>
         <div className="topping-categories">{["Tutte", "Classiche", "Rosse", "Bianche", "Vegetariane"].map((item) => <button key={item} className={category === item ? "selected" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div>
@@ -56,11 +78,11 @@ export function ToppingPlanner({ config, result }: { config: DoughConfig; result
       <div className="pizza-preset-grid">{filtered.map(([id, item]) => <button key={id} className={preset === id ? "selected" : ""} onClick={() => setPreset(id)}><Pizza weight={preset === id ? "fill" : "duotone"} /><span><strong>{item.name}</strong><small>{item.description}</small></span></button>)}</div>
       {filtered.length === 0 && <p className="small-muted">Nessuna pizza trovata con questi filtri.</p>}
       <div className="selected-topping-plan">
-        <div className="selected-topping-heading"><div><span className="eyebrow">PIANO CONDIMENTO</span><h3>{selected.name}</h3><p>{selected.description}</p></div><span>{result.style.pan ? `${config.panWidth}×${config.panLength} cm · ${config.count}` : `${config.count} ${config.count === 1 ? "pizza" : "pizze"}`}</span></div>
-        <div className="topping-ingredients">{selected.ingredients.map((ingredient) => <div key={ingredient.name}><span>{ingredient.name}{ingredient.stage === "fine" ? <small>fine cottura</small> : ingredient.stage === "fuori" ? <small>in uscita</small> : null}</span><strong>{Math.max(1, Math.round(ingredient.grams * scale))} g</strong></div>)}</div>
+        <div className="selected-topping-heading"><div><span className="eyebrow">PIANO CONDIMENTO</span><h3>{selected.name}</h3><p>{selected.description}</p></div><span>{rectangular ? `${width}×${length} cm · ${pieces} ${pieces === 1 ? "teglia" : "teglie"}` : `Ø ${diameter} cm · ${pieces} ${pieces === 1 ? "pizza" : "pizze"}`}</span></div>
+        <div className="topping-ingredients">{selected.ingredients.map((ingredient) => { const totalGrams = Math.max(1, Math.round(ingredient.grams * scale)); const eachGrams = Math.max(1, Math.round(totalGrams / pieces)); return <div key={ingredient.name}><span>{ingredient.name}{ingredient.stage === "fine" ? <small>fine cottura</small> : ingredient.stage === "fuori" ? <small>in uscita</small> : null}</span><span className="topping-grams"><strong>{totalGrams} g</strong>{pieces > 1 && <small>{eachGrams} g cad.</small>}</span></div>; })}</div>
         <div className="topping-order"><Sparkle /><div><strong>Ordine consigliato</strong><p>{selected.order}</p></div></div>
       </div>
-      <p className="small-muted">Quantità di partenza: correggile in base a umidità reale, gusto e potenza del forno. Ingredienti molto acquosi o pesanti possono allungare la cottura della mollica.</p>
+      <p className="small-muted">Le grammature mostrate sono totali per la superficie selezionata; “cad.” indica la dose per singola pizza o teglia. Correggile in base a umidità reale, gusto e potenza del forno.</p>
     </section>
   );
 }
