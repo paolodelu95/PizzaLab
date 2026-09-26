@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">PizzAmico</string>
-    <string name="title_activity_main">PizzAmico</string>
+    <string name="app_name">PizzaLab</string>
+    <string name="title_activity_main">PizzaLab</string>
     <string name="package_name">it.pizzamico.app</string>
     <string name="custom_url_scheme">it.pizzamico.app</string>
 </resources>

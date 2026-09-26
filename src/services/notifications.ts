@@ -17,7 +17,7 @@ export async function scheduleReminders(recipe: Recipe): Promise<string> {
   await LocalNotifications.createChannel({ id: CHANNEL, name: 'Il tuo impasto', description: 'Promemoria per ogni fase della pizza', importance: 4, visibility: 1, vibration: true });
   await cancelReminders();
   await LocalNotifications.schedule({ notifications: stages.map((stage,index) => ({
-    id: 1000+index, title: `PizzAmico · ${stage.title}`, body: stage.detail,
+    id: 1000+index, title: `PizzaLab · ${stage.title}`, body: stage.detail,
     channelId: CHANNEL, isExactNotification: false, schedule: { at: new Date(stage.at), allowWhileIdle: true }, extra: { recipeId: recipe.id },
   })) });
   return `${stages.length} promemoria programmati. Android può ritardarli in base al risparmio energetico; gli orari restano visibili nel piano.`;

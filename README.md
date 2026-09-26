@@ -1,4 +1,4 @@
-# PizzAmico
+# PizzaLab
 
 Companion Android in italiano per la pizza fatta in casa. Interfaccia React/TypeScript, motore di calcolo indipendente e contenitore Android Capacitor. Nessun backend, account o servizio di AI necessario durante l'uso: catalogo e applicazione sono inclusi nel pacchetto Android.
 

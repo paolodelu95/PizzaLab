@@ -23,7 +23,7 @@ await mkdir('.cache/sources', { recursive: true });
 const cachePath = url => `.cache/sources/${Buffer.from(url).toString('base64url')}.html`;
 async function fetchPage(url) {
   try { return await readFile(cachePath(url), 'utf8'); } catch { /* first download */ }
-  const r = await fetch(url, { signal: AbortSignal.timeout(30000), headers: { 'User-Agent': 'PizzAmico/0.1 (product data research)' } });
+  const r = await fetch(url, { signal: AbortSignal.timeout(30000), headers: { 'User-Agent': 'PizzaLab/0.4 (product data research)' } });
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   const html = await r.text();
   await writeFile(cachePath(url), html);
