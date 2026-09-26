@@ -213,7 +213,7 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
   await expect(page.getByText("Modalità bilancia")).toBeVisible();
   await page.getByRole("button", { name: "Chiudi modalità bilancia" }).click();
   await page.getByRole("button", { name: "Guida" }).click();
-  await expect(page.getByText("MODALITÀ GUIDATA")).toBeVisible();
+  await expect(page.getByText("MODALITÀ MANI IN PASTA")).toBeVisible();
   await expect(page.getByText("Come sta andando?")).toBeVisible();
   await page.getByRole("button", { name: "Chiudi modalità guidata" }).click();
   await page.getByRole("button", { name: "Impara", exact: true }).click();
@@ -269,10 +269,10 @@ test("offers classic toppings and guides a starter to maturity", async ({ page }
   await expect(page.locator(".topping-area")).toContainText("3217 cm²");
   await page.getByLabel("Cerca pizza o ingrediente").fill("diavola");
   await page.getByRole("button", { name: /Diavola/ }).click();
-  await expect(page.getByText("Salame piccante", { exact: true })).toBeVisible();
+  await expect(page.locator(".topping-ingredients").getByText("Salame piccante", { exact: true })).toBeVisible();
   await page.getByLabel("Cerca pizza o ingrediente").fill("formaggi");
   await page.getByRole("button", { name: /4 formaggi/ }).click();
-  await expect(page.getByText("Gorgonzola", { exact: true })).toBeVisible();
+  await expect(page.locator(".topping-ingredients").getByText("Gorgonzola", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Lievito madre", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Coltiva il tuo lievito madre." })).toBeVisible();
@@ -381,4 +381,44 @@ test("stays responsive across small phones, large phones and tablets", async ({ 
     expect(navBox!.x).toBeGreaterThanOrEqual(0);
     expect(navBox!.x + navBox!.width).toBeLessThanOrEqual(viewport.width + 1);
   }
+});
+
+test("links a named starter, toppings, shopping, live checks and oven calibration", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Lievito madre", exact: true }).click();
+  await page.getByLabel("Come vuoi chiamarlo?").fill("Levain sabato");
+  await page.locator(".starter-kind-card").filter({ hasText: "Li.Co.Li." }).getByRole("button", { name: "Ne ho già uno" }).click();
+
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.locator(".temperature-fields select").selectOption("licoli");
+  await page.locator(".starter-link-options").getByRole("button", { name: /Levain sabato/ }).click();
+  await expect(page.getByText("Rinfresco preparatorio", { exact: true })).toBeVisible();
+  await expect(page.getByText("Rinfresca indicativamente", { exact: true })).toBeVisible();
+  await page.getByLabel("Crescita osservata").fill("2.4");
+  await expect(page.getByText("Sta correndo", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Applica la correzione ai tempi" }).click();
+
+  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await page.getByRole("button", { name: /Bufala/ }).click();
+  await page.getByText("Lista della spesa completa", { exact: true }).click();
+  await expect(page.getByText("Impasto + Bufala", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copia lista" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: /^3 Cottura/ }).click();
+  await expect(page.locator(".bake-topping-impact")).toContainText("82% umidità");
+  const calibration = page.locator(".bake-calibration");
+  await calibration.getByLabel("Tempo realmente usato").fill("3");
+  await calibration.getByRole("button", { name: "Umida", exact: true }).click();
+  await calibration.getByRole("button", { name: "Salva risultato reale" }).click();
+  await expect(calibration.getByText("Correzione personale", { exact: false })).toBeVisible();
+  await page.screenshot({ path: `test-results/connected-plan-${test.info().project.name}.png`, fullPage: true });
+
+  await page.getByRole("button", { name: "Guida" }).click();
+  await expect(page.getByText("MODALITÀ MANI IN PASTA", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Tieni acceso lo schermo" }).click();
+  await expect(page.getByRole("button", { name: "Schermo sempre acceso" })).toBeVisible();
+  await page.screenshot({ path: `test-results/hands-free-${test.info().project.name}.png`, fullPage: true });
+  await page.getByRole("button", { name: "Chiudi modalità guidata" }).click();
 });

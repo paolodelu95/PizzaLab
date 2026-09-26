@@ -73,6 +73,10 @@ function bakeScores(c: DoughConfig, minutes = c.bakeMinutes) {
   const heat = Math.log(Math.max(0.08, exposure));
   const extraWater = c.hydration - style.hydration;
   const fanBoost = c.ovenType.includes("fan") ? 5 : 0;
+  const toppingLoad = c.toppingLoad ?? 0.22;
+  const toppingMoisture = c.toppingMoisture ?? 50;
+  const toppingPenalty = Math.max(0, toppingLoad - 0.2) * 42;
+  const moisturePenalty = Math.max(0, toppingMoisture - 45) * 0.16;
   return {
     crustScore: clampScore(
       52 +
@@ -82,16 +86,16 @@ function bakeScores(c: DoughConfig, minutes = c.bakeMinutes) {
         c.sugar * 2.2 +
         c.malt * 5 +
         c.oil * 0.45 +
-        fanBoost,
+        fanBoost - moisturePenalty * 0.55,
     ),
     crumbScore: clampScore(
-      54 + heat * 38 - extraWater * 1.05 + fanBoost * 0.65,
+      54 + heat * 38 - extraWater * 1.05 + fanBoost * 0.65 - toppingPenalty - moisturePenalty,
     ),
     baseScore: clampScore(
       51 +
         Math.log(Math.max(0.08, exposure * surfacePower[c.bakeSurface])) * 38 +
         rackBottom[c.ovenRack] -
-        extraWater * 0.3,
+        extraWater * 0.3 - toppingPenalty * 0.35,
     ),
   };
 }
@@ -156,6 +160,10 @@ export function estimateBakeOutcome(c: DoughConfig): BakeOutcome {
     warnings.push("Il fondo rischia di bruciare: riduci il calore dal basso o usa un supporto meno conduttivo.");
   if (scores.baseScore < 40)
     warnings.push("Il fondo riceve poco calore: preriscalda bene il supporto o abbassa il ripiano.");
+  if ((c.toppingMoisture ?? 50) >= 70)
+    warnings.push("Il condimento è molto umido: scola gli ingredienti e valuta mozzarella o verdure a metà cottura.");
+  if ((c.toppingLoad ?? 0.22) >= 0.34)
+    warnings.push("Il carico di condimento è elevato per la superficie: una precottura può aiutare fondo e mollica.");
   const balanced =
     scores.crustScore >= 42 &&
     scores.crustScore <= 66 &&
@@ -210,6 +218,12 @@ export function validateConfig(c: DoughConfig): string[] {
     ["autolyseMinutes", 10, 60, "Durata autolisi"],
     ["starterPercent", 5, 50, "Dose lievito madre"],
     ["starterHydration", 40, 150, "Idratazione lievito madre"],
+    ["pizzaDiameter", 15, 60, "Diametro pizza"],
+    ["toppingCount", 1, 30, "Numero pizze da condire"],
+    ["toppingWidth", 10, 100, "Larghezza condimento"],
+    ["toppingLength", 10, 150, "Lunghezza condimento"],
+    ["toppingLoad", 0.01, 2, "Carico del condimento"],
+    ["toppingMoisture", 0, 100, "Umidità del condimento"],
     ["foldCount", 0, 8, "Numero di pieghe"],
     ["foldIntervalMinutes", 15, 60, "Intervallo tra le pieghe"],
   ];

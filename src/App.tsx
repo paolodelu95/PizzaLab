@@ -65,6 +65,8 @@ import { GuidedMode } from "./components/GuidedMode";
 import { ScaleMode, type ScaleItem } from "./components/ScaleMode";
 import { BakingPlanner } from "./components/BakingPlanner";
 import { SourdoughCare } from "./components/SourdoughCare";
+import { StarterDoughLink } from "./components/StarterDoughLink";
+import { FermentationCheck } from "./components/FermentationCheck";
 import { emptyState, readState, writeState } from "./services/storage";
 import {
   cancelReminders,
@@ -222,7 +224,13 @@ export default function App() {
   function update<K extends keyof DoughConfig>(key: K, value: DoughConfig[K]) {
     setState((s) => ({
       ...s,
-      config: normalizeDuration({ ...s.config, [key]: value }),
+      config: normalizeDuration({
+        ...s.config,
+        [key]: value,
+        ...(key === "count" ? { toppingCount: value as number } : {}),
+        ...(key === "panWidth" ? { toppingWidth: value as number } : {}),
+        ...(key === "panLength" ? { toppingLength: value as number } : {}),
+      }),
     }));
   }
   function updateMany(patch: Partial<DoughConfig>) {
@@ -248,6 +256,10 @@ export default function App() {
         config: normalizeDuration({
           ...s.config,
           styleId: id,
+          pizzaDiameter: id === "padellino" ? 20 : id === "new-york" ? 35 : 32,
+          toppingCount: s.config.count,
+          toppingWidth: s.config.panWidth,
+          toppingLength: s.config.panLength,
           hydration: style.hydration,
           ballWeight: style.ballWeight,
           salt: style.salt,
@@ -358,13 +370,14 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.8.0",
+            version: "0.9.0",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
             equipmentProfiles: state.equipmentProfiles,
             sourdoughProfiles: state.sourdoughProfiles,
             activeSourdoughId: state.activeSourdoughId,
+            bakeCalibrations: state.bakeCalibrations,
           },
           null,
           2,
@@ -408,12 +421,14 @@ export default function App() {
         : data.sourdoughProfile
           ? [data.sourdoughProfile]
           : [];
+      const bakeCalibrations = Array.isArray(data.bakeCalibrations) ? data.bakeCalibrations : [];
       if (
         !recipes.length &&
         !customFlours.length &&
         !savedBlends.length &&
         !equipmentProfiles.length &&
-        !sourdoughProfiles.length
+        !sourdoughProfiles.length &&
+        !bakeCalibrations.length
       )
         throw new Error();
       setState((s) => ({
@@ -448,6 +463,10 @@ export default function App() {
         ],
         activeSourdoughId:
           data.activeSourdoughId ?? sourdoughProfiles[0]?.id ?? s.activeSourdoughId,
+        bakeCalibrations: [
+          ...bakeCalibrations,
+          ...s.bakeCalibrations.filter((old) => !bakeCalibrations.some((item) => item.id === old.id)),
+        ],
       }));
       setMessage(
         `Importazione completata: ${recipes.length} ricette recuperate.`,
@@ -1308,7 +1327,13 @@ export default function App() {
                             currentPercent={result.yeastPercent}
                           />
                         )}
+                      {result.ok && ["sourdough", "licoli"].includes(c.yeast) && (
+                        <StarterDoughLink profiles={state.sourdoughProfiles} config={c} starterGrams={result.starter.grams} onUpdate={updateMany} onManage={() => setTab("madre")} />
+                      )}
                     </section>
+                  )}
+                  {plannerStage === "fermentation" && (
+                    <section className="panel"><FermentationCheck config={c} onUpdate={updateMany} /></section>
                   )}
                   {result.ok && (
                     <AdvancedPlanner
@@ -1338,7 +1363,7 @@ export default function App() {
                     <DoughAnalysis config={c} result={result} />
                   )}
                   {plannerStage === "baking" && (
-                    <BakingPlanner config={c} onUpdate={updateMany} />
+                    <BakingPlanner config={c} onUpdate={updateMany} calibrations={state.bakeCalibrations} onAddCalibration={(calibration) => { setState((s) => ({ ...s, bakeCalibrations: [calibration, ...s.bakeCalibrations].slice(0, 100) })); setMessage("Risultato salvato: la taratura personale è stata aggiornata."); }} />
                   )}
                   {plannerStage === "fermentation" && (
                     <section className="panel">
@@ -1726,7 +1751,7 @@ export default function App() {
               </div>
               {result.ok ? (
                 <div className="standalone-toppings">
-                  <ToppingPlanner config={c} result={result} />
+                  <ToppingPlanner config={c} result={result} onUpdate={updateMany} />
                 </div>
               ) : (
                 <div className="notice warning">

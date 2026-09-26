@@ -1,6 +1,7 @@
-import { Fire, Oven, SquaresFour } from "@phosphor-icons/react";
+import { Fire, Oven, SquaresFour, Target } from "@phosphor-icons/react";
+import { useState } from "react";
 import { bakeSurfaceLabels, estimateBakeOutcome } from "../domain/calculator";
-import type { DoughConfig } from "../domain/types";
+import type { BakeCalibration, DoughConfig } from "../domain/types";
 import { NumberField } from "./Fields";
 
 const rackOptions: [DoughConfig["ovenRack"], string, string][] = [
@@ -29,11 +30,33 @@ const formatTime = (minutes: number) =>
 export function BakingPlanner({
   config: c,
   onUpdate,
+  calibrations,
+  onAddCalibration,
 }: {
   config: DoughConfig;
   onUpdate: (patch: Partial<DoughConfig>) => void;
+  calibrations: BakeCalibration[];
+  onAddCalibration: (calibration: BakeCalibration) => void;
 }) {
+  const [actualMinutes, setActualMinutes] = useState(c.bakeMinutes);
+  const [crust, setCrust] = useState<BakeCalibration["crust"]>("good");
+  const [crumb, setCrumb] = useState<BakeCalibration["crumb"]>("good");
+  const [base, setBase] = useState<BakeCalibration["base"]>("good");
   const outcome = estimateBakeOutcome(c);
+  const exactCalibrations = calibrations.filter((item) => item.ovenType === c.ovenType && item.flourId === c.flourId);
+  const relevantCalibrations = exactCalibrations.length ? exactCalibrations : calibrations.filter((item) => item.ovenType === c.ovenType);
+  const personalDelta = relevantCalibrations.length
+    ? relevantCalibrations.reduce((sum, item) => sum + item.actualMinutes - item.plannedMinutes + (item.crumb === "raw" ? 0.75 : item.crumb === "dry" ? -0.5 : 0), 0) / relevantCalibrations.length
+    : 0;
+  const calibrationHint = relevantCalibrations.some((item) => item.base === "pale")
+    ? "Il fondo tende a restare pallido: prova un ripiano più basso o un supporto più conduttivo."
+    : relevantCalibrations.some((item) => item.base === "dark")
+      ? "Il fondo tende a scurire: alza il ripiano o usa un supporto meno conduttivo."
+      : relevantCalibrations.some((item) => item.crust === "pale")
+        ? "La crosta tende a restare chiara: termina più in alto o con grill controllato."
+        : relevantCalibrations.some((item) => item.crust === "dark")
+          ? "La superficie colora presto: abbassa il ripiano nella prima parte della cottura."
+          : "I risultati registrati sono equilibrati: la correzione riguarda soprattutto il tempo reale.";
   const rack = rackOptions.find(([id]) => id === c.ovenRack)!;
   const chartMax = Math.max(c.bakeMinutes * 1.55, outcome.recommendedMax * 1.25, 2);
   const points = Array.from({ length: 31 }, (_, index) => {
@@ -64,6 +87,7 @@ export function BakingPlanner({
         <NumberField label="Tempo di cottura" value={c.bakeMinutes} onChange={(v) => onUpdate({ bakeMinutes: v })} min={0.5} max={60} step={c.ovenTemp >= 350 ? 0.25 : 1} unit="min" />
       </div>
       <p className="bake-live-time">Tempo effettivo: {formatTime(c.bakeMinutes)}</p>
+      <div className="bake-topping-impact"><span>Condimento collegato</span><strong>{Math.round(c.toppingMoisture)}% umidità · {c.toppingLoad.toLocaleString("it-IT", { maximumFractionDigits: 2 })} g/cm²</strong><small>Il simulatore usa questi valori per mollica e fondo.</small></div>
 
       <div className="bake-choice">
         <span>Altezza nel forno</span>
@@ -130,7 +154,17 @@ export function BakingPlanner({
         <Oven />
         <div><span>{formatTime(c.bakeMinutes)} · {c.ovenTemp} °C · ripiano {rack[1].toLowerCase()}</span><strong>{bakeSurfaceLabels[c.bakeSurface]} · {rack[2]}</strong></div>
       </div>
+      <section className="bake-calibration">
+        <div className="panel-title"><span className="section-icon"><Target /></span><div><h2>Taratura del tuo forno</h2><p>Registra il risultato reale: PizzaLab corregge le prossime previsioni per questo forno e questa farina.</p></div></div>
+        {relevantCalibrations.length > 0 && <><div className="personal-calibration"><Target /><div><span>{relevantCalibrations.length} {relevantCalibrations.length === 1 ? "prova confrontabile" : "prove confrontabili"}</span><strong>Correzione personale {personalDelta >= 0 ? "+" : ""}{personalDelta.toLocaleString("it-IT", { maximumFractionDigits: 1 })} min</strong><small>{exactCalibrations.length ? "Stesso forno e stessa farina" : "Basata sullo stesso forno"}</small></div><button className="button secondary" onClick={() => onUpdate({ bakeMinutes: Math.max(0.5, Math.min(60, c.bakeMinutes + personalDelta)) })}>Applica</button></div><p className="calibration-hint">{calibrationHint}</p></>}
+        <div className="calibration-form"><NumberField label="Tempo realmente usato" value={actualMinutes} onChange={setActualMinutes} min={0.5} max={60} step={c.ovenTemp >= 350 ? 0.25 : 1} unit="min" /><CalibrationChoice label="Crosta" value={crust} options={[["pale", "Pallida"], ["good", "Giusta"], ["dark", "Scura"]]} onChange={setCrust} /><CalibrationChoice label="Mollica" value={crumb} options={[["raw", "Umida"], ["good", "Giusta"], ["dry", "Asciutta"]]} onChange={setCrumb} /><CalibrationChoice label="Fondo" value={base} options={[["pale", "Pallido"], ["good", "Giusto"], ["dark", "Scuro"]]} onChange={setBase} /></div>
+        <button className="button primary full" onClick={() => onAddCalibration({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), ovenType: c.ovenType, flourId: c.flourId, plannedMinutes: c.bakeMinutes, actualMinutes, crust, crumb, base })}>Salva risultato reale</button>
+      </section>
       <small className="baking-disclaimer">Stima comparativa basata su stile, idratazione, spessore, temperatura, tempo, posizione e supporto. Condimenti, temperatura reale e forno specifico possono cambiare il risultato.</small>
     </section>
   );
+}
+
+function CalibrationChoice<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (value: T) => void }) {
+  return <div className="calibration-choice"><span>{label}</span><div>{options.map(([id, text]) => <button key={id} className={value === id ? "selected" : ""} onClick={() => onChange(id)}>{text}</button>)}</div></div>;
 }

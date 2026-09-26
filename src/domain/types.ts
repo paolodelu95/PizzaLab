@@ -57,6 +57,7 @@ export interface DoughConfig {
   weighableYeastGrams: number;
   starterPercent: number;
   starterHydration: number;
+  sourdoughProfileId: string;
   preferment: "none" | "poolish" | "biga";
   prefermentPercent: number;
   prefermentHours: number;
@@ -89,6 +90,13 @@ export interface DoughConfig {
     | "dark-pan"
     | "perforated-pan"
     | "cast-iron";
+  pizzaDiameter: number;
+  toppingCount: number;
+  toppingWidth: number;
+  toppingLength: number;
+  toppingPresetId: string;
+  toppingLoad: number;
+  toppingMoisture: number;
   bakeAt: string;
 }
 export interface Advice {
@@ -169,6 +177,17 @@ export interface SourdoughProfile {
   remindersEnabled: boolean;
   feedings: StarterFeeding[];
 }
+export interface BakeCalibration {
+  id: string;
+  createdAt: string;
+  ovenType: string;
+  flourId: string;
+  plannedMinutes: number;
+  actualMinutes: number;
+  crust: "pale" | "good" | "dark";
+  crumb: "raw" | "good" | "dry";
+  base: "pale" | "good" | "dark";
+}
 export interface StoredState {
   version: 1;
   config: DoughConfig;
@@ -179,4 +198,5 @@ export interface StoredState {
   equipmentProfiles: EquipmentProfile[];
   sourdoughProfiles: SourdoughProfile[];
   activeSourdoughId: string | null;
+  bakeCalibrations: BakeCalibration[];
 }

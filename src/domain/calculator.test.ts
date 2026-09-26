@@ -412,6 +412,13 @@ describe("baking prediction", () => {
     expect(wet.crumbScore).toBeLessThan(normal.crumbScore);
   });
 
+  it("accounts for a wetter and heavier topping in crumb prediction", () => {
+    const light = estimateBakeOutcome(config({ toppingLoad: 0.16, toppingMoisture: 35 }));
+    const loaded = estimateBakeOutcome(config({ toppingLoad: 0.5, toppingMoisture: 85 }));
+    expect(loaded.crumbScore).toBeLessThan(light.crumbScore);
+    expect(loaded.warnings.some((warning) => warning.includes("condimento"))).toBe(true);
+  });
+
   it("provides an ordered recommended bake window", () => {
     const prediction = estimateBakeOutcome(config());
     expect(prediction.recommendedMin).toBeGreaterThan(0);

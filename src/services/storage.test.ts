@@ -64,6 +64,7 @@ describe("storage migrations", () => {
     expect(migrated.activeId).toBe("pizza-attiva");
     expect(migrated.sourdoughProfiles).toEqual([]);
     expect(migrated.activeSourdoughId).toBeNull();
+    expect(migrated.bakeCalibrations).toEqual([]);
 
     await writeState(migrated);
     expect(preferences.set).toHaveBeenCalledWith(

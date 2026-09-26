@@ -13,6 +13,7 @@ export const emptyState = (): StoredState => ({
   equipmentProfiles: [],
   sourdoughProfiles: [],
   activeSourdoughId: null,
+  bakeCalibrations: [],
 });
 export async function readState(): Promise<StoredState> {
   const { value } = await Preferences.get({ key: KEY });
@@ -30,6 +31,9 @@ export async function readState(): Promise<StoredState> {
     : [];
   parsed.equipmentProfiles = Array.isArray(parsed.equipmentProfiles)
     ? parsed.equipmentProfiles
+    : [];
+  parsed.bakeCalibrations = Array.isArray(parsed.bakeCalibrations)
+    ? parsed.bakeCalibrations
     : [];
   const legacyStarter = (parsed as StoredState & { sourdoughProfile?: StoredState["sourdoughProfiles"][number] }).sourdoughProfile;
   parsed.sourdoughProfiles = Array.isArray(parsed.sourdoughProfiles)
@@ -83,6 +87,13 @@ export async function readState(): Promise<StoredState> {
       typeof p.id === "string" &&
       typeof p.name === "string" &&
       ["hand", "stand", "spiral", "thermomix"].includes(p.mixer),
+  );
+  parsed.bakeCalibrations = parsed.bakeCalibrations.filter(
+    (item) =>
+      item &&
+      typeof item.id === "string" &&
+      Number.isFinite(item.actualMinutes) &&
+      Number.isFinite(item.plannedMinutes),
   );
   parsed.sourdoughProfiles = parsed.sourdoughProfiles.filter(
     (profile) =>
