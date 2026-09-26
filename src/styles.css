@@ -55,7 +55,7 @@ body{background:radial-gradient(circle at 78% 2%,#f1ead8 0,transparent 27rem),li
 .planner-steps{grid-template-columns:repeat(3,1fr)!important}
 .folds-summary{display:grid;gap:5px;margin-top:14px;padding:14px 15px;border-radius:13px;background:#e8f3ef;border-left:3px solid #69bfa7}.folds-summary strong{font-size:12px;color:#1f5d55}.folds-summary span{font-size:10px;color:#476e6a}.folds-summary small{font-size:9px;line-height:1.5;color:#718985}.standalone-toppings{max-width:900px}.standalone-toppings .topping-planner{box-shadow:0 18px 48px #17344712}.toppings-heading .heading-illustration{color:var(--accent)}
 @media(max-width:640px){
-  .sidebar nav{grid-template-columns:repeat(5,1fr)!important}.sidebar nav button span{font-size:7.5px!important}.standalone-toppings{max-width:none}
+  .sidebar nav{grid-template-columns:repeat(6,1fr)!important}.sidebar nav button span{font-size:7px!important}.standalone-toppings{max-width:none}
   :root{--mobile-gutter:16px}
   body{background:#f4f6f1}
   .app-shell{padding-bottom:calc(76px + env(safe-area-inset-bottom))}

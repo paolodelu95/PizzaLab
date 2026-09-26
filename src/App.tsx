@@ -12,6 +12,7 @@ import {
   Drop,
   Fire,
   Info,
+  Jar,
   Leaf,
   Notebook,
   Pizza,
@@ -39,7 +40,13 @@ import {
   localDateTime,
   styles,
 } from "./domain/styles";
-import type { DoughConfig, Flour, Recipe, StoredState } from "./domain/types";
+import type {
+  DoughConfig,
+  Flour,
+  Recipe,
+  StarterFeeding,
+  StoredState,
+} from "./domain/types";
 import { NumberField, Stepper } from "./components/Fields";
 import { FlourPicker } from "./components/FlourPicker";
 import { FlourLibrary } from "./components/FlourLibrary";
@@ -57,16 +64,28 @@ import { EquipmentProfiles } from "./components/EquipmentProfiles";
 import { GuidedMode } from "./components/GuidedMode";
 import { ScaleMode, type ScaleItem } from "./components/ScaleMode";
 import { BakingPlanner } from "./components/BakingPlanner";
+import { SourdoughCare } from "./components/SourdoughCare";
 import { emptyState, readState, writeState } from "./services/storage";
-import { cancelReminders, scheduleReminders } from "./services/notifications";
+import {
+  cancelReminders,
+  cancelStarterReminders,
+  scheduleReminders,
+  scheduleStarterReminders,
+} from "./services/notifications";
+import {
+  addStarterFeeding,
+  createStarterProfile,
+  nextStarterFeedAt,
+} from "./domain/sourdough";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-type Tab = "impasto" | "farine" | "condimenti" | "diario" | "guida";
+type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida";
 type PlannerStage = "dough" | "fermentation" | "baking";
 const nav = [
   { id: "impasto", label: "Il tuo impasto", icon: CookingPot },
   { id: "farine", label: "Farine", icon: Wheat },
   { id: "condimenti", label: "Condimenti", icon: Pizza },
+  { id: "madre", label: "Lievito madre", icon: Jar },
   { id: "diario", label: "Diario", icon: Notebook },
   { id: "guida", label: "Impara", icon: BookOpen },
 ] as const;
@@ -336,11 +355,12 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.5.0",
+            version: "0.6.0",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
             equipmentProfiles: state.equipmentProfiles,
+            sourdoughProfile: state.sourdoughProfile,
           },
           null,
           2,
@@ -377,11 +397,13 @@ export default function App() {
       const equipmentProfiles = Array.isArray(data.equipmentProfiles)
         ? data.equipmentProfiles
         : [];
+      const sourdoughProfile = data.sourdoughProfile ?? null;
       if (
         !recipes.length &&
         !customFlours.length &&
         !savedBlends.length &&
-        !equipmentProfiles.length
+        !equipmentProfiles.length &&
+        !sourdoughProfile
       )
         throw new Error();
       setState((s) => ({
@@ -408,6 +430,7 @@ export default function App() {
             (old) => !equipmentProfiles.some((p) => p.id === old.id),
           ),
         ],
+        sourdoughProfile: sourdoughProfile ?? s.sourdoughProfile,
       }));
       setMessage(
         `Importazione completata: ${recipes.length} ricette recuperate.`,
@@ -498,6 +521,65 @@ export default function App() {
     } finally {
       setBusy(false);
     }
+  }
+  function startSourdough(kind: "licoli" | "solid", existing: boolean) {
+    const profile = createStarterProfile(kind, existing);
+    setState((s) => ({ ...s, sourdoughProfile: profile }));
+    setMessage(
+      existing
+        ? "Profilo creato: registra tre rinfreschi per valutarne la forza."
+        : "Percorso avviato. Il primo rinfresco è nella tua routine.",
+    );
+  }
+  function changeSourdough(profile: NonNullable<StoredState["sourdoughProfile"]>) {
+    const previous = state.sourdoughProfile;
+    const scheduleChanged =
+      previous?.preferredTime !== profile.preferredTime ||
+      previous?.storage !== profile.storage ||
+      previous?.phase !== profile.phase;
+    const updated = scheduleChanged
+      ? { ...profile, nextFeedAt: nextStarterFeedAt(profile) }
+      : profile;
+    setState((s) => ({ ...s, sourdoughProfile: updated }));
+    if (scheduleChanged && updated.remindersEnabled)
+      void scheduleStarterReminders(updated).catch(() =>
+        setMessage("Routine aggiornata, ma non ho potuto riprogrammare le notifiche."),
+      );
+  }
+  function logStarterFeeding(feeding: StarterFeeding) {
+    if (!state.sourdoughProfile) return;
+    const updated = addStarterFeeding(state.sourdoughProfile, feeding);
+    setState((s) => ({ ...s, sourdoughProfile: updated }));
+    setMessage(
+      updated.phase === "mature" && state.sourdoughProfile.phase !== "mature"
+        ? "Tre crescite efficaci consecutive: il lievito è entrato nella fase matura."
+        : `Rinfresco registrato. Prossimo controllo: ${dateLabel(updated.nextFeedAt)}.`,
+    );
+    if (updated.remindersEnabled)
+      void scheduleStarterReminders(updated).catch(() =>
+        setMessage("Rinfresco salvato, ma non ho potuto aggiornare le notifiche."),
+      );
+  }
+  async function enableStarterReminders() {
+    if (!state.sourdoughProfile) return;
+    try {
+      const profile = { ...state.sourdoughProfile, remindersEnabled: true };
+      const note = await scheduleStarterReminders(profile);
+      setState((s) => ({ ...s, sourdoughProfile: profile }));
+      setMessage(note);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Non riesco ad attivare i promemoria.");
+    }
+  }
+  async function disableStarterReminders() {
+    await cancelStarterReminders();
+    setState((s) => ({
+      ...s,
+      sourdoughProfile: s.sourdoughProfile
+        ? { ...s.sourdoughProfile, remindersEnabled: false }
+        : null,
+    }));
+    setMessage("Promemoria del lievito madre disattivati.");
   }
   async function deleteRecipe(id: string) {
     setBusy(true);
@@ -1612,6 +1694,17 @@ export default function App() {
                 </div>
               )}
             </>
+          )}
+          {tab === "madre" && (
+            <SourdoughCare
+              profile={state.sourdoughProfile}
+              now={now}
+              onStart={startSourdough}
+              onChange={changeSourdough}
+              onLog={logStarterFeeding}
+              onSchedule={() => void enableStarterReminders()}
+              onDisableReminders={() => void disableStarterReminders()}
+            />
           )}
           {tab === "guida" && (
             <>

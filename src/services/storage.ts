@@ -11,6 +11,7 @@ export const emptyState = (): StoredState => ({
   customFlours: [],
   savedBlends: [],
   equipmentProfiles: [],
+  sourdoughProfile: null,
 });
 export async function readState(): Promise<StoredState> {
   const { value } = await Preferences.get({ key: KEY });
@@ -29,6 +30,7 @@ export async function readState(): Promise<StoredState> {
   parsed.equipmentProfiles = Array.isArray(parsed.equipmentProfiles)
     ? parsed.equipmentProfiles
     : [];
+  parsed.sourdoughProfile = parsed.sourdoughProfile ?? null;
   // Keep plans created by versions that supported two flours only.
   parsed.config = { ...defaultConfig(), ...parsed.config };
   parsed.recipes = parsed.recipes.map((recipe) =>
@@ -75,6 +77,12 @@ export async function readState(): Promise<StoredState> {
       typeof p.name === "string" &&
       ["hand", "stand", "spiral", "thermomix"].includes(p.mixer),
   );
+  if (
+    parsed.sourdoughProfile &&
+    (!['licoli', 'solid'].includes(parsed.sourdoughProfile.kind) ||
+      !Array.isArray(parsed.sourdoughProfile.feedings))
+  )
+    parsed.sourdoughProfile = null;
   if (!parsed.recipes.some((r) => r.id === parsed.activeId))
     parsed.activeId = null;
   return parsed;

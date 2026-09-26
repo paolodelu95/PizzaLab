@@ -62,6 +62,7 @@ describe("storage migrations", () => {
     expect(migrated.recipes[0].config.ovenRack).toBe(current.ovenRack);
     expect(migrated.recipes[0].config.bakeSurface).toBe(current.bakeSurface);
     expect(migrated.activeId).toBe("pizza-attiva");
+    expect(migrated.sourdoughProfile).toBeNull();
 
     await writeState(migrated);
     expect(preferences.set).toHaveBeenCalledWith(

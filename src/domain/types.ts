@@ -139,6 +139,34 @@ export interface Recipe {
   temperatureReadings?: TemperatureReading[];
   favorite?: boolean;
 }
+export interface StarterFeeding {
+  id: string;
+  at: string;
+  starterGrams: number;
+  flourGrams: number;
+  waterGrams: number;
+  temperature: number;
+  rise: number;
+  peakHours: number;
+  notes: string;
+}
+export interface SourdoughProfile {
+  name: string;
+  kind: "licoli" | "solid";
+  phase: "creating" | "strengthening" | "mature";
+  storage: "room" | "fridge";
+  startedAt: string;
+  lastFedAt: string | null;
+  nextFeedAt: string;
+  preferredTime: string;
+  starterGrams: number;
+  flourName: string;
+  temperature: number;
+  feedRatio: 1 | 2 | 4;
+  readyStreak: number;
+  remindersEnabled: boolean;
+  feedings: StarterFeeding[];
+}
 export interface StoredState {
   version: 1;
   config: DoughConfig;
@@ -147,4 +175,5 @@ export interface StoredState {
   customFlours: Flour[];
   savedBlends: FlourBlend[];
   equipmentProfiles: EquipmentProfile[];
+  sourdoughProfile: SourdoughProfile | null;
 }

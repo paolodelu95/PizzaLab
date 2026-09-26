@@ -201,7 +201,7 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
     page.getByText(/Le quantità di farina e acqua da pesare/),
   ).toBeVisible();
   await page.getByRole("button", { name: "Condimenti", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Condimento" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Condimenti classici" })).toBeVisible();
   await page
     .getByRole("button", { name: "Il tuo impasto", exact: true })
     .click();
@@ -262,6 +262,30 @@ test("predicts crust, crumb and base from the baking setup", async ({ page }) =>
   await expect(page.locator(".prediction-result.crust small")).not.toHaveText(initialCrust ?? "");
   await expect(page.getByText(/Finestra consigliata/)).toBeVisible();
 });
+test("offers classic toppings and guides a starter to maturity", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await page.getByLabel("Cerca pizza o ingrediente").fill("diavola");
+  await page.getByRole("button", { name: /Diavola/ }).click();
+  await expect(page.getByText("Salame piccante", { exact: true })).toBeVisible();
+  await page.getByLabel("Cerca pizza o ingrediente").fill("formaggi");
+  await page.getByRole("button", { name: /4 formaggi/ }).click();
+  await expect(page.getByText("Gorgonzola", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Lievito madre", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Coltiva il tuo lievito madre." })).toBeVisible();
+  const liquidCard = page.locator(".starter-kind-card").filter({ hasText: "Li.Co.Li." });
+  await liquidCard.getByRole("button", { name: "Ne ho già uno" }).click();
+  await expect(page.getByText("Consolidamento", { exact: true }).first()).toBeVisible();
+  await page.getByLabel("Ora preferita").fill("09:30");
+  await page.getByRole("button", { name: /Attiva promemoria/ }).click();
+  await expect(page.getByRole("status")).toContainText("Promemoria salvati");
+  for (let index = 0; index < 3; index += 1)
+    await page.getByRole("button", { name: /Rinfresco fatto/ }).click();
+  await expect(page.getByText("Lievito maturo", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("3/3", { exact: true })).toBeVisible();
+  await expect(page.getByText("Dove lo conservi?")).toBeVisible();
+});
 test("reserves enough room-temperature time for every fold and keeps toppings separate", async ({
   page,
 }) => {
@@ -283,5 +307,5 @@ test("reserves enough room-temperature time for every fold and keeps toppings se
   await expect(
     page.getByRole("heading", { name: "Condimenti." }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Condimento" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Condimenti classici" })).toBeVisible();
 });
