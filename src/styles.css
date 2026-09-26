@@ -29,6 +29,7 @@ body{background:radial-gradient(circle at 78% 2%,#f1ead8 0,transparent 27rem),li
 .panel{border-radius:18px;border-color:#e1e7de;box-shadow:0 12px 36px #25462f09;background:#fffefa}
 .section-icon{background:linear-gradient(145deg,#edf4e7,#e2eddd);border:1px solid #dbe8d4}
 .field input:not([type=checkbox]),.field select,.field textarea,.catalog-filters select{border-radius:10px;background:#fff;border-color:#dce5da;transition:border-color .15s,box-shadow .15s}
+.flour-avatar.gluten-free{color:#236d63;background:#dff2ec;box-shadow:inset 0 0 0 1px #b9ded3}
 .field input:focus,.field select:focus,.field textarea:focus{outline:0;border-color:#7c9b70;box-shadow:0 0 0 3px #90aa7d24}
 .method-toggle{border:1px solid #e5eae1;background:#f2f5ef;border-radius:12px}
 .method-toggle button{border-radius:8px}.method-toggle button.selected{box-shadow:0 3px 10px #34533a12}

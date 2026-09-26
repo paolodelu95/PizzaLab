@@ -697,6 +697,21 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       "Farina o miscela speciale",
       "Semola, farro, riso e miscele non si comportano come una normale farina di grano tenero. Verifica la confezione e inseriscile gradualmente in miscela finché non conosci assorbimento e tenuta.",
     );
+  const glutenFreeShares = activeFlours.filter((item) => item.flour.glutenFree);
+  if (glutenFreeShares.length)
+    add(
+      "gluten-free",
+      "warning",
+      "Impasto senza glutine: usa la confezione come riferimento",
+      "Il W non descrive queste miscele e l’idratazione può essere molto diversa. Il calcolatore determina le grammature totali, ma dosi d’acqua, riposi e leganti vanno adattati alle istruzioni del produttore.",
+    );
+  if (glutenFreeShares.length && glutenFreeShares.length !== activeFlours.length)
+    add(
+      "gluten-cross-contact",
+      "error",
+      "Miscela non adatta alla celiachia",
+      "Hai combinato farine senza glutine e farine di frumento. Per un impasto destinato a una persona celiaca usa solo prodotti certificati e attrezzature non contaminate.",
+    );
   const score = (value: number) =>
     Math.round(Math.max(0, Math.min(100, value)));
   const hydrationCenter =

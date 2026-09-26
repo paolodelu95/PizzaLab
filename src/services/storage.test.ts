@@ -62,7 +62,8 @@ describe("storage migrations", () => {
     expect(migrated.recipes[0].config.ovenRack).toBe(current.ovenRack);
     expect(migrated.recipes[0].config.bakeSurface).toBe(current.bakeSurface);
     expect(migrated.activeId).toBe("pizza-attiva");
-    expect(migrated.sourdoughProfile).toBeNull();
+    expect(migrated.sourdoughProfiles).toEqual([]);
+    expect(migrated.activeSourdoughId).toBeNull();
 
     await writeState(migrated);
     expect(preferences.set).toHaveBeenCalledWith(
@@ -72,4 +73,47 @@ describe("storage migrations", () => {
     expect(persisted.recipes[0].name).toBe("Sabato sera");
     expect(persisted.activeId).toBe("pizza-attiva");
   });
+
+  it("migrates the single saved starter into the multi-starter archive", async () => {
+    const legacyState = {
+      ...emptyLegacyState(),
+      sourdoughProfile: {
+        id: "starter-uno",
+        name: "Gino",
+        kind: "licoli",
+        phase: "strengthening",
+        storage: "room",
+        startedAt: "2026-09-20T08:00:00.000Z",
+        lastFedAt: null,
+        nextFeedAt: "2026-09-27T08:00:00.000Z",
+        preferredTime: "08:00",
+        starterGrams: 30,
+        flourName: "Farina forte",
+        temperature: 24,
+        feedRatio: 1,
+        readyStreak: 0,
+        remindersEnabled: false,
+        feedings: [],
+      },
+    };
+    preferences.get.mockResolvedValue({ value: JSON.stringify(legacyState) });
+
+    const migrated = await readState();
+
+    expect(migrated.sourdoughProfiles).toHaveLength(1);
+    expect(migrated.sourdoughProfiles[0].name).toBe("Gino");
+    expect(migrated.activeSourdoughId).toBe("starter-uno");
+  });
 });
+
+function emptyLegacyState() {
+  return {
+    version: 1,
+    config: defaultConfig(),
+    recipes: [],
+    activeId: null,
+    customFlours: [],
+    savedBlends: [],
+    equipmentProfiles: [],
+  };
+}

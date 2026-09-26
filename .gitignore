@@ -14,3 +14,4 @@ test-results/
 *.keystore
 artifacts/*.apk
 *.apk
+.DS_Store

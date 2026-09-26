@@ -29,6 +29,7 @@ const flours = [
   { ...flour, id: "lower", w: [200, 200] as [number, number] },
   { ...flour, id: "unknown", w: null },
   { ...flour, id: "mix", usable: false },
+  { ...flour, id: "gluten-free", name: "Mix pizza", w: null, kind: "blend" as const, glutenFree: true },
 ];
 const config = (patch: Partial<DoughConfig> = {}) => ({
   ...defaultConfig(),
@@ -367,6 +368,11 @@ describe("advanced planning", () => {
     expect(
       r.flourBreakdown.reduce((sum, item) => sum + item.grams, 0),
     ).toBeCloseTo(r.flour);
+  });
+  it("does not apply W assumptions to a gluten-free mix", () => {
+    const r = result({ flourId: "gluten-free" });
+    expect(r.w).toBeNull();
+    expect(r.advice.some((item) => item.id === "gluten-free")).toBe(true);
   });
   it.each([
     { yeast: "licoli" as const, starterHydration: 100 },

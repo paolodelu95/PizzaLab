@@ -286,6 +286,33 @@ test("offers classic toppings and guides a starter to maturity", async ({ page }
   await expect(page.getByText("3/3", { exact: true })).toBeVisible();
   await expect(page.getByText("Dove lo conservi?")).toBeVisible();
 });
+test("selects gluten-free mixes and manages multiple named starters", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Farine", exact: true }).click();
+  await page.getByLabel("Senza glutine", { exact: true }).check();
+  await expect(page.getByText("Mix universale per pizza", { exact: true })).toBeVisible();
+  await expect(page.getByText("Farina di riso", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "La tua farina", exact: true }).click();
+  await page.getByRole("textbox", { name: "Cerca per la tua farina" }).fill("mix universale");
+  await page.getByRole("button", { name: /Mix universale per pizza/ }).click();
+  await expect(page.getByText("Impasto senza glutine: usa la confezione come riferimento")).toBeVisible();
+
+  await page.getByRole("button", { name: "Lievito madre", exact: true }).click();
+  await page.getByLabel("Come vuoi chiamarlo?").fill("Gino");
+  await page.locator(".starter-kind-card").filter({ hasText: "Pasta madre solida" }).getByRole("button", { name: "Ne ho già uno" }).click();
+  await expect(page.getByRole("heading", { name: "Gino" })).toBeVisible();
+  await page.getByRole("button", { name: /Nuovo lievito/ }).click();
+  await page.getByLabel("Come vuoi chiamarlo?").fill("Luna");
+  await page.locator(".starter-kind-card").filter({ hasText: "Li.Co.Li." }).getByRole("button", { name: "Inizia da zero" }).click();
+  await expect(page.getByRole("heading", { name: "Luna" })).toBeVisible();
+  await page.getByRole("button", { name: /Gino Pasta madre solida/ }).click();
+  await page.getByRole("button", { name: "Elimina questo lievito" }).click();
+  await page.getByRole("button", { name: "Elimina definitivamente" }).click();
+  await expect(page.getByRole("heading", { name: "Luna" })).toBeVisible();
+  await expect(page.getByText("1 coltura", { exact: true })).toBeVisible();
+});
 test("reserves enough room-temperature time for every fold and keeps toppings separate", async ({
   page,
 }) => {

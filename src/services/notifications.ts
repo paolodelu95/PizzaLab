@@ -29,8 +29,16 @@ export async function scheduleReminders(recipe: Recipe): Promise<string> {
   return `${stages.length} promemoria programmati. Android può ritardarli in base al risparmio energetico; gli orari restano visibili nel piano.`;
 }
 
-export async function cancelStarterReminders() {
-  await cancelRange(5000, 5999);
+function starterNotificationBase(profileId: string) {
+  let hash = 0;
+  for (const character of profileId) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return 10000 + (hash % 20000) * 32;
+}
+
+export async function cancelStarterReminders(profileId?: string) {
+  if (!profileId) return cancelRange(10000, 649999);
+  const base = starterNotificationBase(profileId);
+  await cancelRange(base, base + 31);
 }
 
 export async function scheduleStarterReminders(profile: SourdoughProfile): Promise<string> {
@@ -47,10 +55,11 @@ export async function scheduleStarterReminders(profile: SourdoughProfile): Promi
     visibility: 1,
     vibration: true,
   });
-  await cancelStarterReminders();
+  await cancelStarterReminders(profile.id);
   const dates = starterReminderDates(profile, profile.storage === 'fridge' ? 8 : 20);
+  const base = starterNotificationBase(profile.id);
   await LocalNotifications.schedule({ notifications: dates.map((at, index) => ({
-    id: 5000 + index,
+    id: base + index,
     title: `PizzaLab · Rinfresca ${profile.name}`,
     body: profile.phase === 'mature' && profile.storage === 'fridge'
       ? 'Togli il lievito dal frigo, osservalo e procedi con il rinfresco settimanale.'
@@ -58,7 +67,7 @@ export async function scheduleStarterReminders(profile: SourdoughProfile): Promi
     channelId: STARTER_CHANNEL,
     isExactNotification: false,
     schedule: { at, allowWhileIdle: true },
-    extra: { section: 'sourdough' },
+    extra: { section: 'sourdough', profileId: profile.id },
   })) });
   return `${dates.length} promemoria del lievito madre programmati. Android può ritardarli leggermente per il risparmio energetico.`;
 }

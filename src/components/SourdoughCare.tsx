@@ -12,6 +12,7 @@ import {
   Snowflake,
   Sparkle,
   Thermometer,
+  Trash,
   Warning,
 } from "@phosphor-icons/react";
 import {
@@ -38,17 +39,23 @@ const formatDate = (value: string) =>
   });
 
 export function SourdoughCare({
+  profiles,
   profile,
   now,
   onStart,
+  onSelect,
+  onDelete,
   onChange,
   onLog,
   onSchedule,
   onDisableReminders,
 }: {
+  profiles: SourdoughProfile[];
   profile: SourdoughProfile | null;
   now: number;
-  onStart: (kind: SourdoughProfile["kind"], existing: boolean) => void;
+  onStart: (kind: SourdoughProfile["kind"], existing: boolean, name: string) => void;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
   onChange: (profile: SourdoughProfile) => void;
   onLog: (feeding: StarterFeeding) => void;
   onSchedule: () => void;
@@ -58,19 +65,32 @@ export function SourdoughCare({
   const [peakHours, setPeakHours] = useState(6);
   const [feedTemp, setFeedTemp] = useState(24);
   const [notes, setNotes] = useState("");
+  const [creatingNew, setCreatingNew] = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (profile) setFeedTemp(profile.temperature);
   }, [profile?.kind]);
 
-  if (!profile)
+  const start = (kind: SourdoughProfile["kind"], existing: boolean) => {
+    onStart(kind, existing, draftName);
+    setCreatingNew(false);
+    setDraftName("");
+  };
+
+  if (!profile || creatingNew)
     return (
       <div className="starter-page">
         <section className="starter-hero starter-onboarding">
           <span className="starter-hero-icon"><Jar weight="duotone" /></span>
           <span className="eyebrow">IL TUO LIEVITO, GIORNO DOPO GIORNO</span>
-          <h1>Coltiva il tuo lievito madre.</h1>
+          <h1>{profiles.length ? "Aggiungi un altro lievito." : "Coltiva il tuo lievito madre."}</h1>
           <p>Un percorso guidato dai primi rinfreschi fino a una coltura stabile, con dosi, osservazioni e promemoria personali.</p>
+        </section>
+        <section className="panel starter-name-card">
+          <label className="field">Come vuoi chiamarlo?<input autoFocus value={draftName} maxLength={40} onChange={(event) => setDraftName(event.target.value)} placeholder="Es. Gino, Madre 2026, Li.Co.Li. pizza" /></label>
+          <p>Potrai cambiare il nome in qualsiasi momento.</p>
         </section>
         <div className="starter-kind-grid">
           {(["licoli", "solid"] as const).map((kind) => (
@@ -79,8 +99,8 @@ export function SourdoughCare({
               <h2>{kind === "licoli" ? "Li.Co.Li." : "Pasta madre solida"}</h2>
               <p>{kind === "licoli" ? "Fluido, semplice da mescolare, idratazione 100%." : "Compatto, tradizionale, idratazione indicativa 50%."}</p>
               <div>
-                <button className="button primary" onClick={() => onStart(kind, false)}>Inizia da zero</button>
-                <button className="button secondary" onClick={() => onStart(kind, true)}>Ne ho già uno</button>
+                <button className="button primary" onClick={() => start(kind, false)}>Inizia da zero</button>
+                <button className="button secondary" onClick={() => start(kind, true)}>Ne ho già uno</button>
               </div>
             </section>
           ))}
@@ -88,6 +108,7 @@ export function SourdoughCare({
         <section className="starter-safety-note">
           <ShieldCheck /><div><strong>Metodo prudente</strong><p>L’app usa peso, crescita, odore e regolarità. Non suggerisce di assaggiare il lievito crudo e segnala quando è più sicuro eliminare la coltura.</p></div>
         </section>
+        {profiles.length > 0 && <button className="button secondary" onClick={() => setCreatingNew(false)}>Annulla e torna ai miei lieviti</button>}
       </div>
     );
 
@@ -115,6 +136,13 @@ export function SourdoughCare({
 
   return (
     <div className="starter-page">
+      <section className="starter-switcher" aria-label="I tuoi lieviti madre">
+        <div><span className="eyebrow">I TUOI LIEVITI</span><strong>{profiles.length} {profiles.length === 1 ? "coltura" : "colture"}</strong></div>
+        <div className="starter-switcher-list">
+          {profiles.map((item) => <button key={item.id} className={item.id === profile.id ? "selected" : ""} onClick={() => { onSelect(item.id); setDeleteConfirm(false); }}><Jar weight={item.id === profile.id ? "fill" : "duotone"} /><span><strong>{item.name}</strong><small>{starterKindLabel(item.kind).split(" · ")[0]}</small></span></button>)}
+          <button className="starter-add" onClick={() => setCreatingNew(true)}><Plus /><span><strong>Nuovo lievito</strong><small>Crea un’altra coltura</small></span></button>
+        </div>
+      </section>
       <section className="starter-hero">
         <div className="starter-hero-top">
           <span className="starter-hero-icon"><Jar weight="duotone" /></span>
@@ -176,6 +204,7 @@ export function SourdoughCare({
             <div className="routine-summary"><Clock /><div><strong>Ogni {interval === 168 ? "7 giorni" : `${interval} ore`}</strong><span>{profile.phase === "mature" && profile.storage === "fridge" ? "Mantenimento settimanale" : "Rinfresco a temperatura ambiente"}</span></div></div>
             {profile.remindersEnabled ? <button className="button secondary full" onClick={onDisableReminders}>Disattiva promemoria</button> : <button className="button primary full" onClick={onSchedule}><BellRinging /> Attiva promemoria</button>}
             <small>Gli orari sono promemoria: se il lievito è ancora in piena crescita, osserva il picco prima di intervenire.</small>
+            {!deleteConfirm ? <button className="starter-delete" onClick={() => setDeleteConfirm(true)}><Trash /> Elimina questo lievito</button> : <div className="starter-delete-confirm"><strong>Eliminare “{profile.name}”?</strong><p>Il diario e i promemoria di questa coltura verranno rimossi.</p><div><button className="button secondary" onClick={() => setDeleteConfirm(false)}>Annulla</button><button className="button danger" onClick={() => { onDelete(profile.id); setDeleteConfirm(false); }}>Elimina definitivamente</button></div></div>}
           </section>
 
           <section className="panel starter-roadmap">

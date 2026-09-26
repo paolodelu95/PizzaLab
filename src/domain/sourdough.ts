@@ -65,9 +65,11 @@ export function createStarterProfile(
   kind: SourdoughProfile["kind"],
   existing = false,
   now = new Date(),
+  name?: string,
 ): SourdoughProfile {
   const profile: SourdoughProfile = {
-    name: kind === "licoli" ? "Il mio Li.Co.Li." : "La mia pasta madre",
+    id: crypto.randomUUID(),
+    name: name?.trim() || (kind === "licoli" ? "Il mio Li.Co.Li." : "La mia pasta madre"),
     kind,
     phase: existing ? "strengthening" : "creating",
     storage: "room",

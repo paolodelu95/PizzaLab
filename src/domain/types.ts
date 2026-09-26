@@ -10,6 +10,7 @@ export interface Flour {
   source: string;
   checkedAt: string;
   kind: "wheat" | "blend" | "other";
+  glutenFree?: boolean;
   usable: boolean;
   note: string;
 }
@@ -151,6 +152,7 @@ export interface StarterFeeding {
   notes: string;
 }
 export interface SourdoughProfile {
+  id: string;
   name: string;
   kind: "licoli" | "solid";
   phase: "creating" | "strengthening" | "mature";
@@ -175,5 +177,6 @@ export interface StoredState {
   customFlours: Flour[];
   savedBlends: FlourBlend[];
   equipmentProfiles: EquipmentProfile[];
-  sourdoughProfile: SourdoughProfile | null;
+  sourdoughProfiles: SourdoughProfile[];
+  activeSourdoughId: string | null;
 }

@@ -154,6 +154,9 @@ export default function App() {
     [state.customFlours],
   );
   const c = state.config;
+  const activeSourdough = state.sourdoughProfiles.find(
+    (profile) => profile.id === state.activeSourdoughId,
+  ) ?? null;
   const selectedFlour = flours.find((f) => f.id === c.flourId);
   const result = useMemo(() => calculate(c, flours), [c, flours]);
   const timeline = useMemo(() => buildTimeline(c, flours), [c, flours]);
@@ -355,12 +358,13 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.6.0",
+            version: "0.7.0",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
             equipmentProfiles: state.equipmentProfiles,
-            sourdoughProfile: state.sourdoughProfile,
+            sourdoughProfiles: state.sourdoughProfiles,
+            activeSourdoughId: state.activeSourdoughId,
           },
           null,
           2,
@@ -378,7 +382,9 @@ export default function App() {
   }
   async function importArchive(file: File) {
     try {
-      const data = JSON.parse(await file.text()) as Partial<StoredState>;
+      const data = JSON.parse(await file.text()) as Partial<StoredState> & {
+        sourdoughProfile?: StoredState["sourdoughProfiles"][number];
+      };
       const recipes = Array.isArray(data.recipes)
         ? data.recipes
             .filter(
@@ -397,13 +403,17 @@ export default function App() {
       const equipmentProfiles = Array.isArray(data.equipmentProfiles)
         ? data.equipmentProfiles
         : [];
-      const sourdoughProfile = data.sourdoughProfile ?? null;
+      const sourdoughProfiles = Array.isArray(data.sourdoughProfiles)
+        ? data.sourdoughProfiles
+        : data.sourdoughProfile
+          ? [data.sourdoughProfile]
+          : [];
       if (
         !recipes.length &&
         !customFlours.length &&
         !savedBlends.length &&
         !equipmentProfiles.length &&
-        !sourdoughProfile
+        !sourdoughProfiles.length
       )
         throw new Error();
       setState((s) => ({
@@ -430,7 +440,14 @@ export default function App() {
             (old) => !equipmentProfiles.some((p) => p.id === old.id),
           ),
         ],
-        sourdoughProfile: sourdoughProfile ?? s.sourdoughProfile,
+        sourdoughProfiles: [
+          ...sourdoughProfiles,
+          ...s.sourdoughProfiles.filter(
+            (old) => !sourdoughProfiles.some((profile) => profile.id === old.id),
+          ),
+        ],
+        activeSourdoughId:
+          data.activeSourdoughId ?? sourdoughProfiles[0]?.id ?? s.activeSourdoughId,
       }));
       setMessage(
         `Importazione completata: ${recipes.length} ricette recuperate.`,
@@ -522,17 +539,21 @@ export default function App() {
       setBusy(false);
     }
   }
-  function startSourdough(kind: "licoli" | "solid", existing: boolean) {
-    const profile = createStarterProfile(kind, existing);
-    setState((s) => ({ ...s, sourdoughProfile: profile }));
+  function startSourdough(kind: "licoli" | "solid", existing: boolean, name: string) {
+    const profile = createStarterProfile(kind, existing, new Date(), name);
+    setState((s) => ({
+      ...s,
+      sourdoughProfiles: [...s.sourdoughProfiles, profile],
+      activeSourdoughId: profile.id,
+    }));
     setMessage(
       existing
         ? "Profilo creato: registra tre rinfreschi per valutarne la forza."
         : "Percorso avviato. Il primo rinfresco è nella tua routine.",
     );
   }
-  function changeSourdough(profile: NonNullable<StoredState["sourdoughProfile"]>) {
-    const previous = state.sourdoughProfile;
+  function changeSourdough(profile: StoredState["sourdoughProfiles"][number]) {
+    const previous = state.sourdoughProfiles.find((item) => item.id === profile.id);
     const scheduleChanged =
       previous?.preferredTime !== profile.preferredTime ||
       previous?.storage !== profile.storage ||
@@ -540,18 +561,28 @@ export default function App() {
     const updated = scheduleChanged
       ? { ...profile, nextFeedAt: nextStarterFeedAt(profile) }
       : profile;
-    setState((s) => ({ ...s, sourdoughProfile: updated }));
+    setState((s) => ({
+      ...s,
+      sourdoughProfiles: s.sourdoughProfiles.map((item) =>
+        item.id === updated.id ? updated : item,
+      ),
+    }));
     if (scheduleChanged && updated.remindersEnabled)
       void scheduleStarterReminders(updated).catch(() =>
         setMessage("Routine aggiornata, ma non ho potuto riprogrammare le notifiche."),
       );
   }
   function logStarterFeeding(feeding: StarterFeeding) {
-    if (!state.sourdoughProfile) return;
-    const updated = addStarterFeeding(state.sourdoughProfile, feeding);
-    setState((s) => ({ ...s, sourdoughProfile: updated }));
+    if (!activeSourdough) return;
+    const updated = addStarterFeeding(activeSourdough, feeding);
+    setState((s) => ({
+      ...s,
+      sourdoughProfiles: s.sourdoughProfiles.map((profile) =>
+        profile.id === updated.id ? updated : profile,
+      ),
+    }));
     setMessage(
-      updated.phase === "mature" && state.sourdoughProfile.phase !== "mature"
+      updated.phase === "mature" && activeSourdough.phase !== "mature"
         ? "Tre crescite efficaci consecutive: il lievito è entrato nella fase matura."
         : `Rinfresco registrato. Prossimo controllo: ${dateLabel(updated.nextFeedAt)}.`,
     );
@@ -561,25 +592,41 @@ export default function App() {
       );
   }
   async function enableStarterReminders() {
-    if (!state.sourdoughProfile) return;
+    if (!activeSourdough) return;
     try {
-      const profile = { ...state.sourdoughProfile, remindersEnabled: true };
+      const profile = { ...activeSourdough, remindersEnabled: true };
       const note = await scheduleStarterReminders(profile);
-      setState((s) => ({ ...s, sourdoughProfile: profile }));
+      changeSourdough(profile);
       setMessage(note);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Non riesco ad attivare i promemoria.");
     }
   }
   async function disableStarterReminders() {
-    await cancelStarterReminders();
+    if (!activeSourdough) return;
+    await cancelStarterReminders(activeSourdough.id);
     setState((s) => ({
       ...s,
-      sourdoughProfile: s.sourdoughProfile
-        ? { ...s.sourdoughProfile, remindersEnabled: false }
-        : null,
+      sourdoughProfiles: s.sourdoughProfiles.map((profile) =>
+        profile.id === activeSourdough.id
+          ? { ...profile, remindersEnabled: false }
+          : profile,
+      ),
     }));
     setMessage("Promemoria del lievito madre disattivati.");
+  }
+  async function deleteSourdough(id: string) {
+    await cancelStarterReminders(id);
+    setState((s) => {
+      const remaining = s.sourdoughProfiles.filter((profile) => profile.id !== id);
+      return {
+        ...s,
+        sourdoughProfiles: remaining,
+        activeSourdoughId:
+          s.activeSourdoughId === id ? remaining[0]?.id ?? null : s.activeSourdoughId,
+      };
+    });
+    setMessage("Lievito eliminato insieme ai suoi promemoria.");
   }
   async function deleteRecipe(id: string) {
     setBusy(true);
@@ -1697,9 +1744,12 @@ export default function App() {
           )}
           {tab === "madre" && (
             <SourdoughCare
-              profile={state.sourdoughProfile}
+              profiles={state.sourdoughProfiles}
+              profile={activeSourdough}
               now={now}
               onStart={startSourdough}
+              onSelect={(id) => setState((s) => ({ ...s, activeSourdoughId: id }))}
+              onDelete={(id) => void deleteSourdough(id)}
               onChange={changeSourdough}
               onLog={logStarterFeeding}
               onSchedule={() => void enableStarterReminders()}
