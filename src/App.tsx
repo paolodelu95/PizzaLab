@@ -57,7 +57,6 @@ import { DoughAnalysis } from "./components/DoughAnalysis";
 import { BlendManager } from "./components/BlendManager";
 import { InsightsDashboard } from "./components/InsightsDashboard";
 import { ovenProfiles } from "./data/ovens";
-import { TemperatureLog } from "./components/TemperatureLog";
 import { ToppingPlanner } from "./components/ToppingPlanner";
 import { DoughRescue } from "./components/DoughRescue";
 import { EquipmentProfiles } from "./components/EquipmentProfiles";
@@ -66,7 +65,7 @@ import { ScaleMode, type ScaleItem } from "./components/ScaleMode";
 import { BakingPlanner } from "./components/BakingPlanner";
 import { SourdoughCare } from "./components/SourdoughCare";
 import { StarterDoughLink } from "./components/StarterDoughLink";
-import { FermentationCheck } from "./components/FermentationCheck";
+import { ActiveDoughJournal } from "./components/ActiveDoughJournal";
 import { emptyState, readState, writeState } from "./services/storage";
 import {
   cancelReminders,
@@ -101,6 +100,28 @@ const dateLabel = (s: string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
+
+function RecipeOutcome({ recipe, onEdit, collapsed }: { recipe: Recipe; onEdit: (patch: Partial<Recipe>) => void; collapsed: boolean }) {
+  const content = <div className="recipe-outcome-fields">
+    <div className="recipe-review">
+      <span>Com’è venuta?</span>
+      <div className="stars">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} aria-label={`${n} stelle per ${recipe.name}`} aria-pressed={recipe.rating === n} onClick={() => onEdit({ rating: recipe.rating === n ? 0 : n })}>
+            <Star weight={recipe.rating >= n ? "fill" : "regular"} />
+          </button>
+        ))}
+      </div>
+    </div>
+    <label className="field">
+      Appunti per la prossima volta
+      <textarea rows={3} maxLength={4000} placeholder="Com’era l’impasto? Cosa cambieresti?" value={recipe.notes} onChange={(event) => onEdit({ notes: event.target.value })} />
+    </label>
+  </div>;
+  return collapsed
+    ? <details className="journal-outcome"><summary>Dopo la cottura · risultato e appunti</summary>{content}</details>
+    : content;
+}
 
 export default function App() {
   const [state, setState] = useState<StoredState>(emptyState);
@@ -1332,9 +1353,6 @@ export default function App() {
                       )}
                     </section>
                   )}
-                  {plannerStage === "fermentation" && (
-                    <section className="panel"><FermentationCheck config={c} onUpdate={updateMany} /></section>
-                  )}
                   {result.ok && (
                     <AdvancedPlanner
                       config={c}
@@ -1827,9 +1845,6 @@ export default function App() {
                   </button>
                 </div>
               </div>
-              {state.recipes.length > 0 && (
-                <InsightsDashboard recipes={state.recipes} flours={flours} />
-              )}{" "}
               {state.recipes.length === 0 ? (
                 <div className="empty-state">
                   <Notebook size={52} weight="duotone" />
@@ -1851,8 +1866,9 @@ export default function App() {
                   {[...state.recipes]
                     .sort(
                       (a, b) =>
-                        Number(Boolean(b.favorite)) -
-                        Number(Boolean(a.favorite)),
+                        Number(b.id === state.activeId) -
+                          Number(a.id === state.activeId) ||
+                        Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)),
                     )
                     .map((recipe) => {
                       const r = calculate(recipe.config, flours);
@@ -1973,90 +1989,47 @@ export default function App() {
                               </button>
                             )}
                           </div>
-                          {isActive && (
-                            <p className="small-muted">
-                              Un solo piano attivo alla volta. Riattivarlo
-                              sostituisce i promemoria precedenti. Nel browser è
-                              disponibile solo il piano visivo.
-                            </p>
+                          {isActive ? (
+                            <>
+                              <p className="small-muted active-plan-note">
+                                Questo è l’unico piano operativo. I controlli qui sotto aggiornano soltanto questa ricetta salvata.
+                              </p>
+                              <ActiveDoughJournal
+                                recipe={recipe}
+                                stages={stages}
+                                onEdit={(patch) => editRecipe(recipe.id, patch)}
+                                onMessage={setMessage}
+                              />
+                            </>
+                          ) : (
+                            <details>
+                              <summary>Consulta le fasi pianificate</summary>
+                              <div className="checklist readonly-checklist">
+                                {stages.map((stage) => (
+                                  <div key={stage.id}>
+                                    <CheckCircle weight={recipe.completedStages.includes(stage.id) ? "fill" : "regular"} />
+                                    <span>
+                                      <strong>{stage.title}</strong>
+                                      <small>{dateLabel(stage.at)}</small>
+                                      <p>{stage.detail}</p>
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
                           )}
-                          <details open={isActive}>
-                            <summary>Le fasi del tuo impasto</summary>
-                            <div className="checklist">
-                              {stages.map((stage) => (
-                                <label key={stage.id}>
-                                  <input
-                                    type="checkbox"
-                                    checked={recipe.completedStages.includes(
-                                      stage.id,
-                                    )}
-                                    onChange={(e) =>
-                                      editRecipe(recipe.id, {
-                                        completedStages: e.target.checked
-                                          ? [
-                                              ...recipe.completedStages,
-                                              stage.id,
-                                            ]
-                                          : recipe.completedStages.filter(
-                                              (id) => id !== stage.id,
-                                            ),
-                                      })
-                                    }
-                                  />
-                                  <span>
-                                    <strong>{stage.title}</strong>
-                                    <small>{dateLabel(stage.at)}</small>
-                                    <p>{stage.detail}</p>
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </details>
-                          <TemperatureLog
+                          <RecipeOutcome
                             recipe={recipe}
-                            onChange={(temperatureReadings) =>
-                              editRecipe(recipe.id, { temperatureReadings })
-                            }
+                            onEdit={(patch) => editRecipe(recipe.id, patch)}
+                            collapsed={isActive && recipe.completedStages.length < stages.length}
                           />
-                          <div className="recipe-review">
-                            <span>Com’è venuta?</span>
-                            <div className="stars">
-                              {[1, 2, 3, 4, 5].map((n) => (
-                                <button
-                                  key={n}
-                                  aria-label={`${n} stelle per ${recipe.name}`}
-                                  aria-pressed={recipe.rating === n}
-                                  onClick={() =>
-                                    editRecipe(recipe.id, {
-                                      rating: recipe.rating === n ? 0 : n,
-                                    })
-                                  }
-                                >
-                                  <Star
-                                    weight={
-                                      recipe.rating >= n ? "fill" : "regular"
-                                    }
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <label className="field">
-                            Appunti per la prossima volta
-                            <textarea
-                              rows={3}
-                              maxLength={4000}
-                              placeholder="Com’era l’impasto? Cosa cambieresti?"
-                              value={recipe.notes}
-                              onChange={(e) =>
-                                editRecipe(recipe.id, { notes: e.target.value })
-                              }
-                            />
-                          </label>
                         </article>
                       );
-                    })}
+                  })}
                 </div>
+              )}
+              {state.recipes.length > 0 && (
+                <InsightsDashboard recipes={state.recipes} flours={flours} />
               )}
             </>
           )}

@@ -18,6 +18,9 @@ test("calculate, save, annotate, persist and delete a recipe", async ({
   await expect(
     page.getByRole("heading", { name: "Prova teglia", exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Attiva piano e promemoria" }).click();
+  await expect(page.getByRole("status")).toContainText("browser");
+  await page.getByText("Dopo la cottura · risultato e appunti").click();
   await page
     .getByLabel("Appunti per la prossima volta")
     .fill("Fondo croccante, ripetere.");
@@ -34,13 +37,12 @@ test("calculate, save, annotate, persist and delete a recipe", async ({
   );
   await page.reload();
   await page.getByRole("button", { name: /Diario/ }).click();
+  await page.getByText("Dopo la cottura · risultato e appunti").click();
   await expect(page.getByLabel("Appunti per la prossima volta")).toHaveValue(
     "Fondo croccante, ripetere.",
   );
   await page.getByText("Temperature reali e controllo scostamenti").click();
   await expect(page.getByText("8 °C", { exact: false })).toBeVisible();
-  await page.getByRole("button", { name: "Attiva piano e promemoria" }).click();
-  await expect(page.getByRole("status")).toContainText("browser");
   await page.getByRole("button", { name: "Elimina Prova teglia" }).click();
   await page
     .getByRole("button", { name: "Elimina piano", exact: true })
@@ -395,9 +397,6 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
   await page.locator(".starter-link-options").getByRole("button", { name: /Levain sabato/ }).click();
   await expect(page.getByText("Rinfresco preparatorio", { exact: true })).toBeVisible();
   await expect(page.getByText("Rinfresca indicativamente", { exact: true })).toBeVisible();
-  await page.getByLabel("Crescita osservata").fill("2.4");
-  await expect(page.getByText("Sta correndo", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Applica la correzione ai tempi" }).click();
 
   await page.getByRole("button", { name: "Condimenti", exact: true }).click();
   await page.getByRole("button", { name: /Bufala/ }).click();
@@ -421,4 +420,15 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
   await expect(page.getByRole("button", { name: "Schermo sempre acceso" })).toBeVisible();
   await page.screenshot({ path: `test-results/hands-free-${test.info().project.name}.png`, fullPage: true });
   await page.getByRole("button", { name: "Chiudi modalità guidata" }).click();
+
+  await page.getByLabel("Nome del piano").fill("Impasto controllato");
+  await page.getByRole("button", { name: "Salva il piano" }).click();
+  await page.getByRole("button", { name: "Attiva piano e promemoria" }).click();
+  await expect(page.getByText("IMPASTO IN CORSO", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Controlli impasto attivo")).toBeVisible();
+  await page.getByLabel("Crescita osservata").fill("2.4");
+  await expect(page.getByText("Sta correndo", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Applica la correzione ai tempi" }).click();
+  await expect(page.getByRole("status")).toContainText("Tempi dell’impasto attivo aggiornati");
+  await page.screenshot({ path: `test-results/active-diary-${test.info().project.name}.png`, fullPage: true });
 });
