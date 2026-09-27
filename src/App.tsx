@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
+  ArrowLeft,
   ArrowRight,
   Bell,
   BookOpen,
@@ -14,16 +15,13 @@ import {
   Info,
   Jar,
   Leaf,
+  ListChecks,
   Notebook,
+  PencilSimple,
   Pizza,
-  Play,
-  Scales as Scale,
   Snowflake,
   Sparkle,
-  Star,
   Timer,
-  Trash,
-  UploadSimple,
   Warning,
   Grains as Wheat,
   X,
@@ -39,10 +37,12 @@ import {
 import {
   bakingDefaults,
   defaultConfig,
+  recommendedExtras,
   localDateTime,
   styles,
 } from "./domain/styles";
 import type {
+  BakeCalibration,
   DoughConfig,
   Flour,
   Recipe,
@@ -57,21 +57,20 @@ import { HydrationChart, YeastChart } from "./components/DoughCharts";
 import { AdvancedPlanner } from "./components/AdvancedPlanner";
 import { DoughAnalysis } from "./components/DoughAnalysis";
 import { BlendManager } from "./components/BlendManager";
-import { InsightsDashboard } from "./components/InsightsDashboard";
 import { ovenProfiles } from "./data/ovens";
 import { ToppingPlanner } from "./components/ToppingPlanner";
 import { DoughRescue } from "./components/DoughRescue";
 import { EquipmentProfiles } from "./components/EquipmentProfiles";
-import { GuidedMode } from "./components/GuidedMode";
-import { ScaleMode, type ScaleItem } from "./components/ScaleMode";
 import { BakingPlanner } from "./components/BakingPlanner";
 import { SourdoughCare } from "./components/SourdoughCare";
 import { StarterDoughLink } from "./components/StarterDoughLink";
-import { ActiveDoughJournal } from "./components/ActiveDoughJournal";
+import { Diary, type DiaryView } from "./components/Diary";
+import { canStartPlan, recipeStatus } from "./domain/recipes";
 import { emptyState, readState, writeState } from "./services/storage";
 import {
   cancelReminders,
   cancelStarterReminders,
+  onReminderOpened,
   scheduleReminders,
   scheduleStarterReminders,
 } from "./services/notifications";
@@ -80,18 +79,39 @@ import {
   createStarterProfile,
   nextStarterFeedAt,
 } from "./domain/sourdough";
+import { useCloseOnBack } from "./services/backNavigation";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
 type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida";
-type PlannerStage = "dough" | "fermentation" | "baking";
+type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
 const nav = [
-  { id: "impasto", label: "Il tuo impasto", icon: CookingPot },
-  { id: "farine", label: "Farine", icon: Wheat },
-  { id: "condimenti", label: "Condimenti", icon: Pizza },
-  { id: "madre", label: "Lievito madre", icon: Jar },
-  { id: "diario", label: "Diario", icon: Notebook },
-  { id: "guida", label: "Impara", icon: BookOpen },
+  { id: "impasto", label: "Il tuo impasto", short: "Impasto", icon: CookingPot },
+  { id: "farine", label: "Farine", short: "Farine", icon: Wheat },
+  { id: "condimenti", label: "Condimenti", short: "Condimenti", icon: Pizza },
+  { id: "madre", label: "Lievito", short: "Lievito", icon: Jar },
+  { id: "diario", label: "Diario", short: "Diario", icon: Notebook },
+  { id: "guida", label: "Impara", short: "Impara", icon: BookOpen },
 ] as const;
+const plannerSteps = [
+  ["dough", "1", "Impasto", "Farina e dosi", Wheat],
+  ["fermentation", "2", "Lievitazione", "Tempi e lievito", Clock],
+  ["baking", "3", "Cottura", "Forno e tempi", Fire],
+  ["summary", "4", "Riepilogo", "Parti o salva", ListChecks],
+] as const;
+const styleTaglines: Record<string, string> = {
+  napoletana: "Il grande classico",
+  contemporanea: "Alta e ariosa",
+  romana: "Sottile e croccante",
+  teglia: "Da condividere",
+  pala: "Leggera e croccante",
+  padellino: "Soffice e dorata",
+  focaccia: "Soffice e oliata",
+  "new-york": "Grande e pieghevole",
+  detroit: "Alta, bordi croccanti",
+  pinsa: "Ovale e leggera",
+  sfincione: "Alta e soffice",
+  "tonda-casa": "Ideale per iniziare",
+};
 const fmt = (n: number, digits = 0) =>
   n.toLocaleString("it-IT", { maximumFractionDigits: digits });
 const dateLabel = (s: string) =>
@@ -102,28 +122,6 @@ const dateLabel = (s: string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
-
-function RecipeOutcome({ recipe, onEdit, collapsed }: { recipe: Recipe; onEdit: (patch: Partial<Recipe>) => void; collapsed: boolean }) {
-  const content = <div className="recipe-outcome-fields">
-    <div className="recipe-review">
-      <span>Com’è venuta?</span>
-      <div className="stars">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button key={n} aria-label={`${n} stelle per ${recipe.name}`} aria-pressed={recipe.rating === n} onClick={() => onEdit({ rating: recipe.rating === n ? 0 : n })}>
-            <Star weight={recipe.rating >= n ? "fill" : "regular"} />
-          </button>
-        ))}
-      </div>
-    </div>
-    <label className="field">
-      Appunti per la prossima volta
-      <textarea rows={3} maxLength={4000} placeholder="Com’era l’impasto? Cosa cambieresti?" value={recipe.notes} onChange={(event) => onEdit({ notes: event.target.value })} />
-    </label>
-  </div>;
-  return collapsed
-    ? <details className="journal-outcome"><summary>Dopo la cottura · risultato e appunti</summary>{content}</details>
-    : content;
-}
 
 export default function App() {
   const [state, setState] = useState<StoredState>(emptyState);
@@ -137,9 +135,31 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [recipeName, setRecipeName] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [guidedOpen, setGuidedOpen] = useState(false);
-  const [scaleOpen, setScaleOpen] = useState(false);
-  const importRef = useRef<HTMLInputElement>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [diaryView, setDiaryView] = useState<DiaryView>("active");
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(""), 7000);
+    return () => clearTimeout(timer);
+  }, [message]);
+  useEffect(() => {
+    window.history.replaceState({ tab: "impasto" }, "");
+    const onPop = (event: PopStateEvent) => {
+      const previous = (event.state as { tab?: Tab } | null)?.tab;
+      if (previous) setTab(previous);
+    };
+    window.addEventListener("popstate", onPop);
+    const stopListening = onReminderOpened((section) => {
+      if (section === "dough") setDiaryView("active");
+      openTab(section === "dough" ? "diario" : "madre");
+    });
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      stopListening();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useCloseOnBack(Boolean(deleteId), () => setDeleteId(null));
   useEffect(() => {
     let alive = true;
     readState()
@@ -191,45 +211,6 @@ export default function App() {
   const activeNext = active
     ? buildTimeline(active.config).find((s) => new Date(s.at).getTime() > now)
     : undefined;
-  const scaleItems: ScaleItem[] = result.ok
-    ? [
-        ...result.mainFlourBreakdown.map((item) => ({
-          label: item.name,
-          grams: item.grams,
-          note: "Farina da aggiungere direttamente all’impasto.",
-        })),
-        ...(c.preferment !== "none"
-          ? [
-              {
-                label: `Farina per ${c.preferment}`,
-                grams: result.preferment.flour,
-              },
-            ]
-          : []),
-        {
-          label: "Acqua da aggiungere",
-          grams: result.waterToWeigh,
-          note: c.autolyse
-            ? `${fmt(result.autolyse.water)} g nell’autolisi e ${fmt(result.autolyse.reservedWater)} g di riserva.`
-            : undefined,
-        },
-        {
-          label:
-            c.yeast === "sourdough"
-              ? "Pasta madre"
-              : c.yeast === "licoli"
-                ? "Licoli"
-                : `Lievito ${c.yeast === "fresh" ? "fresco" : "secco"}`,
-          grams: result.yeast,
-        },
-        { label: "Sale", grams: result.salt },
-        ...(result.oil > 0 ? [{ label: "Olio", grams: result.oil }] : []),
-        ...(result.sugar > 0
-          ? [{ label: "Zucchero", grams: result.sugar }]
-          : []),
-        ...(result.malt > 0 ? [{ label: "Malto", grams: result.malt }] : []),
-      ]
-    : [];
   function normalizePlanning(config: DoughConfig) {
     if (config.planMode === "automatic") {
       const automatic = deriveAutomaticSchedule(config);
@@ -293,9 +274,15 @@ export default function App() {
     setPlannerStage(stage);
     requestAnimationFrame(() =>
       document
-        .getElementById("planner-steps")
+        .getElementById("planner-anchor")
         ?.scrollIntoView({ behavior: "smooth", block: "start" }),
     );
+  }
+  function openTab(next: Tab) {
+    // Ogni sezione entra nella cronologia: il tasto «Indietro» di Android torna alla precedente.
+    if (next !== tab) window.history.pushState({ tab: next }, "");
+    setTab(next);
+    window.scrollTo({ top: 0 });
   }
   function changeStyle(id: string) {
     const style = styles.find((s) => s.id === id)!;
@@ -312,10 +299,9 @@ export default function App() {
           toppingLength: s.config.panLength,
           hydration: style.hydration,
           ballWeight: style.ballWeight,
-          salt: style.salt,
-          oil: style.oil,
-          sugar: id === "new-york" ? 2 : id === "detroit" ? 1 : 0,
-          malt: id === "new-york" ? 0.4 : 0,
+          ...recommendedExtras(id),
+          // Il malto è difficile da trovare: si suggerisce, ma si parte senza.
+          malt: 0,
           coldHours: style.cold,
           bulkHours: style.bulk,
           proofHours: style.proof,
@@ -420,7 +406,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.11.0",
+            version: "0.12.0",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -525,8 +511,6 @@ export default function App() {
       setMessage(
         "File non riconosciuto: usa un archivio JSON esportato da PizzaLab.",
       );
-    } finally {
-      if (importRef.current) importRef.current.value = "";
     }
   }
   async function shareRecipe(recipe: Recipe) {
@@ -549,27 +533,42 @@ export default function App() {
       /* L’utente può chiudere il pannello di condivisione senza conseguenze. */
     }
   }
-  async function saveRecipe() {
+  /** Salva il piano del calcolatore: "later" lo mette tra le salvate, "start" lo avvia con i promemoria. */
+  async function saveRecipe(mode: "later" | "start") {
     if (!result.ok || loadError) return;
+    const existing = editingId ? state.recipes.find((r) => r.id === editingId) : undefined;
     const recipe: Recipe = {
-      id: crypto.randomUUID(),
+      ...(existing ?? { notes: "", rating: 0, createdAt: new Date().toISOString() }),
+      id: existing?.id ?? crypto.randomUUID(),
       name:
         recipeName.trim() ||
+        existing?.name ||
         `${result.style.name} · ${new Date(c.bakeAt).toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`,
-      createdAt: new Date().toISOString(),
       config: { ...c },
-      notes: "",
-      rating: 0,
       completedStages: [],
+      temperatureReadings: [],
+      startedAt: undefined,
+      finishedAt: undefined,
+    } as Recipe;
+    const next = {
+      ...state,
+      recipes: existing
+        ? state.recipes.map((r) => (r.id === recipe.id ? recipe : r))
+        : [recipe, ...state.recipes],
     };
-    const next = { ...state, recipes: [recipe, ...state.recipes] };
     try {
       await writeState(next);
       setState(next);
-      setMessage(
-        "Piano salvato nel diario. Puoi attivare i promemoria dalla sua scheda.",
-      );
-      setTab("diario");
+      setEditingId(null);
+      setRecipeName("");
+      setPlannerStage("dough");
+      if (mode === "start") {
+        await activate(recipe);
+      } else {
+        setDiaryView("saved");
+        setMessage("Pizza salvata per dopo: la trovi nel diario, tra le salvate. Quando vuoi, premi «Inizia ora».");
+      }
+      openTab("diario");
     } catch {
       setStorageError("Piano non salvato: memoria locale non disponibile.");
     }
@@ -578,20 +577,21 @@ export default function App() {
     setBusy(true);
     try {
       const note = await scheduleReminders(recipe);
-      setState((s) => ({ ...s, activeId: recipe.id }));
-      setMessage(note);
+      const startedAt = new Date().toISOString();
+      setState((s) => ({
+        ...s,
+        activeId: recipe.id,
+        recipes: s.recipes.map((r) => (r.id === recipe.id ? { ...r, startedAt, finishedAt: undefined } : r)),
+      }));
+      setDiaryView("active");
+      setMessage(`Si parte! ${note}`);
     } catch (e) {
-      try {
-        await cancelReminders();
-        setState((s) => ({ ...s, activeId: null }));
-      } catch {
-        /* Conserva lo stato visibile se Android non conferma la cancellazione. */
-      }
       setMessage(
         e instanceof Error
           ? e.message
           : "Non riesco a programmare i promemoria.",
       );
+      setDiaryView("saved");
     } finally {
       setBusy(false);
     }
@@ -601,12 +601,57 @@ export default function App() {
     try {
       await cancelReminders();
       setState((s) => ({ ...s, activeId: null }));
-      setMessage("Piano disattivato e promemoria cancellati.");
+      setDiaryView("saved");
+      setMessage("Impasto interrotto e promemoria cancellati: lo ritrovi tra le salvate.");
     } catch {
       setMessage("Cancellazione dei promemoria non riuscita. Riprova.");
     } finally {
       setBusy(false);
     }
+  }
+  async function finishRecipe(recipe: Recipe) {
+    setBusy(true);
+    try {
+      if (state.activeId === recipe.id) await cancelReminders();
+      const finishedAt = new Date().toISOString();
+      setState((s) => ({
+        ...s,
+        activeId: s.activeId === recipe.id ? null : s.activeId,
+        recipes: s.recipes.map((r) => (r.id === recipe.id ? { ...r, finishedAt } : r)),
+      }));
+      setDiaryView("past");
+      setMessage("Buon appetito! Ora dai un voto e, se vuoi, registra com’è andata la cottura.");
+    } catch {
+      setMessage("Non riesco a cancellare i promemoria. Riprova.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  function openInPlanner(recipe: Recipe, mode: "edit" | "reschedule" | "copy") {
+    setState((s) => ({ ...s, config: normalizePlanning({ ...recipe.config }) }));
+    setEditingId(mode === "copy" ? null : recipe.id);
+    setRecipeName(recipe.name);
+    setPlannerStage(mode === "reschedule" ? "fermentation" : "dough");
+    openTab("impasto");
+    setMessage(
+      mode === "copy"
+        ? "Ricetta caricata: scegli la nuova data nel passaggio 2 e salva un nuovo piano."
+        : mode === "reschedule"
+          ? "Scegli una nuova data di cottura, poi conferma dal riepilogo."
+          : `Stai modificando «${recipe.name}»: le modifiche si salvano dal riepilogo.`,
+    );
+  }
+  function openDiary() {
+    const counts = { active: 0, saved: 0, past: 0 };
+    for (const recipe of state.recipes) counts[recipeStatus(recipe, state.activeId, now)] += 1;
+    setDiaryView(counts.active ? "active" : counts.saved ? "saved" : counts.past ? "past" : "active");
+    openTab("diario");
+  }
+  function startNewDough() {
+    setEditingId(null);
+    setRecipeName("");
+    setPlannerStage("dough");
+    openTab("impasto");
   }
   function startSourdough(kind: "licoli" | "solid", existing: boolean, name: string) {
     const profile = createStarterProfile(kind, existing, new Date(), name);
@@ -706,6 +751,7 @@ export default function App() {
         recipes: s.recipes.filter((r) => r.id !== id),
         activeId: s.activeId === id ? null : s.activeId,
       }));
+      if (editingId === id) setEditingId(null);
       setDeleteId(null);
     } catch {
       setMessage(
@@ -716,14 +762,36 @@ export default function App() {
     }
   }
   function editRecipe(id: string, patch: Partial<Recipe>) {
+    const current = state.recipes.find((r) => r.id === id);
     setState((s) => ({
       ...s,
       recipes: s.recipes.map((r) => (r.id === id ? { ...r, ...patch } : r)),
     }));
+    // Se il check di fermentazione cambia i tempi dell’impasto in corso, i promemoria vanno riallineati.
+    if (current && patch.config && state.activeId === id)
+      void scheduleReminders({ ...current, ...patch }).catch(() =>
+        setMessage("Tempi aggiornati, ma non ho potuto riprogrammare i promemoria."),
+      );
+  }
+  function saveCalibration(recipe: Recipe, calibration: BakeCalibration) {
+    setState((s) => ({
+      ...s,
+      bakeCalibrations: [calibration, ...s.bakeCalibrations.filter((item) => item.id !== calibration.id)].slice(0, 100),
+      recipes: s.recipes.map((r) => (r.id === recipe.id ? { ...r, calibrationId: calibration.id } : r)),
+    }));
+    setMessage("Taratura salvata: le prossime previsioni di cottura con questo forno terranno conto del risultato reale.");
   }
   const isPan = styles.find((s) => s.id === c.styleId)?.pan;
   const startPast =
     timeline.length > 0 && new Date(timeline[0].at).getTime() < now;
+  const canStart = canStartPlan(timeline, now);
+  const recommended = recommendedExtras(c.styleId);
+  const extrasMatch =
+    Math.abs(c.salt - recommended.salt) < 0.05 &&
+    Math.abs(c.oil - recommended.oil) < 0.05 &&
+    Math.abs(c.sugar - recommended.sugar) < 0.05;
+  const editingRecipe = editingId ? state.recipes.find((r) => r.id === editingId) : undefined;
+  const activeRecipe = state.recipes.find((r) => r.id === state.activeId);
   if (!ready)
     return (
       <div className="loading">
@@ -732,58 +800,89 @@ export default function App() {
       </div>
     );
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
+    <div className={`app-shell tab-${tab}`}>
+      <nav className="app-nav" aria-label="Navigazione principale">
         <a
           href="#impasto"
-          className="brand"
+          className="brand nav-brand"
           onClick={(e) => {
             e.preventDefault();
-            setTab("impasto");
+            openTab("impasto");
           }}
         >
           <span className="brand-icon">
             <img src={pizzaLabLogo} alt="" />
           </span>
-          <span>
+          <span className="brand-name">
             Pizza<span className="brand-amico">Lab</span>
-            <small>IMPASTO. METODO. RISULTATI.</small>
           </span>
         </a>
-        <nav aria-label="Navigazione principale">
+        <div className="app-nav-items">
           {nav.map((n) => (
             <button
               key={n.id}
-              className={tab === n.id ? "active" : ""}
+              className={`nav-item nav-${n.id} ${tab === n.id ? "active" : ""}`}
+              aria-label={n.label}
               aria-current={tab === n.id ? "page" : undefined}
-              onClick={() => {
-                setTab(n.id);
-                window.scrollTo({ top: 0 });
-              }}
+              onClick={() => (n.id === "diario" ? openDiary() : openTab(n.id))}
             >
-              <n.icon size={22} weight={tab === n.id ? "fill" : "regular"} />
-              <span>{n.label}</span>
-              {n.id === "diario" && state.recipes.length > 0 && (
-                <small>{state.recipes.length}</small>
-              )}
+              <span className="nav-icon">
+                <n.icon size={22} weight={tab === n.id ? "fill" : "regular"} />
+                {n.id === "diario" && state.recipes.length > 0 && (
+                  <small className="nav-badge">{state.recipes.length}</small>
+                )}
+              </span>
+              <span className="nav-label nav-label-long">{n.label}</span>
+              <span className="nav-label nav-label-short">{n.short}</span>
             </button>
           ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <Leaf size={21} />
-          <p>
-            Farina, acqua, tempo.
-            <br />
-            <strong>Il tuo laboratorio della pizza.</strong>
-          </p>
-          <span>Dati sul tuo dispositivo · Senza account</span>
         </div>
-      </aside>
+        <div className="sidebar-bottom">
+          <Leaf size={18} />
+          <p>
+            <strong>I tuoi dati restano sul dispositivo.</strong> Nessun account,
+            funziona anche offline.
+          </p>
+        </div>
+      </nav>
       <div className="workspace">
         <header className="topbar">
-          <span>PizzaLab · il tuo laboratorio d’impasti</span>
-          <div>
-            <span className="offline-dot" /> Disponibile offline su Android
+          <a
+            href="#impasto"
+            className="brand topbar-brand"
+            onClick={(e) => {
+              e.preventDefault();
+              openTab("impasto");
+            }}
+          >
+            <span className="brand-icon">
+              <img src={pizzaLabLogo} alt="" />
+            </span>
+            <span className="brand-name">
+              Pizza<span className="brand-amico">Lab</span>
+            </span>
+          </a>
+          <span className="topbar-title">
+            {nav.find((n) => n.id === tab)?.label}
+          </span>
+          <div className="topbar-actions">
+            {active && tab !== "diario" && (
+              <button
+                className="live-chip"
+                onClick={() => openDiary()}
+                aria-label={`Impasto in corso: ${active.name}`}
+              >
+                <span className="live-dot" aria-hidden="true" />
+                <span>In corso</span>
+              </button>
+            )}
+            <button
+              className={`learn-button ${tab === "guida" ? "active" : ""}`}
+              onClick={() => openTab("guida")}
+            >
+              <BookOpen size={20} weight={tab === "guida" ? "fill" : "regular"} />
+              <span>Impara</span>
+            </button>
           </div>
         </header>
         <main>
@@ -803,7 +902,7 @@ export default function App() {
           )}
           {message && (
             <div className="toast" role="status">
-              <Info size={22} />
+              <Info size={22} weight="fill" />
               <p>{message}</p>
               <button
                 aria-label="Chiudi messaggio"
@@ -817,36 +916,34 @@ export default function App() {
             <>
               <div className="page-heading home-heading">
                 <div>
-                  <span className="eyebrow">
-                    IL TUO LABORATORIO DELLA PIZZA
-                  </span>
+                  <span className="eyebrow">Il tuo laboratorio della pizza</span>
                   <h1>
-                    Progetta. Impasta.
-                    <br /> <span>Perfeziona.</span>
+                    Progetta. Impasta. <span>Perfeziona.</span>
                   </h1>
-                  <p>Un percorso chiaro, dallo stile alla cottura.</p>
+                  <p>
+                    Scegli lo stile e segui i tre passaggi: dosi, tempi e
+                    promemoria li calcola PizzaLab per te.
+                  </p>
                 </div>
                 <div className="heading-illustration" aria-hidden="true">
                   <Pizza weight="duotone" />
-                  <span>
-                    Ogni impasto
-                    <br />è un esperimento.
-                  </span>
                 </div>
               </div>
               {active && (
                 <button
                   className="active-banner"
-                  onClick={() => setTab("diario")}
+                  onClick={() => openDiary()}
                 >
-                  <Clock size={25} />
+                  <span className="active-banner-icon">
+                    <Clock size={22} weight="bold" />
+                  </span>
                   <div>
-                    <strong>{active.name}</strong>
-                    <span>
+                    <small>Impasto in corso · {active.name}</small>
+                    <strong>
                       {activeNext
-                        ? `Prossima fase: ${activeNext.title} · ${dateLabel(activeNext.at)}`
-                        : "La tabella di marcia è terminata. Com’è andata?"}
-                    </span>
+                        ? `${activeNext.title} · ${dateLabel(activeNext.at)}`
+                        : "Tabella di marcia terminata. Com’è andata?"}
+                    </strong>
                   </div>
                   <ArrowRight />
                 </button>
@@ -854,7 +951,7 @@ export default function App() {
               <section className="style-section">
                 <div className="section-title">
                   <h2>Che pizza ti va?</h2>
-                  <span>Ogni stile, il suo impasto</span>
+                  <span>Tocca uno stile: dosi e tempi si impostano da soli.</span>
                 </div>
                 <div className="style-options">
                   {styles.map((s, i) => (
@@ -863,6 +960,7 @@ export default function App() {
                       className={`style-option ${c.styleId === s.id ? "is-selected" : ""}`}
                       aria-pressed={c.styleId === s.id}
                       onClick={() => changeStyle(s.id)}
+                      style={{ "--art-hue": `${(i * 29) % 360}` } as CSSProperties}
                     >
                       <span className={`style-art art-${i}`} aria-hidden="true">
                         {s.pan ? (
@@ -872,19 +970,7 @@ export default function App() {
                         )}
                       </span>
                       <strong>{s.name}</strong>
-                      <small>
-                        {s.pan
-                          ? "Da condividere"
-                          : i === 2
-                            ? "Sottile e croccante"
-                            : i === 1
-                              ? "Alta e ariosa"
-                              : i === 4
-                                ? "Leggera e croccante"
-                                : i === 5
-                                  ? "Soffice e dorata"
-                                  : "Il grande classico"}
-                      </small>
+                      <small>{styleTaglines[s.id] ?? (s.pan ? "Da condividere" : "Il grande classico")}</small>
                       {c.styleId === s.id && (
                         <CheckCircle className="style-check" weight="fill" />
                       )}
@@ -892,55 +978,50 @@ export default function App() {
                   ))}
                 </div>
               </section>
-              {result.ok && (
-                <div className="mobile-dose" aria-label="Dosi rapide">
+              {result.ok && plannerStage !== "summary" && (
+                <div
+                  className="mobile-dose"
+                  aria-label="Dosi rapide"
+                >
                   <div>
-                    <small>FARINA</small>
+                    <small>Farina</small>
                     <strong>
                       {fmt(result.flour)} <span>g</span>
                     </strong>
                   </div>
                   <div>
-                    <small>ACQUA</small>
+                    <small>Acqua</small>
                     <strong>
                       {fmt(result.water)} <span>g</span>
                     </strong>
                   </div>
                   <div>
-                    <small>LIEVITO</small>
+                    <small>{["sourdough", "licoli"].includes(c.yeast) ? "Madre" : "Lievito"}</small>
                     <strong>
-                      {fmt(result.yeast, 2)} <span>g</span>
+                      {fmt(result.yeast, ["sourdough", "licoli"].includes(c.yeast) ? 0 : 2)} <span>g</span>
+                    </strong>
+                  </div>
+                  <div className="dose-salt">
+                    <small>Sale</small>
+                    <strong>
+                      {fmt(result.salt, 1)} <span>g</span>
                     </strong>
                   </div>
                   <button
-                    aria-label="Vai alla ricetta completa"
-                    onClick={() =>
-                      document
-                        .getElementById("recipe-summary")
-                        ?.scrollIntoView({ behavior: "auto", block: "start" })
-                    }
+                    aria-label="Vai al riepilogo della ricetta"
+                    onClick={() => goToPlannerStage("summary")}
                   >
-                    <ArrowRight />
+                    <span>Riepilogo</span>
+                    <ArrowRight weight="bold" />
                   </button>
                 </div>
               )}
+              <span id="planner-anchor" className="planner-anchor" aria-hidden="true" />
               <nav id="planner-steps" className="planner-steps" aria-label="Fasi di progettazione">
-                {(
-                  [
-                    ["dough", "1", "Impasto", "Dosi e metodo", Wheat],
-                    [
-                      "fermentation",
-                      "2",
-                      "Lievitazione",
-                      "Tempi e lievito",
-                      Clock,
-                    ],
-                    ["baking", "3", "Cottura", "Anteprima dinamica", Fire],
-                  ] as const
-                ).map(([id, number, label, detail, Icon]) => (
+                {plannerSteps.map(([id, number, label, detail, Icon]) => (
                   <button
                     key={id}
-                    className={plannerStage === id ? "active" : ""}
+                    className={`${plannerStage === id ? "active" : ""} ${plannerSteps.findIndex(([step]) => step === plannerStage) > Number(number) - 1 ? "done" : ""}`}
                     aria-current={plannerStage === id ? "step" : undefined}
                     onClick={() => goToPlannerStage(id)}
                   >
@@ -953,8 +1034,21 @@ export default function App() {
                   </button>
                 ))}
               </nav>
-              <div className="planner-grid">
+              <div className={`planner-grid ${plannerStage === "summary" ? "is-summary" : ""}`}>
                 <div className="planner-fields">
+                  {!result.ok && plannerStage !== "summary" && (
+                    <div className="notice warning" role="alert">
+                      <Warning />
+                      <div>
+                        <strong>Controlla questi valori</strong>
+                        <ul>
+                          {result.errors.map((e) => (
+                            <li key={e}>{e}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
                   {plannerStage === "dough" && (
                     <section className="panel">
                       <div className="panel-title">
@@ -984,9 +1078,132 @@ export default function App() {
                             ? `${fmt(selectedFlour.protein, 1)}% proteine`
                             : "Proteine n.d."}
                         </span>
-                        <button onClick={() => setTab("farine")}>
+                        <button onClick={() => openTab("farine")}>
                           Esplora le farine <ArrowRight />
                         </button>
+                      </div>
+                      <p className="field-explainer">
+                        <Info size={16} /> <span><strong>W</strong> indica la forza della farina: più è alto, più l’impasto regge lievitazioni lunghe.</span>
+                      </p>
+                      <div className="blend-section">
+                        <div className="blend-heading">
+                          <strong>Miscela di farine</strong>
+                          <em className="optional-badge">Facoltativo</em>
+                        </div>
+                        <p>Vuoi mescolare più farine? Aggiungine fino ad altre tre e scegli la quota di ciascuna.</p>
+                        <div className="field-grid blend-fields">
+                            <FlourPicker
+                              label="Seconda farina"
+                              value={c.secondFlourId}
+                              flours={flours}
+                              allowEmpty
+                              emptyLabel="Una sola farina"
+                              onChange={(value) => {
+                                if (value) update("secondFlourId", value);
+                                else
+                                  updateMany({
+                                    secondFlourId: "",
+                                    secondFlourPercent: 0,
+                                    thirdFlourId: "",
+                                    thirdFlourPercent: 0,
+                                    fourthFlourId: "",
+                                    fourthFlourPercent: 0,
+                                  });
+                              }}
+                            />
+                            {c.secondFlourId && (
+                              <NumberField
+                                label="Quota seconda farina"
+                                value={c.secondFlourPercent}
+                                onChange={(v) => update("secondFlourPercent", v)}
+                                min={0}
+                                max={Math.max(
+                                  0,
+                                  100 -
+                                    c.thirdFlourPercent -
+                                    c.fourthFlourPercent,
+                                )}
+                                unit="%"
+                              />
+                            )}
+                            {c.secondFlourId && (
+                              <FlourPicker
+                                label="Terza farina"
+                                value={c.thirdFlourId}
+                                flours={flours}
+                                allowEmpty
+                                emptyLabel="Nessuna terza farina"
+                                onChange={(value) => {
+                                  if (value) update("thirdFlourId", value);
+                                  else
+                                    updateMany({
+                                      thirdFlourId: "",
+                                      thirdFlourPercent: 0,
+                                      fourthFlourId: "",
+                                      fourthFlourPercent: 0,
+                                    });
+                                }}
+                              />
+                            )}
+                            {c.thirdFlourId && (
+                              <NumberField
+                                label="Quota terza farina"
+                                value={c.thirdFlourPercent}
+                                onChange={(v) => update("thirdFlourPercent", v)}
+                                min={0}
+                                max={Math.max(
+                                  0,
+                                  100 -
+                                    c.secondFlourPercent -
+                                    c.fourthFlourPercent,
+                                )}
+                                unit="%"
+                              />
+                            )}
+                            {c.thirdFlourId && (
+                              <FlourPicker
+                                label="Quarta farina"
+                                value={c.fourthFlourId}
+                                flours={flours}
+                                allowEmpty
+                                emptyLabel="Nessuna quarta farina"
+                                onChange={(value) => {
+                                  update("fourthFlourId", value);
+                                  if (!value) update("fourthFlourPercent", 0);
+                                }}
+                              />
+                            )}
+                            {c.fourthFlourId && (
+                              <NumberField
+                                label="Quota quarta farina"
+                                value={c.fourthFlourPercent}
+                                onChange={(v) => update("fourthFlourPercent", v)}
+                                min={0}
+                                max={Math.max(
+                                  0,
+                                  100 -
+                                    c.secondFlourPercent -
+                                    c.thirdFlourPercent,
+                                )}
+                                unit="%"
+                              />
+                            )}
+                        </div>
+                        <BlendManager
+                          config={c}
+                          flours={flours}
+                          blends={state.savedBlends}
+                          onSave={saveBlend}
+                          onLoad={loadBlend}
+                          onDelete={(id) =>
+                            setState((s) => ({
+                              ...s,
+                              savedBlends: s.savedBlends.filter(
+                                (b) => b.id !== id,
+                              ),
+                            }))
+                          }
+                        />
                       </div>
                       <div className="field-grid quantity-fields">
                         <Stepper
@@ -1005,6 +1222,7 @@ export default function App() {
                             max={2000}
                             step={10}
                             unit="g"
+                            hint="Il peso di ogni pallina di impasto."
                           />
                         )}
                       </div>
@@ -1047,7 +1265,7 @@ export default function App() {
                           max={90}
                           step={1}
                           unit="%"
-                          hint="Verso il minimo è più facile da lavorare; aumentando diventa più ariosa e impegnativa."
+                          hint="Acqua ogni 100 g di farina: 65% = 650 g d’acqua per 1 kg. Più bassa è più facile da lavorare; più alta dà una pizza ariosa ma più impegnativa."
                         />
                       </div>
                       {result.ok && (
@@ -1057,13 +1275,46 @@ export default function App() {
                           w={result.w}
                         />
                       )}
-                      <details>
+                      <details className="extras-details">
                         <summary>
-                          Ingredienti e miscela fino a quattro farine
+                          <span>
+                            Ingredienti aggiuntivi
+                            <small>
+                              Sale {fmt(c.salt, 1)}% · Olio {fmt(c.oil, 1)}% · Zucchero {fmt(c.sugar, 1)}% · Malto {fmt(c.malt, 1)}%
+                            </small>
+                            <em className={`optional-badge ${extrasMatch ? "saved-badge" : ""}`}>
+                              {extrasMatch ? "Come da ricetta" : "Personalizzati"}
+                            </em>
+                          </span>
                         </summary>
-                        <div className="field-grid details-content">
+                        <div className="extras-content">
+                          <p className="field-explainer">
+                            <Info size={16} />
+                            <span>
+                              Per la <strong>{currentStyle.name}</strong> la ricetta prevede sale {fmt(recommended.salt, 1)}%
+                              {recommended.oil ? `, olio ${fmt(recommended.oil, 1)}%` : ", niente olio"}
+                              {recommended.sugar ? `, zucchero ${fmt(recommended.sugar, 1)}%` : ""}
+                              {recommended.malt ? ` e malto ${fmt(recommended.malt, 1)}% (facoltativo)` : ""}. Le percentuali sono calcolate sul peso della farina.
+                            </span>
+                          </p>
+                          {!extrasMatch && (
+                            <button
+                              className="button secondary"
+                              onClick={() =>
+                                updateMany({
+                                  salt: recommended.salt,
+                                  oil: recommended.oil,
+                                  sugar: recommended.sugar,
+                                })
+                              }
+                            >
+                              <Sparkle /> Usa i valori della ricetta
+                            </button>
+                          )}
+                          <div className="field-grid">
                           <NumberField
                             label="Sale sulla farina"
+                            hint={`Consigliato: ${fmt(recommended.salt, 1)}%`}
                             value={c.salt}
                             onChange={(v) => update("salt", v)}
                             min={0}
@@ -1073,6 +1324,7 @@ export default function App() {
                           />
                           <NumberField
                             label="Olio sulla farina"
+                            hint={recommended.oil ? `Consigliato: ${fmt(recommended.oil, 1)}%` : "Questo stile non lo prevede"}
                             value={c.oil}
                             onChange={(v) => update("oil", v)}
                             min={0}
@@ -1082,6 +1334,7 @@ export default function App() {
                           />
                           <NumberField
                             label="Zucchero sulla farina"
+                            hint={recommended.sugar ? `Consigliato: ${fmt(recommended.sugar, 1)}%` : "Questo stile non lo prevede"}
                             value={c.sugar}
                             onChange={(v) => update("sugar", v)}
                             min={0}
@@ -1091,6 +1344,7 @@ export default function App() {
                           />
                           <NumberField
                             label="Malto diastatico"
+                            hint={recommended.malt ? `Facoltativo · la ricetta ne prevede ${fmt(recommended.malt, 1)}%` : "Facoltativo · questo stile non lo prevede"}
                             value={c.malt}
                             onChange={(v) => update("malt", v)}
                             min={0}
@@ -1098,118 +1352,23 @@ export default function App() {
                             step={0.1}
                             unit="%"
                           />
-                          <FlourPicker
-                            label="Seconda farina"
-                            value={c.secondFlourId}
-                            flours={flours}
-                            allowEmpty
-                            emptyLabel="Una sola farina"
-                            onChange={(value) => {
-                              if (value) update("secondFlourId", value);
-                              else
-                                updateMany({
-                                  secondFlourId: "",
-                                  secondFlourPercent: 0,
-                                  thirdFlourId: "",
-                                  thirdFlourPercent: 0,
-                                  fourthFlourId: "",
-                                  fourthFlourPercent: 0,
-                                });
-                            }}
-                          />
-                          {c.secondFlourId && (
-                            <NumberField
-                              label="Quota seconda farina"
-                              value={c.secondFlourPercent}
-                              onChange={(v) => update("secondFlourPercent", v)}
-                              min={0}
-                              max={Math.max(
-                                0,
-                                100 -
-                                  c.thirdFlourPercent -
-                                  c.fourthFlourPercent,
-                              )}
-                              unit="%"
-                            />
-                          )}
-                          {c.secondFlourId && (
-                            <FlourPicker
-                              label="Terza farina"
-                              value={c.thirdFlourId}
-                              flours={flours}
-                              allowEmpty
-                              emptyLabel="Nessuna terza farina"
-                              onChange={(value) => {
-                                if (value) update("thirdFlourId", value);
-                                else
-                                  updateMany({
-                                    thirdFlourId: "",
-                                    thirdFlourPercent: 0,
-                                    fourthFlourId: "",
-                                    fourthFlourPercent: 0,
-                                  });
-                              }}
-                            />
-                          )}
-                          {c.thirdFlourId && (
-                            <NumberField
-                              label="Quota terza farina"
-                              value={c.thirdFlourPercent}
-                              onChange={(v) => update("thirdFlourPercent", v)}
-                              min={0}
-                              max={Math.max(
-                                0,
-                                100 -
-                                  c.secondFlourPercent -
-                                  c.fourthFlourPercent,
-                              )}
-                              unit="%"
-                            />
-                          )}
-                          {c.thirdFlourId && (
-                            <FlourPicker
-                              label="Quarta farina"
-                              value={c.fourthFlourId}
-                              flours={flours}
-                              allowEmpty
-                              emptyLabel="Nessuna quarta farina"
-                              onChange={(value) => {
-                                update("fourthFlourId", value);
-                                if (!value) update("fourthFlourPercent", 0);
-                              }}
-                            />
-                          )}
-                          {c.fourthFlourId && (
-                            <NumberField
-                              label="Quota quarta farina"
-                              value={c.fourthFlourPercent}
-                              onChange={(v) => update("fourthFlourPercent", v)}
-                              min={0}
-                              max={Math.max(
-                                0,
-                                100 -
-                                  c.secondFlourPercent -
-                                  c.thirdFlourPercent,
-                              )}
-                              unit="%"
-                            />
+                          </div>
+                          {recommended.malt > 0 && c.malt === 0 && result.ok && (
+                            <div className="notice malt-note">
+                              <Info />
+                              <div>
+                                <strong>Il malto è facoltativo</strong>
+                                <p>
+                                  La ricetta {currentStyle.name} ne prevede {fmt(recommended.malt, 1)}% ({fmt((result.flour * recommended.malt) / 100, 1)} g): aiuta colore e
+                                  morbidezza, ma è difficile da trovare e si può omettere senza problemi.
+                                </p>
+                                <button className="text-button" onClick={() => update("malt", recommended.malt)}>
+                                  Ce l’ho: aggiungilo
+                                </button>
+                              </div>
+                            </div>
                           )}
                         </div>
-                        <BlendManager
-                          config={c}
-                          flours={flours}
-                          blends={state.savedBlends}
-                          onSave={saveBlend}
-                          onLoad={loadBlend}
-                          onDelete={(id) =>
-                            setState((s) => ({
-                              ...s,
-                              savedBlends: s.savedBlends.filter(
-                                (b) => b.id !== id,
-                              ),
-                            }))
-                          }
-                        />
                       </details>
                     </section>
                   )}
@@ -1228,6 +1387,7 @@ export default function App() {
                         <div>
                           <span className="eyebrow">COME VUOI PIANIFICARE?</span>
                           <strong>{c.planMode === "automatic" ? "L’app costruisce il piano" : "Decidi tu ogni fase"}</strong>
+                          <p>{c.planMode === "automatic" ? "Indica quando inizi e quando vuoi mangiare: tempi e lievito li calcola PizzaLab." : "Scegli tu le ore di ogni riposo. Consigliato se conosci già il tuo impasto."}</p>
                         </div>
                         <div className="method-toggle" aria-label="Modalità di pianificazione">
                           <button
@@ -1320,7 +1480,7 @@ export default function App() {
                           hint={
                             c.foldCount > 0
                               ? `Minimo ${fmt((c.foldCount * c.foldIntervalMinutes) / 60, 2)} ore per completare le pieghe`
-                              : "Primo riposo, in massa"
+                              : "Primo riposo dell’impasto intero, prima di dividerlo in panetti"
                           }
                         />
                         <SliderField
@@ -1332,7 +1492,7 @@ export default function App() {
                           sliderMax={Math.max(72, c.coldHours)}
                           step={0.5}
                           unit="ore"
-                          hint="Massa coperta al freddo"
+                          hint="Impasto coperto in frigorifero: rallenta la lievitazione e sviluppa sapore"
                         />
                         <SliderField
                           label="Appretto fuori frigo"
@@ -1343,7 +1503,7 @@ export default function App() {
                           sliderMax={Math.max(12, c.proofHours)}
                           step={0.5}
                           unit="ore"
-                          hint="Ultimo riposo, già diviso"
+                          hint="Ultimo riposo dei panetti già formati, prima di stendere"
                         />
                       </div>
                       <div className="time-breakdown">
@@ -1356,6 +1516,11 @@ export default function App() {
                           }}
                         />
                         <span style={{ flex: Math.max(0.1, c.proofHours) }} />
+                      </div>
+                      <div className="time-legend" aria-hidden="true">
+                        <span>Puntata {fmt(c.bulkHours, 1)} h</span>
+                        {c.coldHours > 0 && <span className="cold">Frigo {fmt(c.coldHours, 1)} h</span>}
+                        <span className="proof">Appretto {fmt(c.proofHours, 1)} h</span>
                       </div>
                       <div className="time-total">
                         <span>Tempo di fermentazione</span>
@@ -1374,6 +1539,7 @@ export default function App() {
                           min={10}
                           max={35}
                           unit="°C"
+                          hint="Dove lievita l’impasto"
                         />
                         {c.coldHours > 0 && (
                           <SliderField
@@ -1422,11 +1588,11 @@ export default function App() {
                           />
                         )}
                       {result.ok && ["sourdough", "licoli"].includes(c.yeast) && (
-                        <StarterDoughLink profiles={state.sourdoughProfiles} config={c} starterGrams={result.starter.grams} onUpdate={updateMany} onManage={() => setTab("madre")} />
+                        <StarterDoughLink profiles={state.sourdoughProfiles} config={c} starterGrams={result.starter.grams} onUpdate={updateMany} onManage={() => openTab("madre")} />
                       )}
                     </section>
                   )}
-                  {result.ok && (
+                  {result.ok && plannerStage !== "summary" && (
                     <AdvancedPlanner
                       config={c}
                       flours={flours}
@@ -1454,7 +1620,7 @@ export default function App() {
                     <DoughAnalysis config={c} result={result} />
                   )}
                   {plannerStage === "baking" && (
-                    <BakingPlanner config={c} onUpdate={updateMany} calibrations={state.bakeCalibrations} onAddCalibration={(calibration) => { setState((s) => ({ ...s, bakeCalibrations: [calibration, ...s.bakeCalibrations].slice(0, 100) })); setMessage("Risultato salvato: la taratura personale è stata aggiornata."); }} />
+                    <BakingPlanner config={c} onUpdate={updateMany} calibrations={state.bakeCalibrations} />
                   )}
                   {plannerStage === "fermentation" && (
                     <section className="panel">
@@ -1485,6 +1651,16 @@ export default function App() {
                           </div>
                         </div>
                       )}
+                      {timeline[0] && (
+                        <div className={`plan-window ${startPast ? "is-late" : ""}`}>
+                          <Clock />
+                          <div>
+                            <span>Inizi a impastare</span>
+                            <strong>{dateLabel(timeline[0].at)}</strong>
+                            <small>La tabella di marcia completa è nel riepilogo (passaggio 4).</small>
+                          </div>
+                        </div>
+                      )}
                       {startPast && (
                         <div className="notice warning">
                           <Warning />
@@ -1497,6 +1673,44 @@ export default function App() {
                           </div>
                         </div>
                       )}
+                    </section>
+                  )}
+                  {plannerStage === "summary" && (
+                    <section className="panel summary-panel">
+                      <div className="panel-title">
+                        <span className="section-icon">
+                          <ListChecks />
+                        </span>
+                        <div>
+                          <h2>Il tuo programma</h2>
+                          <p>Controlla tempi e dosi. Poi scegli: inizi subito con i promemoria o lo salvi per un altro giorno.</p>
+                        </div>
+                      </div>
+                      {editingRecipe && (
+                        <div className="notice editing-notice">
+                          <PencilSimple />
+                          <div>
+                            <strong>Stai modificando «{editingRecipe.name}»</strong>
+                            <p>Salvando aggiorni la pizza già presente nel diario, senza crearne una nuova.</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="summary-facts">
+                        <div><span>Inizi</span><strong>{timeline[0] ? dateLabel(timeline[0].at) : "—"}</strong></div>
+                        <div><span>Inforni</span><strong>{dateLabel(c.bakeAt)}</strong></div>
+                        <div><span>Lievitazione</span><strong>{result.ok ? `${fmt(result.hours, 1)} ore` : "—"}</strong></div>
+                        <div><span>{isPan ? "Teglie" : "Pizze"}</span><strong>{c.count} · {currentStyle.name}</strong></div>
+                      </div>
+                      {startPast && (
+                        <div className="notice warning">
+                          <Warning />
+                          <div>
+                            <strong>L’inizio del piano è già passato</strong>
+                            <p>Per iniziare adesso torna al passaggio 2 e sposta la cottura più avanti. Puoi comunque salvarla per dopo.</p>
+                          </div>
+                        </div>
+                      )}
+                      <h3 className="summary-subtitle">Tabella di marcia</h3>
                       <div className="timeline">
                         {timeline.map((stage) => (
                           <div
@@ -1522,34 +1736,75 @@ export default function App() {
                       </div>
                     </section>
                   )}
-                  {plannerStage === "dough" && (
-                    <button className="journey-next" onClick={() => goToPlannerStage("fermentation")}>
-                      <span><small>PASSAGGIO 2</small><strong>Passa a lievitazione</strong></span>
-                      <ArrowRight />
-                    </button>
+                  {result.ok && (
+                    <div className="advice-section">
+                      <div className="section-title">
+                        <h3>
+                          <ChefHat /> Il consiglio di PizzaLab
+                        </h3>
+                      </div>
+                      {result.advice.length === 0 ? (
+                        <div className="advice info">
+                          <CheckCircle />
+                          <div>
+                            <strong>Un buon punto di partenza</strong>
+                            <p>
+                              I parametri rientrano nei riferimenti del
+                              calcolatore. Osserva comunque l’impasto durante la
+                              lievitazione.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        result.advice.map((a) => (
+                          <div key={a.id} className={`advice ${a.level}`}>
+                            {a.level === "warning" ? <Warning /> : <Info />}
+                            <div>
+                              <strong>{a.title}</strong>
+                              <p>{a.text}</p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                      <div className="style-tip">
+                        <Leaf />
+                        <p>{result.style.tip}</p>
+                      </div>
+                      <small className="bake-note">
+                        {result.style.bake} I tempi dipendono da forno, supporto
+                        e condimento.
+                      </small>
+                    </div>
                   )}
-                  {plannerStage === "fermentation" && (
-                    <button className="journey-next" onClick={() => goToPlannerStage("baking")}>
-                      <span><small>PASSAGGIO 3</small><strong>Passa a cottura</strong></span>
-                      <ArrowRight />
-                    </button>
-                  )}
-                  {plannerStage === "baking" && (
-                    <section className="panel final-save-panel">
-                      <span className="eyebrow">PIANO COMPLETO</span>
-                      <h2>Pronto per il tuo diario</h2>
-                      <p>Salva dosi, lievitazione e previsione di cottura in un unico piano.</p>
-                      <label className="field recipe-name">
-                        Nome del piano
-                        <input maxLength={80} value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder="Es. La pizza del sabato" />
-                      </label>
-                      <button className="button primary full final-save-button" disabled={loadError || !result.ok} onClick={() => void saveRecipe()}>
-                        <BookmarkSimple /> Salva il piano <ArrowRight />
-                      </button>
-                      <small>Lo ritrovi nel diario, anche offline.</small>
-                    </section>
+                  {plannerStage !== "summary" && (
+                    <div className="step-footer">
+                      {plannerStage !== "dough" && (
+                        <button className="button secondary step-back" onClick={() => goToPlannerStage(plannerStage === "baking" ? "fermentation" : "dough")}>
+                          <ArrowLeft /> Indietro
+                        </button>
+                      )}
+                      {plannerStage === "dough" && (
+                        <button className="journey-next" onClick={() => goToPlannerStage("fermentation")}>
+                          <span><small>Passaggio 2 di 4</small><strong>Passa a lievitazione</strong></span>
+                          <ArrowRight weight="bold" />
+                        </button>
+                      )}
+                      {plannerStage === "fermentation" && (
+                        <button className="journey-next" onClick={() => goToPlannerStage("baking")}>
+                          <span><small>Passaggio 3 di 4</small><strong>Passa a cottura</strong></span>
+                          <ArrowRight weight="bold" />
+                        </button>
+                      )}
+                      {plannerStage === "baking" && (
+                        <button className="journey-next" onClick={() => goToPlannerStage("summary")}>
+                          <span><small>Passaggio 4 di 4</small><strong>Vai al riepilogo</strong></span>
+                          <ArrowRight weight="bold" />
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
+                {plannerStage === "summary" && (
                 <aside className="recipe-sidebar" id="recipe-summary">
                   <div className="recipe-sheet">
                     <span className="eyebrow">IL TUO IMPASTO</span>
@@ -1710,20 +1965,6 @@ export default function App() {
                             quantità mostrate sono arrotondate.
                           </span>
                         </div>
-                        <div className="recipe-tools">
-                          <button
-                            className="button secondary"
-                            onClick={() => setScaleOpen(true)}
-                          >
-                            <Scale /> Pesa
-                          </button>
-                          <button
-                            className="button secondary"
-                            onClick={() => setGuidedOpen(true)}
-                          >
-                            <Play /> Guida
-                          </button>
-                        </div>
                       </>
                     ) : (
                       <div className="notice warning" role="alert">
@@ -1739,47 +1980,36 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  {result.ok && (
-                    <div className="advice-section">
-                      <div className="section-title">
-                        <h3>
-                          <ChefHat /> Il consiglio di PizzaLab
-                        </h3>
+                  {plannerStage === "summary" && (
+                    <section className="panel final-save-panel" aria-labelledby="final-save-title">
+                      <span className="eyebrow">Passaggio 4 di 4 · Tutto pronto?</span>
+                      <h2 id="final-save-title">Partiamo o lo salvi per dopo?</h2>
+                      <label className="field recipe-name">
+                        Nome del piano
+                        <input maxLength={80} value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder="Es. La pizza del sabato" />
+                      </label>
+                      <div className="final-choice">
+                        <button className="button primary full final-start-button" disabled={loadError || !result.ok || !canStart || busy} onClick={() => void saveRecipe("start")}>
+                          <Bell /> Inizia ora
+                        </button>
+                        <p>{canStart ? "Si attivano i promemoria di ogni fase e la pizza compare nel diario, «In corso». Bilancia e guida passo passo ti aspettano lì." : "Non puoi iniziare adesso: l’orario di inizio è già passato. Sposta la cottura al passaggio 2."}</p>
+                        {canStart && activeRecipe && activeRecipe.id !== editingId && (
+                          <p className="replace-note"><Warning /> Hai già «{activeRecipe.name}» in corso: iniziando questa, l’altra tornerà tra le salvate.</p>
+                        )}
                       </div>
-                      {result.advice.length === 0 ? (
-                        <div className="advice info">
-                          <CheckCircle />
-                          <div>
-                            <strong>Un buon punto di partenza</strong>
-                            <p>
-                              I parametri rientrano nei riferimenti del
-                              calcolatore. Osserva comunque l’impasto durante la
-                              lievitazione.
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        result.advice.map((a) => (
-                          <div key={a.id} className={`advice ${a.level}`}>
-                            {a.level === "warning" ? <Warning /> : <Info />}
-                            <div>
-                              <strong>{a.title}</strong>
-                              <p>{a.text}</p>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                      <div className="style-tip">
-                        <Leaf />
-                        <p>{result.style.tip}</p>
+                      <div className="final-choice">
+                        <button className="button secondary full final-save-button" disabled={loadError || !result.ok || busy} onClick={() => void saveRecipe("later")}>
+                          <BookmarkSimple /> {editingRecipe ? "Salva le modifiche" : "Salva per dopo"}
+                        </button>
+                        <p>Nessun promemoria per ora: la ritrovi nel diario, tra le «Salvate», e la avvii quando vuoi.</p>
                       </div>
-                      <small className="bake-note">
-                        {result.style.bake} I tempi dipendono da forno, supporto
-                        e condimento.
-                      </small>
-                    </div>
+                      <button className="text-button step-back-link" onClick={() => goToPlannerStage("baking")}>
+                        <ArrowLeft /> Torna alla cottura
+                      </button>
+                    </section>
                   )}
                 </aside>
+                )}
               </div>
             </>
           )}
@@ -1855,236 +2085,28 @@ export default function App() {
             </>
           )}
           {tab === "diario" && (
-            <>
-              <div className="page-heading diary-heading">
-                <div>
-                  <span className="eyebrow">OGNI IMPASTO INSEGNA QUALCOSA</span>
-                  <h1>Il tuo diario di pizza.</h1>
-                  <p>Ricette, promemoria e piccoli progressi.</p>
-                </div>
-                <div className="heading-illustration" aria-hidden="true">
-                  <Notebook weight="duotone" />
-                  <span>Ogni prova lascia<br />una traccia.</span>
-                </div>
-              </div>
-              <div className="heading-actions page-tools-row diary-tools">
-                  <input
-                    ref={importRef}
-                    hidden
-                    type="file"
-                    accept="application/json,.json"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) void importArchive(file);
-                    }}
-                  />
-                  <button
-                    className="button secondary"
-                    onClick={() => importRef.current?.click()}
-                  >
-                    <UploadSimple /> Importa
-                  </button>
-                  <button
-                    className="button secondary"
-                    disabled={!state.recipes.length}
-                    onClick={exportArchive}
-                  >
-                    Esporta
-                  </button>
-                  <button
-                    className="button primary"
-                    onClick={() => setTab("impasto")}
-                  >
-                    Nuovo impasto <ArrowRight />
-                  </button>
-              </div>
-              {state.recipes.length === 0 ? (
-                <div className="empty-state">
-                  <Notebook size={52} weight="duotone" />
-                  <h2>La prima pagina è tutta tua.</h2>
-                  <p>
-                    Salva un piano, segui le fasi e annota com’è andata.
-                    <br />
-                    La prossima pizza partirà da qui.
-                  </p>
-                  <button
-                    className="button primary"
-                    onClick={() => setTab("impasto")}
-                  >
-                    Prepara il primo impasto <ArrowRight />
-                  </button>
-                </div>
-              ) : (
-                <div className="journal-list">
-                  {[...state.recipes]
-                    .sort(
-                      (a, b) =>
-                        Number(b.id === state.activeId) -
-                          Number(a.id === state.activeId) ||
-                        Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)),
-                    )
-                    .map((recipe) => {
-                      const r = calculate(recipe.config, flours);
-                      const stages = buildTimeline(recipe.config, flours);
-                      const isActive = state.activeId === recipe.id;
-                      const expired =
-                        new Date(recipe.config.bakeAt).getTime() <= now;
-                      return (
-                        <article
-                          className={`journal-card ${isActive ? "active-recipe" : ""}`}
-                          key={recipe.id}
-                        >
-                          <div className="journal-title">
-                            <div>
-                              <span className="eyebrow">
-                                {isActive
-                                  ? "PIANO ATTIVO"
-                                  : recipe.favorite
-                                    ? "PREFERITA"
-                                    : expired
-                                      ? "DA RICORDARE"
-                                      : "IN PROGRAMMA"}
-                              </span>
-                              <h2>{recipe.name}</h2>
-                              <p>
-                                {dateLabel(recipe.config.bakeAt)} ·{" "}
-                                {recipe.config.count}{" "}
-                                {r.ok && r.style.pan ? "teglie" : "pizze"} ·{" "}
-                                {recipe.config.hydration}% acqua
-                              </p>
-                            </div>
-                            <button
-                              className={`icon-button favorite-button ${recipe.favorite ? "selected" : ""}`}
-                              aria-label={`${recipe.favorite ? "Rimuovi dai" : "Aggiungi ai"} preferiti ${recipe.name}`}
-                              onClick={() =>
-                                editRecipe(recipe.id, {
-                                  favorite: !recipe.favorite,
-                                })
-                              }
-                            >
-                              <Star
-                                weight={recipe.favorite ? "fill" : "regular"}
-                              />
-                            </button>
-                            <button
-                              className="icon-button"
-                              aria-label={`Elimina ${recipe.name}`}
-                              onClick={() => setDeleteId(recipe.id)}
-                            >
-                              <Trash />
-                            </button>
-                          </div>
-                          {r.ok && (
-                            <div className="journal-ingredients">
-                              <strong>Farina totale {fmt(r.flour)} g</strong>
-                              <br />
-                              <small>
-                                {r.flourBreakdown
-                                  .map(
-                                    (item) =>
-                                      `${item.name}: ${fmt(item.grams)} g (${fmt(item.percent, 1)}%)`,
-                                  )
-                                  .join(" · ")}
-                              </small>
-                              <br />
-                              Acqua {fmt(r.water)} g · Sale {fmt(r.salt, 1)} g ·{" "}
-                              {recipe.config.yeast === "sourdough"
-                                ? "Pasta madre"
-                                : recipe.config.yeast === "licoli"
-                                  ? "Licoli"
-                                  : `Lievito ${recipe.config.yeast === "fresh" ? "fresco" : "secco"}`}{" "}
-                              {fmt(
-                                r.yeast,
-                                ["sourdough", "licoli"].includes(
-                                  recipe.config.yeast,
-                                )
-                                  ? 0
-                                  : 2,
-                              )}{" "}
-                              g{r.oil > 0 ? ` · Olio ${fmt(r.oil, 1)} g` : ""}
-                            </div>
-                          )}
-                          <div className="journal-actions">
-                            <button
-                              className="button secondary"
-                              onClick={() => {
-                                setState((s) => ({
-                                  ...s,
-                                  config: { ...recipe.config },
-                                }));
-                                setTab("impasto");
-                                setRecipeName(recipe.name);
-                              }}
-                            >
-                              Apri nel calcolatore
-                            </button>
-                            <button
-                              className="button secondary"
-                              onClick={() => void shareRecipe(recipe)}
-                            >
-                              Condividi
-                            </button>
-                            {isActive ? (
-                              <button
-                                className="button secondary"
-                                disabled={busy}
-                                onClick={() => void deactivate()}
-                              >
-                                <Bell /> Disattiva piano
-                              </button>
-                            ) : (
-                              <button
-                                className="button primary"
-                                disabled={busy || expired}
-                                onClick={() => void activate(recipe)}
-                              >
-                                <Bell /> Attiva piano e promemoria
-                              </button>
-                            )}
-                          </div>
-                          {isActive ? (
-                            <>
-                              <p className="small-muted active-plan-note">
-                                Questo è l’unico piano operativo. I controlli qui sotto aggiornano soltanto questa ricetta salvata.
-                              </p>
-                              <ActiveDoughJournal
-                                recipe={recipe}
-                                stages={stages}
-                                onEdit={(patch) => editRecipe(recipe.id, patch)}
-                                onMessage={setMessage}
-                              />
-                            </>
-                          ) : (
-                            <details>
-                              <summary>Consulta le fasi pianificate</summary>
-                              <div className="checklist readonly-checklist">
-                                {stages.map((stage) => (
-                                  <div key={stage.id}>
-                                    <CheckCircle weight={recipe.completedStages.includes(stage.id) ? "fill" : "regular"} />
-                                    <span>
-                                      <strong>{stage.title}</strong>
-                                      <small>{dateLabel(stage.at)}</small>
-                                      <p>{stage.detail}</p>
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </details>
-                          )}
-                          <RecipeOutcome
-                            recipe={recipe}
-                            onEdit={(patch) => editRecipe(recipe.id, patch)}
-                            collapsed={isActive && recipe.completedStages.length < stages.length}
-                          />
-                        </article>
-                      );
-                  })}
-                </div>
-              )}
-              {state.recipes.length > 0 && (
-                <InsightsDashboard recipes={state.recipes} flours={flours} />
-              )}
-            </>
+            <Diary
+              recipes={state.recipes}
+              activeId={state.activeId}
+              flours={flours}
+              now={now}
+              busy={busy}
+              view={diaryView}
+              calibrations={state.bakeCalibrations}
+              onViewChange={setDiaryView}
+              onNew={startNewDough}
+              onImport={(file) => void importArchive(file)}
+              onExport={exportArchive}
+              onStart={(recipe) => void activate(recipe)}
+              onStop={() => void deactivate()}
+              onFinish={(recipe) => void finishRecipe(recipe)}
+              onEdit={editRecipe}
+              onDelete={setDeleteId}
+              onOpenInPlanner={openInPlanner}
+              onShare={(recipe) => void shareRecipe(recipe)}
+              onMessage={setMessage}
+              onSaveCalibration={saveCalibration}
+            />
           )}
           <footer className="page-footer">
             <span>PizzaLab</span> Fatto per chi ama mettere le mani in pasta.
@@ -2122,16 +2144,6 @@ export default function App() {
             </div>
           </div>
         </div>
-      )}
-      {guidedOpen && result.ok && (
-        <GuidedMode
-          title={result.style.name}
-          stages={timeline}
-          onClose={() => setGuidedOpen(false)}
-        />
-      )}
-      {scaleOpen && result.ok && (
-        <ScaleMode items={scaleItems} onClose={() => setScaleOpen(false)} />
       )}
     </div>
   );

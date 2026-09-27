@@ -121,7 +121,11 @@ export function deriveAutomaticSchedule(c: DoughConfig): AutomaticSchedule {
 
 const clampScore = (value: number) => Math.max(0, Math.min(100, value));
 
-function bakeScores(c: DoughConfig, minutes = c.bakeMinutes) {
+/**
+ * Punteggi 0–100 di crosta, mollica e fondo dopo `minutes` di cottura.
+ * È leggero: il grafico lo usa per disegnare le curve senza ricalcolare la finestra consigliata.
+ */
+export function bakeScores(c: DoughConfig, minutes = c.bakeMinutes) {
   const style = styles.find((item) => item.id === c.styleId) ?? styles[0];
   const defaults =
     style.id === "napoletana" || style.id === "contemporanea"
@@ -181,8 +185,25 @@ function bakeScores(c: DoughConfig, minutes = c.bakeMinutes) {
         c.oil * 0.45 +
         fanBoost - moisturePenalty * 0.55,
     ),
+    // La mollica cuoce dal cuore: il calore arriva sia da sopra sia dal supporto,
+    // penetra più lentamente negli impasti spessi e parte in ritardo rispetto alla crosta,
+    // quindi la sua curva è più ripida e reagisce anche a supporto e altezza nel forno.
     crumbScore: clampScore(
-      54 + heat * 38 - extraWater * 1.05 + fanBoost * 0.65 - toppingPenalty - moisturePenalty,
+      56 +
+        Math.log(
+          Math.max(
+            0.05,
+            (exposure * (0.5 + 0.5 * surfacePower[c.bakeSurface])) /
+              Math.pow(thickness, 0.35),
+          ),
+        ) *
+          46 +
+        (rackTop[c.ovenRack] + rackBottom[c.ovenRack]) * 0.2 -
+        Math.abs(rackTop[c.ovenRack] - rackBottom[c.ovenRack]) * 0.12 -
+        extraWater * 1.05 +
+        fanBoost * 0.65 -
+        toppingPenalty -
+        moisturePenalty,
     ),
     baseScore: clampScore(
       51 +

@@ -1,4 +1,5 @@
 import { CheckCircle, Clock, Gauge } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 import type { DoughConfig, Recipe, Stage } from "../domain/types";
 import { FermentationCheck } from "./FermentationCheck";
 import { TemperatureLog } from "./TemperatureLog";
@@ -17,11 +18,13 @@ export function ActiveDoughJournal({
   stages,
   onEdit,
   onMessage,
+  tools,
 }: {
   recipe: Recipe;
   stages: Stage[];
   onEdit: (patch: Partial<Recipe>) => void;
   onMessage: (message: string) => void;
+  tools?: ReactNode;
 }) {
   const completed = new Set(recipe.completedStages);
   const nextStage = stages.find((stage) => !completed.has(stage.id));
@@ -68,24 +71,10 @@ export function ActiveDoughJournal({
         </article>
       )}
 
-      <div className="live-check-zone">
-        <div className="live-check-intro">
-          <span>CONTROLLO DURANTE LA LAVORAZIONE</span>
-          <p>Usalo solo mentre stai seguendo questo impasto: le correzioni aggiornano il piano salvato, non il calcolatore.</p>
-        </div>
-        <FermentationCheck
-          config={recipe.config}
-          onUpdate={updateConfig}
-          onApplied={() => onMessage("Tempi dell’impasto attivo aggiornati nel diario.")}
-        />
-        <TemperatureLog
-          recipe={recipe}
-          onChange={(temperatureReadings) => onEdit({ temperatureReadings })}
-        />
-      </div>
+      {tools}
 
       <details className="active-stage-list">
-        <summary><Gauge /> Tutte le fasi · {completedCount}/{stages.length} completate</summary>
+        <summary><Gauge /><span>Segna le fasi fatte · {completedCount}/{stages.length}</span></summary>
         <div className="checklist">
           {stages.map((stage) => (
             <label key={stage.id}>
@@ -109,6 +98,23 @@ export function ActiveDoughJournal({
           ))}
         </div>
       </details>
+
+      <div className="live-check-zone">
+        <div className="live-check-intro">
+          <span>CONTROLLO DURANTE LA LAVORAZIONE</span>
+          <p>Usalo solo mentre stai seguendo questo impasto: le correzioni aggiornano il piano salvato, non il calcolatore.</p>
+        </div>
+        <FermentationCheck
+          config={recipe.config}
+          onUpdate={updateConfig}
+          onApplied={() => onMessage("Tempi dell’impasto attivo aggiornati nel diario.")}
+        />
+        <TemperatureLog
+          recipe={recipe}
+          onChange={(temperatureReadings) => onEdit({ temperatureReadings })}
+        />
+      </div>
+
     </section>
   );
 }

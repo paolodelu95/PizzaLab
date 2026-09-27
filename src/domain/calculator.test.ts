@@ -444,6 +444,21 @@ describe("baking prediction", () => {
     expect(steel.baseScore).toBeGreaterThan(stone.baseScore);
   });
 
+  it("gives the crumb its own, steeper cooking curve", () => {
+    const short = estimateBakeOutcome(config({ bakeMinutes: 1 }));
+    const long = estimateBakeOutcome(config({ bakeMinutes: 3 }));
+    expect(long.crumbScore - short.crumbScore).toBeGreaterThan(long.crustScore - short.crustScore);
+  });
+
+  it("lets the baking support and rack affect the crumb", () => {
+    const stone = estimateBakeOutcome(config({ bakeSurface: "stone" }));
+    const steel = estimateBakeOutcome(config({ bakeSurface: "steel" }));
+    const middle = estimateBakeOutcome(config({ ovenRack: "middle" }));
+    const top = estimateBakeOutcome(config({ ovenRack: "top" }));
+    expect(steel.crumbScore).toBeGreaterThan(stone.crumbScore);
+    expect(middle.crumbScore).toBeGreaterThan(top.crumbScore);
+  });
+
   it("requires more energy to set a more hydrated crumb", () => {
     const normal = estimateBakeOutcome(config({ hydration: 63 }));
     const wet = estimateBakeOutcome(config({ hydration: 75 }));

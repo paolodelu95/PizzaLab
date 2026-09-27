@@ -82,13 +82,22 @@ export function SourdoughCare({
   if (!profile || creatingNew)
     return (
       <div className="starter-page">
-        <section className="starter-hero starter-onboarding">
-          <span className="starter-hero-icon"><Jar weight="duotone" /></span>
-          <span className="eyebrow">IL TUO LIEVITO, GIORNO DOPO GIORNO</span>
-          <h1>{profiles.length ? "Aggiungi un altro lievito." : "Coltiva il tuo lievito madre."}</h1>
-          <p>Un percorso guidato dai primi rinfreschi fino a una coltura stabile, con dosi, osservazioni e promemoria personali.</p>
-        </section>
+        <div className="page-heading starter-heading">
+          <div>
+            <span className="eyebrow">Lievito madre e Li.Co.Li.</span>
+            <h1>Il tuo lievito.</h1>
+            <p>Rinfreschi, crescita e promemoria della tua coltura, giorno dopo giorno.</p>
+          </div>
+          <div className="heading-illustration" aria-hidden="true"><Jar weight="duotone" /></div>
+        </div>
         <section className="panel starter-name-card">
+          <div className="panel-title">
+            <span className="section-icon"><Jar /></span>
+            <div>
+              <h2>{profiles.length ? "Aggiungi un altro lievito." : "Coltiva il tuo lievito madre."}</h2>
+              <p>Un percorso guidato dai primi rinfreschi fino a una coltura stabile, con dosi, osservazioni e promemoria personali.</p>
+            </div>
+          </div>
           <label className="field">Come vuoi chiamarlo?<input value={draftName} maxLength={40} onChange={(event) => setDraftName(event.target.value)} placeholder="Es. Gino, Madre 2026, Li.Co.Li. pizza" /></label>
           <p>Potrai cambiare il nome in qualsiasi momento.</p>
         </section>
@@ -136,6 +145,14 @@ export function SourdoughCare({
 
   return (
     <div className="starter-page">
+      <div className="page-heading starter-heading">
+        <div>
+          <span className="eyebrow">Lievito madre e Li.Co.Li.</span>
+          <h1>Il tuo lievito.</h1>
+          <p>Rinfreschi, crescita e promemoria della tua coltura, giorno dopo giorno.</p>
+        </div>
+        <div className="heading-illustration" aria-hidden="true"><Jar weight="duotone" /></div>
+      </div>
       <section className="starter-switcher" aria-label="I tuoi lieviti madre">
         <div><span className="eyebrow">I TUOI LIEVITI</span><strong>{profiles.length} {profiles.length === 1 ? "coltura" : "colture"}</strong></div>
         <div className="starter-switcher-list">
@@ -143,10 +160,10 @@ export function SourdoughCare({
           <button className="starter-add" onClick={() => setCreatingNew(true)}><Plus /><span><strong>Nuovo lievito</strong><small>Crea un’altra coltura</small></span></button>
         </div>
       </section>
-      <section className="starter-hero">
+      <section className="panel starter-hero">
         <div className="starter-hero-top">
           <span className="starter-hero-icon"><Jar weight="duotone" /></span>
-          <div><span className="eyebrow">GIORNO {ageDays}</span><h1>{profile.name}</h1><p>{starterKindLabel(profile.kind)}</p></div>
+          <div><span className="eyebrow">Giorno {ageDays}</span><h2>{profile.name}</h2><p>{starterKindLabel(profile.kind)}</p></div>
           <span className={`starter-phase ${profile.phase}`}>{phase[0]}</span>
         </div>
         <div className="starter-next">

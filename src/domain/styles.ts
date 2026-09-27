@@ -222,6 +222,20 @@ export function localDateTime(date: Date): string {
     .toISOString()
     .slice(0, 16);
 }
+/**
+ * Ingredienti aggiuntivi previsti dalla ricetta di ogni stile, in percentuale sulla farina.
+ * Il malto resta facoltativo: l’app lo suggerisce ma non lo aggiunge da sola.
+ */
+export function recommendedExtras(styleId: string) {
+  const style = styles.find((item) => item.id === styleId) ?? styles[0];
+  return {
+    salt: style.salt,
+    oil: style.oil,
+    sugar: styleId === "new-york" ? 2 : styleId === "detroit" ? 1 : 0,
+    malt: styleId === "new-york" ? 0.4 : 0,
+  };
+}
+
 export function bakingDefaults(
   styleId: string,
 ): Pick<

@@ -1,5 +1,5 @@
 import { Minus, Plus } from "@phosphor-icons/react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type CSSProperties } from "react";
 
 export function parseNumberDraft(draft: string, min: number, max: number) {
   if (draft.trim() === "") return null;
@@ -141,6 +141,7 @@ export function SliderField({
         max={sliderMax}
         step={step}
         value={Math.max(sliderMin, Math.min(sliderMax, value))}
+        style={{ "--fill": `${sliderMax > sliderMin ? ((Math.max(sliderMin, Math.min(sliderMax, value)) - sliderMin) / (sliderMax - sliderMin)) * 100 : 0}%` } as CSSProperties}
         onChange={(event) => publish(Number(event.target.value))}
       />
       <div className="slider-bounds"><span>{sliderMin.toLocaleString("it-IT")} {unit}</span><span>{sliderMax.toLocaleString("it-IT")} {unit}</span></div>

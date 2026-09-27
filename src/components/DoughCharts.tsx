@@ -1,5 +1,4 @@
 import type { DoughConfig, PizzaStyle } from '../domain/types';
-import './charts.css';
 
 const fmt = (value:number,digits=1) => value.toLocaleString('it-IT',{maximumFractionDigits:digits});
 

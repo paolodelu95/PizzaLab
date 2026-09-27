@@ -12,6 +12,7 @@ test-results/
 *.tsbuildinfo
 *.jks
 *.keystore
+android/keystore.properties
 artifacts/*.apk
 *.apk
 .DS_Store

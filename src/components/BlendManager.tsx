@@ -5,5 +5,6 @@ type Props={config:DoughConfig;flours:Flour[];blends:FlourBlend[];onSave:()=>voi
 export function BlendManager({config,flours,blends,onSave,onLoad,onDelete}:Props){
   const hasBlend=config.secondFlourPercent>0||config.thirdFlourPercent>0||config.fourthFlourPercent>0;
   const label=(blend:FlourBlend)=>blend.components.map(item=>`${flours.find(f=>f.id===item.flourId)?.brand??'Farina'} ${item.percent}%`).join(' + ');
+  if(!hasBlend&&blends.length===0)return null;
   return <div className="blend-manager"><div><Wheat/><div><strong>Miscele salvate</strong><span>Riusa la stessa combinazione in un nuovo impasto.</span></div><button className="button secondary" disabled={!hasBlend} onClick={onSave}><FloppyDisk/> Salva questa</button></div>{blends.length>0&&<div className="saved-blends">{blends.map(blend=><div key={blend.id}><button onClick={()=>onLoad(blend)}><strong>{blend.name}</strong><span>{label(blend)}</span></button><button aria-label={`Elimina miscela ${blend.name}`} onClick={()=>onDelete(blend.id)}><Trash/></button></div>)}</div>}</div>;
 }

@@ -1,6 +1,7 @@
 import { Check, MagnifyingGlass, X, Grains as Wheat } from '@phosphor-icons/react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { Flour } from '../domain/types';
+import { useCloseOnBack } from '../services/backNavigation';
 
 const normalize=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 
@@ -8,6 +9,7 @@ export function FlourPicker({label,value,flours,onChange,allowEmpty=false,emptyL
   label:string;value:string;flours:Flour[];onChange:(id:string)=>void;allowEmpty?:boolean;emptyLabel?:string;
 }){
   const id=useId();const [open,setOpen]=useState(false);const [query,setQuery]=useState('');
+  useCloseOnBack(open,()=>setOpen(false));
   const selected=flours.find(item=>item.id===value);
   const usable=useMemo(()=>flours.filter(item=>item.usable),[flours]);
   const filtered=useMemo(()=>{const needle=normalize(query.trim());const matches=needle?usable.filter(item=>normalize(`${item.brand} ${item.name} ${item.type} ${item.w?.join(' ')??''} ${item.glutenFree?'senza glutine gluten free':''}`).includes(needle)):usable;return [...matches].sort((a,b)=>Number(b.brand==='Farina generica')-Number(a.brand==='Farina generica')).slice(0,100);},[query,usable]);

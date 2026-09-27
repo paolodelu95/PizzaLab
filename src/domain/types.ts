@@ -148,6 +148,12 @@ export interface Recipe {
   completedStages: string[];
   temperatureReadings?: TemperatureReading[];
   favorite?: boolean;
+  /** Momento in cui il piano è stato avviato con «Inizia ora». */
+  startedAt?: string;
+  /** Momento in cui la pizza è stata conclusa e archiviata tra le passate. */
+  finishedAt?: string;
+  /** Taratura del forno registrata a partire da questa pizza. */
+  calibrationId?: string;
 }
 export interface StarterFeeding {
   id: string;

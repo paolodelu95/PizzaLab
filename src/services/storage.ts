@@ -113,7 +113,7 @@ export async function readState(): Promise<StoredState> {
   );
   if (!parsed.sourdoughProfiles.some((profile) => profile.id === parsed.activeSourdoughId))
     parsed.activeSourdoughId = parsed.sourdoughProfiles[0]?.id ?? null;
-  if (!parsed.recipes.some((r) => r.id === parsed.activeId))
+  if (!parsed.recipes.some((r) => r.id === parsed.activeId && !r.finishedAt))
     parsed.activeId = null;
   return parsed;
 }

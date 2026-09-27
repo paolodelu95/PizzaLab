@@ -71,3 +71,12 @@ export async function scheduleStarterReminders(profile: SourdoughProfile): Promi
   })) });
   return `${dates.length} promemoria del lievito madre programmati. Android può ritardarli leggermente per il risparmio energetico.`;
 }
+
+/** Toccando una notifica, l’app si apre sulla sezione giusta. */
+export function onReminderOpened(handler: (section: 'dough' | 'sourdough') => void) {
+  if (!Capacitor.isNativePlatform()) return () => undefined;
+  const listener = LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+    handler(action.notification.extra?.section === 'sourdough' ? 'sourdough' : 'dough');
+  });
+  return () => { void listener.then((item) => item.remove()); };
+}

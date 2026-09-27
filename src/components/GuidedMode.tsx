@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, Check, Clock, Fire, Microphone, Pause, Play, Snowflake, SpeakerHigh, Thermometer, X } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Stage } from '../domain/types';
+import { useCloseOnBack } from '../services/backNavigation';
 
 type Drift='ok'|'fast'|'slow'|'hot'|'cold';
 type WakeLockLike={release:()=>Promise<void>};
@@ -9,6 +10,7 @@ const driftAdvice:Record<Drift,[string,string]>={ok:['Tutto regolare','Continua 
 const formatTime=(seconds:number)=>`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
 
 export function GuidedMode({title,stages,onClose}:{title:string;stages:Stage[];onClose:()=>void}){
+  useCloseOnBack(true,onClose);
   const [index,setIndex]=useState(0);const [running,setRunning]=useState(false);const [remaining,setRemaining]=useState(0);const [drift,setDrift]=useState<Drift>('ok');const [voice,setVoice]=useState(false);const [awake,setAwake]=useState(false);const [voiceNote,setVoiceNote]=useState('');
   const wakeRef=useRef<WakeLockLike|null>(null);const recognitionRef=useRef<RecognitionLike|null>(null);const listeningRef=useRef(false);
   const stage=stages[index];const suggested=useMemo(()=>Math.max(0,Math.round((new Date(stage.until).getTime()-new Date(stage.at).getTime())/1000)),[stage]);

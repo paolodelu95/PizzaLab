@@ -14,7 +14,6 @@ import { ovenProfiles } from "../data/ovens";
 import { mixerProfiles } from "../data/mixers";
 import { NumberField } from "./Fields";
 import { FlourPicker } from "./FlourPicker";
-import "./advanced.css";
 
 type GoodResult = Extract<ReturnType<typeof calculate>, { ok: true }>;
 type Props = {

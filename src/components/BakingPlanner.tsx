@@ -1,8 +1,8 @@
 import { Fire, Oven, SquaresFour, Target } from "@phosphor-icons/react";
-import { useState } from "react";
-import { bakeSurfaceLabels, estimateBakeOutcome } from "../domain/calculator";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { bakeScores, bakeSurfaceLabels, estimateBakeOutcome } from "../domain/calculator";
 import type { BakeCalibration, DoughConfig } from "../domain/types";
-import { NumberField, SliderField } from "./Fields";
+import { SliderField } from "./Fields";
 
 const rackOptions: [DoughConfig["ovenRack"], string, string][] = [
   ["bottom", "Basso", "Più energia al fondo"],
@@ -31,18 +31,24 @@ export function BakingPlanner({
   config: c,
   onUpdate,
   calibrations,
-  onAddCalibration,
 }: {
   config: DoughConfig;
   onUpdate: (patch: Partial<DoughConfig>) => void;
   calibrations: BakeCalibration[];
-  onAddCalibration: (calibration: BakeCalibration) => void;
 }) {
-  const [actualMinutes, setActualMinutes] = useState(c.bakeMinutes);
-  const [crust, setCrust] = useState<BakeCalibration["crust"]>("good");
-  const [crumb, setCrumb] = useState<BakeCalibration["crumb"]>("good");
-  const [base, setBase] = useState<BakeCalibration["base"]>("good");
-  const outcome = estimateBakeOutcome(c);
+  // Il tempo di cottura segue il dito subito; l’app intera si aggiorna appena il dito si ferma.
+  const [minutes, setMinutes] = useState(c.bakeMinutes);
+  const commitTimer = useRef<number | undefined>(undefined);
+  useEffect(() => setMinutes(c.bakeMinutes), [c.bakeMinutes]);
+  useEffect(() => () => window.clearTimeout(commitTimer.current), []);
+  const changeMinutes = (value: number) => {
+    const next = Math.max(0.5, Math.min(60, value));
+    setMinutes(next);
+    window.clearTimeout(commitTimer.current);
+    commitTimer.current = window.setTimeout(() => onUpdate({ bakeMinutes: next }), 140);
+  };
+  const live = useMemo(() => ({ ...c, bakeMinutes: minutes }), [c, minutes]);
+  const outcome = useMemo(() => estimateBakeOutcome(live), [live]);
   const exactCalibrations = calibrations.filter((item) => item.ovenType === c.ovenType && item.flourId === c.flourId);
   const relevantCalibrations = exactCalibrations.length ? exactCalibrations : calibrations.filter((item) => item.ovenType === c.ovenType);
   const personalDelta = relevantCalibrations.length
@@ -58,22 +64,39 @@ export function BakingPlanner({
           ? "La superficie colora presto: abbassa il ripiano nella prima parte della cottura."
           : "I risultati registrati sono equilibrati: la correzione riguarda soprattutto il tempo reale.";
   const rack = rackOptions.find(([id]) => id === c.ovenRack)!;
-  const baseSliderMax = c.ovenTemp >= 350 ? 10 : c.ovenTemp >= 280 ? 20 : 60;
-  const chartMax = Math.max(baseSliderMax, c.bakeMinutes, outcome.recommendedMax * 1.15);
-  const points = Array.from({ length: 31 }, (_, index) => {
-    const time = (chartMax * index) / 30;
-    return estimateBakeOutcome({ ...c, bakeMinutes: Math.max(0.05, time) });
-  });
+  const fast = c.ovenTemp >= 350;
+  const step = fast ? 0.25 : c.ovenTemp >= 280 ? 0.5 : 1;
+  // Il grafico si concentra attorno alla finestra utile, così le curve non restano schiacciate a sinistra.
+  const chartMax =
+    Math.ceil(
+      Math.max(fast ? 4 : c.ovenTemp >= 280 ? 8 : 16, outcome.recommendedMax * 1.7, minutes * 1.25) / step,
+    ) * step;
+  const W = 320;
+  const H = 190;
+  const left = 8;
+  const right = W - 8;
+  const top = 10;
+  const bottom = H - 22;
+  const xOf = (time: number) => left + (Math.min(chartMax, time) / chartMax) * (right - left);
+  const yOf = (score: number) => bottom - (score / 100) * (bottom - top);
+  const points = useMemo(
+    () =>
+      Array.from({ length: 49 }, (_, index) => {
+        const time = Math.max(0.05, (chartMax * index) / 48);
+        return { time, ...bakeScores(c, time) };
+      }),
+    [c, chartMax],
+  );
   const path = (key: "crustScore" | "crumbScore" | "baseScore") =>
-    points
-      .map((point, index) => {
-        const x = 12 + (index / 30) * 296;
-        const y = 126 - point[key] * 1.05;
-        return `${index ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(" ");
-  const markerX = 12 + Math.min(1, c.bakeMinutes / chartMax) * 296;
-  const bakeSliderMax = Math.ceil(chartMax / (c.ovenTemp >= 350 ? 0.25 : 1)) * (c.ovenTemp >= 350 ? 0.25 : 1);
+    points.map((point, index) => `${index ? "L" : "M"}${xOf(point.time).toFixed(1)},${yOf(point[key]).toFixed(1)}`).join(" ");
+  const markerX = xOf(minutes);
+  const windowX1 = xOf(outcome.recommendedMin);
+  const windowX2 = xOf(outcome.recommendedMax);
+  const scrub = (event: PointerEvent<SVGSVGElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    const ratio = ((event.clientX - box.left) / box.width) * (W / (right - left)) - left / (right - left);
+    changeMinutes(Math.round((Math.max(0, Math.min(1, ratio)) * chartMax) / step) * step);
+  };
 
   return (
     <section className="panel baking-planner">
@@ -100,13 +123,49 @@ export function BakingPlanner({
         </div>
       </div>
 
-      <div className="bake-prediction-window" aria-live="polite">
+      <div className="bake-prediction-window">
         <div className="prediction-heading">
           <div><small>ANTEPRIMA IN TEMPO REALE</small><h3>Risultato previsto</h3></div>
-          <span>{formatTime(c.bakeMinutes)}</span>
+          <span aria-live="polite">{formatTime(minutes)}</span>
+        </div>
+        <div className="bake-curve">
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            role="img"
+            aria-label={`Evoluzione prevista durante la cottura. Finestra consigliata ${formatTime(outcome.recommendedMin)}–${formatTime(outcome.recommendedMax)}. Tocca o trascina sul grafico per scegliere il tempo.`}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              scrub(event);
+            }}
+            onPointerMove={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) scrub(event);
+            }}
+          >
+            <rect x={left} y={yOf(70)} width={right - left} height={yOf(40) - yOf(70)} rx="6" className="ideal-zone" />
+            <rect x={windowX1} y={top} width={Math.max(2, windowX2 - windowX1)} height={bottom - top} rx="4" className="ideal-window" />
+            <line x1={left} y1={bottom} x2={right} y2={bottom} className="chart-axis" />
+            <path d={path("baseScore")} className="curve base" />
+            <path d={path("crustScore")} className="curve crust" />
+            <path d={path("crumbScore")} className="curve crumb" />
+            <line x1={markerX} y1={top - 4} x2={markerX} y2={bottom} className="time-marker" />
+            <circle cx={markerX} cy={yOf(outcome.crustScore)} r="4.5" className="curve-dot crust" />
+            <circle cx={markerX} cy={yOf(outcome.crumbScore)} r="4.5" className="curve-dot crumb" />
+            <circle cx={markerX} cy={yOf(outcome.baseScore)} r="4.5" className="curve-dot base" />
+            <text x={left} y={H - 6} className="axis-label">0</text>
+            <text x={(left + right) / 2} y={H - 6} textAnchor="middle" className="axis-label">{formatTime(chartMax / 2)}</text>
+            <text x={right} y={H - 6} textAnchor="end" className="axis-label">{formatTime(chartMax)}</text>
+          </svg>
+          <div className="curve-legend">
+            <span className="crust">Crosta</span>
+            <span className="crumb">Mollica</span>
+            <span className="base">Fondo</span>
+            <small className="ideal-legend"><i /> fascia ideale</small>
+            <small className="window-legend"><i /> tempi consigliati</small>
+          </div>
+          <p className="curve-hint">Tocca o trascina il dito sul grafico per cambiare il tempo.</p>
         </div>
         <div className="prediction-time-control">
-          <SliderField label="Tempo di cottura" value={c.bakeMinutes} onChange={(v) => onUpdate({ bakeMinutes: v })} min={0.5} max={60} sliderMax={bakeSliderMax} step={c.ovenTemp >= 350 ? 0.25 : 1} unit="min" hint="Muovi il cursore: grafico, crosta, mollica e fondo cambiano in tempo reale." />
+          <SliderField label="Tempo di cottura" value={minutes} onChange={changeMinutes} min={0.5} max={60} sliderMax={chartMax} step={step} unit="min" />
         </div>
         <div className="prediction-results">
           {([
@@ -121,28 +180,14 @@ export function BakingPlanner({
             </div>
           ))}
         </div>
-        <div className="curve-rack-layout">
-          <div className="bake-curve" aria-label="Evoluzione prevista durante la cottura">
-            <svg viewBox="0 0 320 138" role="img">
-              <rect x="12" y="46" width="296" height="36" rx="8" className="ideal-zone" />
-              <text x="21" y="58" className="ideal-zone-label">FASCIA IDEALE</text>
-              <line x1="12" y1="126" x2="308" y2="126" className="chart-axis" />
-              <path d={path("crustScore")} className="curve crust" />
-              <path d={path("crumbScore")} className="curve crumb" />
-              <path d={path("baseScore")} className="curve base" />
-              <line x1={markerX} y1="12" x2={markerX} y2="126" className="time-marker" />
-            </svg>
-            <div className="curve-legend"><span className="crust">Crosta</span><span className="crumb">Mollica</span><span className="base">Fondo</span><small className="ideal-legend"><i/> equilibrio ideale</small></div>
-          </div>
-          <aside className="prediction-rack-rail" aria-label="Altezza nel forno">
-            <span>ALTEZZA</span>
-            {rackOptions.map(([id, label], rackIndex) => (
-              <button key={id} title={label} aria-label={label} className={c.ovenRack === id ? "selected" : ""} aria-pressed={c.ovenRack === id} onClick={() => onUpdate({ ovenRack: id })}>
-                <span className="mini-oven">{[0, 1, 2, 3, 4].map((n) => <i key={n} className={n === rackIndex ? "rack" : ""} />)}</span>
-                <small>{label}</small>
-              </button>
-            ))}
-          </aside>
+        <div className="prediction-rack-rail" role="group" aria-label="Altezza nel forno">
+          <span>ALTEZZA NEL FORNO</span>
+          {rackOptions.map(([id, label], rackIndex) => (
+            <button key={id} title={label} aria-label={label} className={c.ovenRack === id ? "selected" : ""} aria-pressed={c.ovenRack === id} onClick={() => onUpdate({ ovenRack: id })}>
+              <span className="mini-oven">{[0, 1, 2, 3, 4].map((n) => <i key={n} className={n === rackIndex ? "rack" : ""} />)}</span>
+              <small>{label}</small>
+            </button>
+          ))}
         </div>
         <div className="prediction-copy">
           <strong>{outcome.summary}</strong>
@@ -153,19 +198,23 @@ export function BakingPlanner({
 
       <div className="baking-summary">
         <Oven />
-        <div><span>{formatTime(c.bakeMinutes)} · {c.ovenTemp} °C · ripiano {rack[1].toLowerCase()}</span><strong>{bakeSurfaceLabels[c.bakeSurface]} · {rack[2]}</strong></div>
+        <div><span>{formatTime(minutes)} · {c.ovenTemp} °C · ripiano {rack[1].toLowerCase()}</span><strong>{bakeSurfaceLabels[c.bakeSurface]} · {rack[2]}</strong></div>
       </div>
-      <section className="bake-calibration">
-        <div className="panel-title"><span className="section-icon"><Target /></span><div><h2>Taratura del tuo forno</h2><p>Registra il risultato reale: PizzaLab corregge le prossime previsioni per questo forno e questa farina.</p></div></div>
-        {relevantCalibrations.length > 0 && <><div className="personal-calibration"><Target /><div><span>{relevantCalibrations.length} {relevantCalibrations.length === 1 ? "prova confrontabile" : "prove confrontabili"}</span><strong>Correzione personale {personalDelta >= 0 ? "+" : ""}{personalDelta.toLocaleString("it-IT", { maximumFractionDigits: 1 })} min</strong><small>{exactCalibrations.length ? "Stesso forno e stessa farina" : "Basata sullo stesso forno"}</small></div><button className="button secondary" onClick={() => onUpdate({ bakeMinutes: Math.max(0.5, Math.min(60, c.bakeMinutes + personalDelta)) })}>Applica</button></div><p className="calibration-hint">{calibrationHint}</p></>}
-        <div className="calibration-form"><NumberField label="Tempo realmente usato" value={actualMinutes} onChange={setActualMinutes} min={0.5} max={60} step={c.ovenTemp >= 350 ? 0.25 : 1} unit="min" /><CalibrationChoice label="Crosta" value={crust} options={[["pale", "Pallida"], ["good", "Giusta"], ["dark", "Scura"]]} onChange={setCrust} /><CalibrationChoice label="Mollica" value={crumb} options={[["raw", "Umida"], ["good", "Giusta"], ["dry", "Asciutta"]]} onChange={setCrumb} /><CalibrationChoice label="Fondo" value={base} options={[["pale", "Pallido"], ["good", "Giusto"], ["dark", "Scuro"]]} onChange={setBase} /></div>
-        <button className="button primary full" onClick={() => onAddCalibration({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), ovenType: c.ovenType, flourId: c.flourId, plannedMinutes: c.bakeMinutes, actualMinutes, crust, crumb, base })}>Salva risultato reale</button>
-      </section>
-      <small className="baking-disclaimer">Stima comparativa basata su stile, idratazione, spessore, temperatura, tempo, posizione e supporto. Condimenti, temperatura reale e forno specifico possono cambiare il risultato.</small>
+      {relevantCalibrations.length > 0 && (
+        <section className="bake-calibration">
+          <div className="personal-calibration">
+            <Target />
+            <div>
+              <span>Dalla tua taratura · {relevantCalibrations.length} {relevantCalibrations.length === 1 ? "prova confrontabile" : "prove confrontabili"}</span>
+              <strong>Correzione personale {personalDelta >= 0 ? "+" : ""}{personalDelta.toLocaleString("it-IT", { maximumFractionDigits: 1 })} min</strong>
+              <small>{exactCalibrations.length ? "Stesso forno e stessa farina" : "Basata sullo stesso forno"}</small>
+            </div>
+            <button className="button secondary" onClick={() => changeMinutes(minutes + personalDelta)}>Applica</button>
+          </div>
+          <p className="calibration-hint">{calibrationHint}</p>
+        </section>
+      )}
+      <small className="baking-disclaimer">Stima comparativa basata su stile, idratazione, spessore, temperatura, tempo, posizione e supporto. Condimenti, temperatura reale e forno specifico possono cambiare il risultato. Dopo aver cotto, registra com’è andata nel Diario, tra le pizze passate: la taratura del forno renderà più precise le prossime previsioni.</small>
     </section>
   );
-}
-
-function CalibrationChoice<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (value: T) => void }) {
-  return <div className="calibration-choice"><span>{label}</span><div>{options.map(([id, text]) => <button key={id} className={value === id ? "selected" : ""} onClick={() => onChange(id)}>{text}</button>)}</div></div>;
 }
