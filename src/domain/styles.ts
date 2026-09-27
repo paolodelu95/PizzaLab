@@ -297,7 +297,7 @@ export function defaultConfig(): DoughConfig {
     mixerProfileId: "generic-planetary",
     flourTemp: 20,
     desiredDoughTemp: 24,
-    planMode: "date",
+    planMode: "automatic",
     startAt: localDateTime(start),
     ovenType: "high-temp-electric",
     bulkHours: 2,

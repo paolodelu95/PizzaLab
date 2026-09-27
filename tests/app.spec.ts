@@ -1,4 +1,16 @@
 import { test, expect } from "@playwright/test";
+test("first use explains the three-step path and keeps advanced controls collapsed", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Tu scegli il risultato. Al resto pensiamo insieme." })).toBeVisible();
+  await expect(page.getByText("Scegli la pizza", { exact: true })).toBeVisible();
+  await expect(page.getByText("Indica gli orari", { exact: true })).toBeVisible();
+  await expect(page.getByText("Segui il piano", { exact: true })).toBeVisible();
+  await expect(page.locator(".expert-disclosure").first()).not.toHaveAttribute("open", "");
+  await page.getByRole("button", { name: /Inizia, guidami tu/ }).click();
+  await expect(page.getByRole("heading", { name: "Tu scegli il risultato. Al resto pensiamo insieme." })).toHaveCount(0);
+  await page.getByRole("button", { name: /Come funziona/ }).click();
+  await expect(page.getByRole("heading", { name: "Tu scegli il risultato. Al resto pensiamo insieme." })).toBeVisible();
+});
 test("calculate, save, annotate, persist and delete a recipe", async ({
   page,
 }) => {
@@ -104,6 +116,7 @@ test("invalid fields block saving and hot/weak dough produces warnings", async (
   ).toHaveCount(0);
   await page.getByLabel("Peso del panetto", { exact: true }).fill("260");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.getByRole("button", { name: /Manuale/ }).click();
   await page.getByRole("button", { name: "Tutto fuori frigo" }).click();
   await expect(page.getByLabel("Riposo in frigo", { exact: true })).toHaveValue(
     "0",
@@ -149,10 +162,13 @@ test("preferment, water temperature, manual yeast and oven profile work together
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Contemporanea" }).click();
+  await page.getByText("Tecniche e regolazioni avanzate", { exact: true }).click();
   await page.getByRole("button", { name: "Poolish" }).click();
   await expect(page.getByText("al picco", { exact: true })).toBeVisible();
   await expect(page.getByText("Acqua consigliata")).toBeVisible();
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.getByRole("button", { name: /Manuale/ }).click();
+  await page.getByText("Regolazioni avanzate del lievito", { exact: true }).click();
   await page.getByRole("button", { name: "Percentuale" }).click();
   await page.getByLabel("Lievito fresco sulla farina").fill("0.12");
   await page.getByRole("button", { name: /^3 Cottura/ }).click();
@@ -162,12 +178,14 @@ test("preferment, water temperature, manual yeast and oven profile work together
   await page.getByRole("button", { name: /Manuale/ }).click();
   await expect(page.getByLabel("Giorno e ora della prima infornata")).toBeVisible();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await page.getByText("Analisi tecnica dell’impasto", { exact: true }).click();
   await expect(page.getByText("Percorso di fermentazione")).toBeVisible();
 });
 test("temperature editing stays mounted and autolyse and mixer guidance are explicit", async ({
   page,
 }) => {
   await page.goto("/");
+  await page.getByText("Tecniche e regolazioni avanzate", { exact: true }).click();
   const flourTemp = page.getByLabel("Temperatura farina", { exact: true });
   await flourTemp.fill("");
   await expect(flourTemp).toBeVisible();
@@ -180,6 +198,7 @@ test("temperature editing stays mounted and autolyse and mixer guidance are expl
   await roomTemp.pressSequentially("24");
   await expect(page.getByText("FARINA TOTALE")).toBeVisible();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await page.getByText("Tecniche e regolazioni avanzate", { exact: true }).click();
   await page.getByRole("button", { name: "Aggiungi autolisi" }).click();
   await expect(page.getByText("ACQUA DI RISERVA")).toBeVisible();
   await expect(
@@ -196,6 +215,8 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
   await page.goto("/");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await page.locator(".temperature-fields select").selectOption("licoli");
+  await page.getByRole("button", { name: /Manuale/ }).click();
+  await page.getByText("Regolazioni avanzate del lievito", { exact: true }).click();
   await expect(page.getByLabel("Licoli sulla farina")).toBeVisible();
   await expect(
     page.getByText(/Le quantità di farina e acqua da pesare/),
@@ -203,7 +224,7 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
   await page.getByRole("button", { name: "Condimenti", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Condimenti classici" })).toBeVisible();
   await page
-    .getByRole("button", { name: "Il tuo impasto", exact: true })
+    .getByRole("button", { name: "Impasto", exact: true })
     .click();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
   await expect(
@@ -212,7 +233,7 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
   await page.getByRole("button", { name: "Pesa" }).click();
   await expect(page.getByText("Modalità bilancia")).toBeVisible();
   await page.getByRole("button", { name: "Chiudi modalità bilancia" }).click();
-  await page.getByRole("button", { name: "Guida" }).click();
+  await page.getByRole("button", { name: "Guida", exact: true }).click();
   await expect(page.getByText("MODALITÀ MANI IN PASTA")).toBeVisible();
   await expect(page.getByText("Come sta andando?")).toBeVisible();
   await page.getByRole("button", { name: "Chiudi modalità guidata" }).click();
@@ -238,6 +259,8 @@ test("searches generic flours and compensates an integer yeast dose", async ({
     page.getByRole("button", { name: "La tua farina", exact: true }),
   ).toContainText("Semola rimacinata");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.getByRole("button", { name: /Manuale/ }).click();
+  await page.getByText("Regolazioni avanzate del lievito", { exact: true }).click();
   await page.getByRole("button", { name: "Grammi interi" }).click();
   await page.getByLabel("Lievito fresco da pesare").fill("2");
   await expect(page.getByText("STIMA AUTOMATICA")).toBeVisible();
@@ -297,7 +320,7 @@ test("scales toppings from round and tray dimensions", async ({ page }) => {
   await page.getByLabel("Diametro").fill("40");
   await expect(tomato).toContainText("469 g");
 
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Impasto", exact: true }).click();
   await page.getByRole("button", { name: "In teglia Da condividere" }).click();
   await page.getByRole("button", { name: "Condimenti", exact: true }).click();
   await expect(page.getByLabel("Larghezza")).toHaveValue("30");
@@ -314,7 +337,7 @@ test("selects gluten-free mixes and manages multiple named starters", async ({ p
   await expect(page.getByText("Mix universale per pizza", { exact: true })).toBeVisible();
   await expect(page.getByText("Farina di riso", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Impasto", exact: true }).click();
   await page.getByRole("button", { name: "La tua farina", exact: true }).click();
   await page.getByRole("textbox", { name: "Cerca per la tua farina" }).fill("mix universale");
   await page.getByRole("button", { name: /Mix universale per pizza/ }).click();
@@ -339,8 +362,10 @@ test("reserves enough room-temperature time for every fold and keeps toppings se
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.getByRole("button", { name: /Manuale/ }).click();
   await page.getByLabel("Puntata fuori frigo", { exact: true }).fill("1");
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await page.getByText("Tecniche e regolazioni avanzate", { exact: true }).click();
   await page.getByLabel("Numero di pieghe").fill("3");
   await expect(page.getByText("Puntata minima: 1,5 ore")).toBeVisible();
   await expect(page.getByText(/minuti 30, 60, 90/)).toBeVisible();
@@ -362,9 +387,10 @@ test("automatic planning derives phases and yeast from start and meal time", asy
   await page.goto("/");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await page.getByRole("button", { name: /Automatica/ }).click();
-  await page.getByLabel("Voglio iniziare").fill("2026-11-13T19:40");
-  await page.getByLabel("Voglio mangiare").fill("2026-11-14T20:00");
+  await page.getByLabel("Quando vuoi iniziare?").fill("2026-11-13T19:40");
+  await page.getByLabel("Quando vuoi mangiare?").fill("2026-11-14T20:00");
   await expect(page.getByText("LIEVITO CALCOLATO", { exact: true })).toBeVisible();
+  await page.getByText("Regolazioni avanzate del lievito", { exact: true }).click();
   await expect(page.getByText("Dose sincronizzata con gli orari", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Puntata fuori frigo: cursore")).toHaveCount(0);
   await expect(page.locator(".automatic-phase-grid .cold strong")).not.toHaveText("0 h");
@@ -402,8 +428,9 @@ test("stays responsive across small phones, large phones and tablets", async ({ 
         await page.screenshot({ path: `test-results/fold-cover-${section.toLowerCase()}.png` });
     }
     if (viewport.width === 344) {
-      await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+      await page.getByRole("button", { name: "Impasto", exact: true }).click();
       await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+      await page.getByRole("button", { name: /Manuale/ }).click();
       const sliderBox = await page.getByLabel("Puntata fuori frigo: cursore").boundingBox();
       expect(sliderBox).not.toBeNull();
       expect(sliderBox!.width).toBeGreaterThan(230);
@@ -423,7 +450,7 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
   await page.getByLabel("Come vuoi chiamarlo?").fill("Levain sabato");
   await page.locator(".starter-kind-card").filter({ hasText: "Li.Co.Li." }).getByRole("button", { name: "Ne ho già uno" }).click();
 
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Impasto", exact: true }).click();
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await page.locator(".temperature-fields select").selectOption("licoli");
   await page.locator(".starter-link-options").getByRole("button", { name: /Levain sabato/ }).click();
@@ -436,7 +463,7 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
   await expect(page.getByText("Impasto + Bufala", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copia lista" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Impasto", exact: true }).click();
   await page.getByRole("button", { name: /^3 Cottura/ }).click();
   await expect(page.locator(".bake-topping-impact")).toContainText("82% umidità");
   const calibration = page.locator(".bake-calibration");
@@ -446,7 +473,7 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
   await expect(calibration.getByText("Correzione personale", { exact: false })).toBeVisible();
   await page.screenshot({ path: `test-results/connected-plan-${test.info().project.name}.png`, fullPage: true });
 
-  await page.getByRole("button", { name: "Guida" }).click();
+  await page.getByRole("button", { name: "Guida", exact: true }).click();
   await expect(page.getByText("MODALITÀ MANI IN PASTA", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Tieni acceso lo schermo" }).click();
   await expect(page.getByRole("button", { name: "Schermo sempre acceso" })).toBeVisible();

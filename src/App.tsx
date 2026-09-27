@@ -11,6 +11,7 @@ import {
   CookingPot,
   Drop,
   Fire,
+  Flask,
   Info,
   Jar,
   Leaf,
@@ -85,7 +86,7 @@ import pizzaLabLogo from "./assets/pizzalab-logo.png";
 type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida";
 type PlannerStage = "dough" | "fermentation" | "baking";
 const nav = [
-  { id: "impasto", label: "Il tuo impasto", icon: CookingPot },
+  { id: "impasto", label: "Impasto", icon: CookingPot },
   { id: "farine", label: "Farine", icon: Wheat },
   { id: "condimenti", label: "Condimenti", icon: Pizza },
   { id: "madre", label: "Lievito madre", icon: Jar },
@@ -139,6 +140,8 @@ export default function App() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [guidedOpen, setGuidedOpen] = useState(false);
   const [scaleOpen, setScaleOpen] = useState(false);
+  const [expertOpen, setExpertOpen] = useState(false);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     let alive = true;
@@ -174,6 +177,10 @@ export default function App() {
     const timer = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(timer);
   }, []);
+  useEffect(() => {
+    setExpertOpen(false);
+    setAnalysisOpen(false);
+  }, [plannerStage]);
   const flours = useMemo(
     () => [...catalog, ...state.customFlours],
     [state.customFlours],
@@ -420,7 +427,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.11.0",
+            version: "0.12.0",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -721,6 +728,19 @@ export default function App() {
       recipes: s.recipes.map((r) => (r.id === id ? { ...r, ...patch } : r)),
     }));
   }
+  function showGettingStarted() {
+    setState((s) => ({ ...s, onboardingComplete: false }));
+    setTab("impasto");
+    setPlannerStage("dough");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function finishGettingStarted(scrollToStyles = false) {
+    setState((s) => ({ ...s, onboardingComplete: true }));
+    if (scrollToStyles)
+      requestAnimationFrame(() =>
+        document.getElementById("style-choice")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
+  }
   const isPan = styles.find((s) => s.id === c.styleId)?.pan;
   const startPast =
     timeline.length > 0 && new Date(timeline[0].at).getTime() < now;
@@ -782,8 +802,9 @@ export default function App() {
       <div className="workspace">
         <header className="topbar">
           <span>PizzaLab · il tuo laboratorio d’impasti</span>
-          <div>
-            <span className="offline-dot" /> Disponibile offline su Android
+          <div className="topbar-actions">
+            <button className="quick-help" onClick={showGettingStarted}><Info /> <span>Come funziona</span></button>
+            <div className="offline-status"><span className="offline-dot" /> Disponibile offline su Android</div>
           </div>
         </header>
         <main>
@@ -834,6 +855,24 @@ export default function App() {
                   </span>
                 </div>
               </div>
+              {!state.onboardingComplete && (
+                <section className="getting-started" aria-label="Guida al primo utilizzo">
+                  <div className="getting-started-copy">
+                    <span className="eyebrow">PRIMA PIZZA CON PIZZALAB?</span>
+                    <h2>Tu scegli il risultato. Al resto pensiamo insieme.</h2>
+                    <p>Non serve conoscere percentuali o termini tecnici: segui tre passaggi e usa le impostazioni consigliate.</p>
+                  </div>
+                  <div className="getting-started-steps">
+                    <div><span>1</span><strong>Scegli la pizza</strong><small>Tipo, quantità e farina.</small></div>
+                    <div><span>2</span><strong>Indica gli orari</strong><small>Inizio e ora in cui vuoi mangiare.</small></div>
+                    <div><span>3</span><strong>Segui il piano</strong><small>L’app ti dice cosa fare e quando.</small></div>
+                  </div>
+                  <div className="getting-started-actions">
+                    <button className="button primary" onClick={() => finishGettingStarted(true)}>Inizia, guidami tu <ArrowRight /></button>
+                    <button className="button secondary" onClick={() => finishGettingStarted()}>Conosco già l’impasto</button>
+                  </div>
+                </section>
+              )}
               {active && (
                 <button
                   className="active-banner"
@@ -851,10 +890,10 @@ export default function App() {
                   <ArrowRight />
                 </button>
               )}
-              <section className="style-section">
+              <section className="style-section" id="style-choice">
                 <div className="section-title">
-                  <h2>Che pizza ti va?</h2>
-                  <span>Ogni stile, il suo impasto</span>
+                  <h2>1. Che pizza vuoi preparare?</h2>
+                  <span>Scorri e scegli uno stile</span>
                 </div>
                 <div className="style-options">
                   {styles.map((s, i) => (
@@ -927,15 +966,15 @@ export default function App() {
               <nav id="planner-steps" className="planner-steps" aria-label="Fasi di progettazione">
                 {(
                   [
-                    ["dough", "1", "Impasto", "Dosi e metodo", Wheat],
+                    ["dough", "1", "Impasto", "Cosa serve", Wheat],
                     [
                       "fermentation",
                       "2",
                       "Lievitazione",
-                      "Tempi e lievito",
+                      "Quando iniziare",
                       Clock,
                     ],
-                    ["baking", "3", "Cottura", "Anteprima dinamica", Fire],
+                    ["baking", "3", "Cottura", "Come cuocerla", Fire],
                   ] as const
                 ).map(([id, number, label, detail, Icon]) => (
                   <button
@@ -953,6 +992,13 @@ export default function App() {
                   </button>
                 ))}
               </nav>
+              <section className={`stage-guide ${plannerStage}`} aria-live="polite">
+                <span>{plannerStage === "dough" ? "PASSO 1 DI 3" : plannerStage === "fermentation" ? "PASSO 2 DI 3" : "PASSO 3 DI 3"}</span>
+                <div>
+                  <strong>{plannerStage === "dough" ? "Partiamo dalle scelte indispensabili" : plannerStage === "fermentation" ? "Dicci quando vuoi iniziare e mangiare" : "Regola il forno guardando il risultato"}</strong>
+                  <p>{plannerStage === "dough" ? "Scegli farina, quantità e acqua. Le tecniche più complesse restano nelle opzioni avanzate." : plannerStage === "fermentation" ? "La modalità automatica calcola lievito, frigo e riposi. Usa Manuale solo se vuoi controllare ogni fase." : "Tempo, temperatura e altezza aggiornano subito la previsione di crosta, mollica e fondo."}</p>
+                </div>
+              </section>
               <div className="planner-grid">
                 <div className="planner-fields">
                   {plannerStage === "dough" && (
@@ -962,8 +1008,8 @@ export default function App() {
                           <Wheat />
                         </span>
                         <div>
-                          <h2>La base giusta</h2>
-                          <p>Farina e quantità, come piacciono a te.</p>
+                          <h2>Farina e quantità</h2>
+                          <p>Le sole informazioni necessarie per calcolare le dosi.</p>
                         </div>
                       </div>
                       <FlourPicker
@@ -1040,7 +1086,7 @@ export default function App() {
                       )}
                       <div className="hydration-field">
                         <SliderField
-                          label="Idratazione"
+                          label="Acqua nell’impasto (idratazione)"
                           value={c.hydration}
                           onChange={(v) => update("hydration", v)}
                           min={45}
@@ -1226,23 +1272,23 @@ export default function App() {
                       </div>
                       <div className="planning-mode-card">
                         <div>
-                          <span className="eyebrow">COME VUOI PIANIFICARE?</span>
-                          <strong>{c.planMode === "automatic" ? "L’app costruisce il piano" : "Decidi tu ogni fase"}</strong>
+                          <span className="eyebrow">SCEGLI IL LIVELLO DI CONTROLLO</span>
+                          <strong>{c.planMode === "automatic" ? "Consigliato: calcola tutto PizzaLab" : "Per esperti: decidi tu ogni fase"}</strong>
                         </div>
                         <div className="method-toggle" aria-label="Modalità di pianificazione">
-                          <button
-                            className={c.planMode !== "automatic" ? "selected" : ""}
-                            aria-pressed={c.planMode !== "automatic"}
-                            onClick={() => update("planMode", "date")}
-                          >
-                            <Timer /> Manuale
-                          </button>
                           <button
                             className={c.planMode === "automatic" ? "selected" : ""}
                             aria-pressed={c.planMode === "automatic"}
                             onClick={() => updateMany({ planMode: "automatic", yeastMode: "auto" })}
                           >
-                            <Sparkle /> Automatica
+                            <Sparkle /> Automatica · consigliata
+                          </button>
+                          <button
+                            className={c.planMode !== "automatic" ? "selected" : ""}
+                            aria-pressed={c.planMode !== "automatic"}
+                            onClick={() => update("planMode", "date")}
+                          >
+                            <Timer /> Manuale · esperti
                           </button>
                         </div>
                       </div>
@@ -1250,11 +1296,11 @@ export default function App() {
                         <div className="automatic-window">
                           <div className="automatic-dates">
                             <label className="field">
-                              Voglio iniziare
+                              Quando vuoi iniziare?
                               <input type="datetime-local" value={c.startAt} onChange={(e) => update("startAt", e.target.value)} />
                             </label>
                             <label className="field">
-                              Voglio mangiare
+                              Quando vuoi mangiare?
                               <input type="datetime-local" value={c.bakeAt} onChange={(e) => update("bakeAt", e.target.value)} />
                             </label>
                           </div>
@@ -1426,14 +1472,21 @@ export default function App() {
                       )}
                     </section>
                   )}
-                  {result.ok && (
-                    <AdvancedPlanner
-                      config={c}
-                      flours={flours}
-                      result={result}
-                      section={plannerStage}
-                      onUpdate={updateMany}
-                    />
+                  {result.ok && plannerStage !== "baking" && (
+                    <details
+                      className="expert-disclosure"
+                      open={expertOpen}
+                      onToggle={(event) => setExpertOpen(event.currentTarget.open)}
+                    >
+                      <summary>
+                        <span><Flask /> {plannerStage === "dough" ? "Tecniche e regolazioni avanzate" : "Regolazioni avanzate del lievito"}</span>
+                        <small>{plannerStage === "dough" ? "Prefermento, autolisi, pieghe e impastatrice" : "Dose manuale, grammi interi e pasta madre"}</small>
+                      </summary>
+                      <AdvancedPlanner config={c} flours={flours} result={result} section={plannerStage} onUpdate={updateMany} />
+                    </details>
+                  )}
+                  {result.ok && plannerStage === "baking" && (
+                    <AdvancedPlanner config={c} flours={flours} result={result} section={plannerStage} onUpdate={updateMany} />
                   )}
                   {plannerStage === "dough" && (
                     <EquipmentProfiles
@@ -1451,7 +1504,14 @@ export default function App() {
                     />
                   )}
                   {result.ok && plannerStage === "dough" && (
-                    <DoughAnalysis config={c} result={result} />
+                    <details
+                      className="expert-disclosure analysis-disclosure"
+                      open={analysisOpen}
+                      onToggle={(event) => setAnalysisOpen(event.currentTarget.open)}
+                    >
+                      <summary><span><Info /> Analisi tecnica dell’impasto</span><small>Forza, idratazione e curva di fermentazione</small></summary>
+                      <DoughAnalysis config={c} result={result} />
+                    </details>
                   )}
                   {plannerStage === "baking" && (
                     <BakingPlanner config={c} onUpdate={updateMany} calibrations={state.bakeCalibrations} onAddCalibration={(calibration) => { setState((s) => ({ ...s, bakeCalibrations: [calibration, ...s.bakeCalibrations].slice(0, 100) })); setMessage("Risultato salvato: la taratura personale è stata aggiornata."); }} />

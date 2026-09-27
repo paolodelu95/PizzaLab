@@ -34,6 +34,7 @@ const flours = [
 ];
 const config = (patch: Partial<DoughConfig> = {}) => ({
   ...defaultConfig(),
+  planMode: "date" as const,
   bakeAt: "2026-11-14T20:00",
   ...patch,
 });

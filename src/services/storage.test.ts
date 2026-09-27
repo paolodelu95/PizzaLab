@@ -65,6 +65,7 @@ describe("storage migrations", () => {
     expect(migrated.sourdoughProfiles).toEqual([]);
     expect(migrated.activeSourdoughId).toBeNull();
     expect(migrated.bakeCalibrations).toEqual([]);
+    expect(migrated.onboardingComplete).toBe(true);
 
     await writeState(migrated);
     expect(preferences.set).toHaveBeenCalledWith(

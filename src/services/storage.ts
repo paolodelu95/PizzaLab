@@ -5,6 +5,7 @@ import type { StoredState } from "../domain/types";
 const KEY = "pizzalab-state-v1";
 export const emptyState = (): StoredState => ({
   version: 1,
+  onboardingComplete: false,
   config: defaultConfig(),
   recipes: [],
   activeId: null,
@@ -35,6 +36,10 @@ export async function readState(): Promise<StoredState> {
   parsed.bakeCalibrations = Array.isArray(parsed.bakeCalibrations)
     ? parsed.bakeCalibrations
     : [];
+  parsed.onboardingComplete =
+    typeof parsed.onboardingComplete === "boolean"
+      ? parsed.onboardingComplete
+      : true;
   const legacyStarter = (parsed as StoredState & { sourdoughProfile?: StoredState["sourdoughProfiles"][number] }).sourdoughProfile;
   parsed.sourdoughProfiles = Array.isArray(parsed.sourdoughProfiles)
     ? parsed.sourdoughProfiles

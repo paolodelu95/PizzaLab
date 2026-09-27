@@ -191,6 +191,7 @@ export interface BakeCalibration {
 }
 export interface StoredState {
   version: 1;
+  onboardingComplete: boolean;
   config: DoughConfig;
   recipes: Recipe[];
   activeId: string | null;
