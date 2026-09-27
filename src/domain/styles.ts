@@ -256,6 +256,7 @@ export function defaultConfig(): DoughConfig {
   const date = new Date();
   date.setDate(date.getDate() + 2);
   date.setHours(20, 0, 0, 0);
+  const start = new Date(date.getTime() - (24 * 60 + 20) * 60000);
   return {
     styleId: "napoletana",
     flourId: "caputo-pizzeria",
@@ -297,6 +298,7 @@ export function defaultConfig(): DoughConfig {
     flourTemp: 20,
     desiredDoughTemp: 24,
     planMode: "date",
+    startAt: localDateTime(start),
     ovenType: "high-temp-electric",
     bulkHours: 2,
     coldHours: 18,

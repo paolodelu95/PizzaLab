@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildTimeline,
   calculate,
+  deriveAutomaticSchedule,
   estimateBakeOutcome,
   validateConfig,
 } from "./calculator";
@@ -225,6 +226,43 @@ describe("input guards", () => {
   });
 });
 describe("schedule", () => {
+  it("derives warm, cold and proof phases from a chosen start and bake time", () => {
+    const c = config({
+      planMode: "automatic",
+      startAt: "2026-11-13T19:40",
+      bakeAt: "2026-11-14T20:00",
+    });
+    const plan = deriveAutomaticSchedule(c);
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    expect(plan.bulkHours + plan.coldHours + plan.proofHours).toBeCloseTo(24, 2);
+    expect(plan.coldHours).toBeGreaterThan(0);
+    const timeline = buildTimeline({
+      ...c,
+      bulkHours: plan.bulkHours,
+      coldHours: plan.coldHours,
+      proofHours: plan.proofHours,
+    });
+    expect(new Date(timeline[0].at).getTime()).toBe(new Date(c.startAt).getTime());
+  });
+  it("rejects an automatic window that is too short", () => {
+    const plan = deriveAutomaticSchedule(config({
+      planMode: "automatic",
+      startAt: "2026-11-14T19:00",
+      bakeAt: "2026-11-14T20:00",
+    }));
+    expect(plan.ok).toBe(false);
+  });
+  it("keeps the automatic window long enough for all scheduled folds", () => {
+    const plan = deriveAutomaticSchedule(config({
+      planMode: "automatic",
+      startAt: "2026-11-14T16:00",
+      bakeAt: "2026-11-14T20:00",
+      foldCount: 7,
+      foldIntervalMinutes: 30,
+    }));
+    expect(plan.ok).toBe(false);
+  });
   it("works backwards from bake time including 20 minutes mixing", () => {
     const c = config();
     const t = buildTimeline(c);

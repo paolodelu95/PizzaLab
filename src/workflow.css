@@ -138,6 +138,57 @@
   .curve-rack-layout { grid-template-columns: minmax(0, 1fr) 72px; }
 }
 
+/* Ogni area del laboratorio ha una propria identità, senza cambiare struttura. */
+@media(max-width:850px){
+  .page-heading.library-heading { background: radial-gradient(circle at 90% 12%,#c5e6c44a,transparent 8rem),linear-gradient(142deg,#17483d,#24705c); }
+  .page-heading.toppings-heading { background: radial-gradient(circle at 90% 12%,#ffd1a83e,transparent 8rem),linear-gradient(142deg,#713b2e,#a9503c); }
+  .page-heading.diary-heading { background: radial-gradient(circle at 90% 12%,#d7c8ff38,transparent 8rem),linear-gradient(142deg,#35365f,#55558a); }
+  .page-heading.guide-heading { background: radial-gradient(circle at 90% 12%,#fff0b948,transparent 8rem),linear-gradient(142deg,#5a4922,#89713a); }
+  .page-heading.library-heading,
+  .page-heading.toppings-heading,
+  .page-heading.diary-heading,
+  .page-heading.guide-heading { box-shadow:0 18px 38px #172f3529; }
+}
+
+.planning-mode-card { display: grid; grid-template-columns: minmax(160px,.75fr) minmax(260px,1.25fr); gap: 18px; align-items: center; margin-bottom: 21px; padding: 16px; border: 1px solid #dbe6e4; border-radius: 17px; background: linear-gradient(145deg,#f4faf8,#edf5f3); }
+.planning-mode-card > div:first-child { display: grid; gap: 6px; }
+.planning-mode-card > div:first-child strong { font-size: 13px; color: #214f53; }
+.planning-mode-card .method-toggle { margin: 0; background: #dfece9; }
+.automatic-window { margin-bottom: 24px; padding: 18px; border: 1px solid #cfe2de; border-radius: 18px; background: #fbfefd; }
+.automatic-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.automatic-phase-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 16px; }
+.automatic-phase-grid > div { display: grid; gap: 5px; min-width: 0; padding: 13px; border-radius: 14px; background: #edf5f2; }
+.automatic-phase-grid > div.cold { background: #e7f0f5; }
+.automatic-phase-grid > div.yeast { background: linear-gradient(145deg,#183247,#245867); color: white; }
+.automatic-phase-grid span { color: #66827e; font-size: 7px; font-weight: 750; letter-spacing: .9px; }
+.automatic-phase-grid .yeast span,.automatic-phase-grid .yeast small { color: #a9d8ce; }
+.automatic-phase-grid strong { overflow-wrap: anywhere; font-size: 18px; letter-spacing: -.4px; }
+.automatic-phase-grid small { color: #7c908c; font-size: 8px; }
+.automatic-plan-note { display: flex; gap: 8px; align-items: flex-start; margin-top: 13px; padding: 11px 12px; border-radius: 12px; color: #376960; background: #e4f2ee; font-size: 10px; line-height: 1.55; }
+.automatic-plan-note svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.automatic-yeast-lock { display: grid; grid-template-columns: auto 1fr auto; gap: 11px; align-items: center; padding: 15px; border-radius: 14px; color: #e7f6f2; background: linear-gradient(145deg,#183247,#245867); }
+.automatic-yeast-lock > svg { width: 22px; color: #7fd0bd; }
+.automatic-yeast-lock div { display: grid; gap: 4px; }
+.automatic-yeast-lock strong { font-size: 11px; }
+.automatic-yeast-lock p { color: #b9d2d1; font-size: 9px; line-height: 1.5; }
+.automatic-yeast-lock > span { white-space: nowrap; font-size: 18px; font-weight: 750; }
+
+@media(max-width:640px){
+  .planning-mode-card { grid-template-columns: 1fr; gap: 12px; padding: 14px; }
+  .automatic-window { padding: 14px 12px; }
+  .automatic-dates { grid-template-columns: 1fr; }
+  .automatic-phase-grid { grid-template-columns: 1fr 1fr; }
+  .automatic-phase-grid > div { min-height: 92px; }
+  .automatic-yeast-lock { grid-template-columns: auto 1fr; }
+  .automatic-yeast-lock > span { grid-column: 2; }
+}
+
+@media(max-width:380px){
+  .automatic-phase-grid { gap: 6px; }
+  .automatic-phase-grid > div { padding: 11px 10px; }
+  .automatic-phase-grid strong { font-size: 16px; }
+}
+
 .journey-next {
   display: flex;
   width: 100%;

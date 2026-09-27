@@ -72,7 +72,8 @@ export interface DoughConfig {
   mixerProfileId: string;
   flourTemp: number;
   desiredDoughTemp: number;
-  planMode: "date" | "duration";
+  planMode: "date" | "duration" | "automatic";
+  startAt: string;
   ovenType: string;
   bulkHours: number;
   coldHours: number;

@@ -89,7 +89,7 @@ export function SourdoughCare({
           <p>Un percorso guidato dai primi rinfreschi fino a una coltura stabile, con dosi, osservazioni e promemoria personali.</p>
         </section>
         <section className="panel starter-name-card">
-          <label className="field">Come vuoi chiamarlo?<input autoFocus value={draftName} maxLength={40} onChange={(event) => setDraftName(event.target.value)} placeholder="Es. Gino, Madre 2026, Li.Co.Li. pizza" /></label>
+          <label className="field">Come vuoi chiamarlo?<input value={draftName} maxLength={40} onChange={(event) => setDraftName(event.target.value)} placeholder="Es. Gino, Madre 2026, Li.Co.Li. pizza" /></label>
           <p>Potrai cambiare il nome in qualsiasi momento.</p>
         </section>
         <div className="starter-kind-grid">

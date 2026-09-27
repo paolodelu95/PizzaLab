@@ -430,7 +430,13 @@ export function AdvancedPlanner({
                 : "Automatico o dose bloccata"}
             </span>
           </div>
-          {naturalStarter ? (
+          {c.planMode === "automatic" ? (
+            <div className="automatic-yeast-lock">
+              <MagicWand />
+              <div><strong>Dose sincronizzata con gli orari</strong><p>{naturalStarter ? "PizzaLab stima la quantità dai tempi e dalle temperature. Verifica sempre la vitalità reale della coltura dalla sua crescita." : "In modalità automatica PizzaLab calcola il lievito dai tempi e dalle temperature. Passa a Manuale per bloccare grammi o percentuale."}</p></div>
+              <span>{fmt(result.yeast, 2)} g</span>
+            </div>
+          ) : naturalStarter ? (
             <div className="field-grid">
               <NumberField
                 label={
@@ -457,8 +463,7 @@ export function AdvancedPlanner({
                 hint="In genere 45–55% per pasta madre e 100% per licoli."
               />
             </div>
-          ) : (
-            <>
+          ) : <>
               <div className="method-toggle three">
                 <button
                   className={c.yeastMode === "auto" ? "selected" : ""}
@@ -548,8 +553,7 @@ export function AdvancedPlanner({
                   )}
                 </div>
               )}
-            </>
-          )}
+            </>}
         </div>
       )}
 

@@ -44,9 +44,17 @@ export async function readState(): Promise<StoredState> {
   parsed.activeSourdoughId = parsed.activeSourdoughId ?? parsed.sourdoughProfiles[0]?.id ?? null;
   // Keep plans created by versions that supported two flours only.
   parsed.config = { ...defaultConfig(), ...parsed.config };
+  if (parsed.config.planMode === "duration") parsed.config.planMode = "date";
   parsed.recipes = parsed.recipes.map((recipe) =>
     recipe?.config
-      ? { ...recipe, config: { ...defaultConfig(), ...recipe.config } }
+      ? {
+          ...recipe,
+          config: {
+            ...defaultConfig(),
+            ...recipe.config,
+            planMode: recipe.config.planMode === "duration" ? "date" : (recipe.config.planMode ?? "date"),
+          },
+        }
       : recipe,
   );
   if (validateConfig(parsed.config).length) parsed.config = defaultConfig();

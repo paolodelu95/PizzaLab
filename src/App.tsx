@@ -19,6 +19,7 @@ import {
   Play,
   Scales as Scale,
   Snowflake,
+  Sparkle,
   Star,
   Timer,
   Trash,
@@ -32,6 +33,7 @@ import {
   bakeSurfaceLabels,
   buildTimeline,
   calculate,
+  deriveAutomaticSchedule,
   validateConfig,
 } from "./domain/calculator";
 import {
@@ -182,6 +184,7 @@ export default function App() {
   ) ?? null;
   const selectedFlour = flours.find((f) => f.id === c.flourId);
   const result = useMemo(() => calculate(c, flours), [c, flours]);
+  const automaticPlan = useMemo(() => deriveAutomaticSchedule(c), [c]);
   const timeline = useMemo(() => buildTimeline(c, flours), [c, flours]);
   const currentStyle = styles.find((s) => s.id === c.styleId)!;
   const active = state.recipes.find((r) => r.id === state.activeId);
@@ -227,25 +230,51 @@ export default function App() {
         ...(result.malt > 0 ? [{ label: "Malto", grams: result.malt }] : []),
       ]
     : [];
-  function normalizeDuration(config: DoughConfig) {
-    if (config.planMode !== "duration") return config;
-    const total =
-      config.bulkHours +
-      config.coldHours +
-      config.proofHours +
-      (config.preferment === "none" ? 0 : config.prefermentHours);
-    const prepMinutes = 20 + (config.autolyse ? config.autolyseMinutes : 0);
-    return {
-      ...config,
-      bakeAt: localDateTime(
-        new Date(Date.now() + (total * 60 + prepMinutes) * 60000),
-      ),
-    };
+  function normalizePlanning(config: DoughConfig) {
+    if (config.planMode === "automatic") {
+      const automatic = deriveAutomaticSchedule(config);
+      if (!automatic.ok) return config;
+      const naturalStarter = ["sourdough", "licoli"].includes(config.yeast);
+      const roomRate = 2 ** ((config.roomTemp - 22) / 10);
+      const coldRate = 0.08 * 2 ** ((config.fridgeTemp - 4) / 5);
+      const equivalentHours =
+        (automatic.bulkHours + automatic.proofHours) * roomRate +
+        automatic.coldHours * coldRate;
+      const automaticStarterPercent = Math.max(
+        5,
+        Math.min(50, 20 * (8 / Math.max(0.5, equivalentHours)) ** 0.65),
+      );
+      return {
+        ...config,
+        yeastMode: naturalStarter ? config.yeastMode : "auto" as const,
+        starterPercent: naturalStarter
+          ? Math.round(automaticStarterPercent * 10) / 10
+          : config.starterPercent,
+        bulkHours: automatic.bulkHours,
+        coldHours: automatic.coldHours,
+        proofHours: automatic.proofHours,
+      };
+    }
+    if (config.planMode === "duration") {
+      const total =
+        config.bulkHours +
+        config.coldHours +
+        config.proofHours +
+        (config.preferment === "none" ? 0 : config.prefermentHours);
+      const prepMinutes = 20 + (config.autolyse ? config.autolyseMinutes : 0);
+      return {
+        ...config,
+        bakeAt: localDateTime(
+          new Date(Date.now() + (total * 60 + prepMinutes) * 60000),
+        ),
+      };
+    }
+    return config;
   }
   function update<K extends keyof DoughConfig>(key: K, value: DoughConfig[K]) {
     setState((s) => ({
       ...s,
-      config: normalizeDuration({
+      config: normalizePlanning({
         ...s.config,
         [key]: value,
         ...(key === "count" ? { toppingCount: value as number } : {}),
@@ -257,7 +286,7 @@ export default function App() {
   function updateMany(patch: Partial<DoughConfig>) {
     setState((s) => ({
       ...s,
-      config: normalizeDuration({ ...s.config, ...patch }),
+      config: normalizePlanning({ ...s.config, ...patch }),
     }));
   }
   function goToPlannerStage(stage: PlannerStage) {
@@ -274,7 +303,7 @@ export default function App() {
       const oven = ovenProfiles.find((o) => o.id === s.config.ovenType);
       return {
         ...s,
-        config: normalizeDuration({
+        config: normalizePlanning({
           ...s.config,
           styleId: id,
           pizzaDiameter: id === "padellino" ? 20 : id === "new-york" ? 35 : 32,
@@ -391,7 +420,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.10.2",
+            version: "0.11.0",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -786,7 +815,7 @@ export default function App() {
           )}
           {tab === "impasto" && (
             <>
-              <div className="page-heading">
+              <div className="page-heading home-heading">
                 <div>
                   <span className="eyebrow">
                     IL TUO LABORATORIO DELLA PIZZA
@@ -1195,6 +1224,57 @@ export default function App() {
                           <p>Fasi calde e fredde, con i ritmi che scegli tu.</p>
                         </div>
                       </div>
+                      <div className="planning-mode-card">
+                        <div>
+                          <span className="eyebrow">COME VUOI PIANIFICARE?</span>
+                          <strong>{c.planMode === "automatic" ? "L’app costruisce il piano" : "Decidi tu ogni fase"}</strong>
+                        </div>
+                        <div className="method-toggle" aria-label="Modalità di pianificazione">
+                          <button
+                            className={c.planMode !== "automatic" ? "selected" : ""}
+                            aria-pressed={c.planMode !== "automatic"}
+                            onClick={() => update("planMode", "date")}
+                          >
+                            <Timer /> Manuale
+                          </button>
+                          <button
+                            className={c.planMode === "automatic" ? "selected" : ""}
+                            aria-pressed={c.planMode === "automatic"}
+                            onClick={() => updateMany({ planMode: "automatic", yeastMode: "auto" })}
+                          >
+                            <Sparkle /> Automatica
+                          </button>
+                        </div>
+                      </div>
+                      {c.planMode === "automatic" && (
+                        <div className="automatic-window">
+                          <div className="automatic-dates">
+                            <label className="field">
+                              Voglio iniziare
+                              <input type="datetime-local" value={c.startAt} onChange={(e) => update("startAt", e.target.value)} />
+                            </label>
+                            <label className="field">
+                              Voglio mangiare
+                              <input type="datetime-local" value={c.bakeAt} onChange={(e) => update("bakeAt", e.target.value)} />
+                            </label>
+                          </div>
+                          {automaticPlan.ok ? (
+                            <>
+                              <div className="automatic-phase-grid">
+                                <div><span>PUNTATA</span><strong>{fmt(c.bulkHours, 2)} h</strong><small>fuori frigo</small></div>
+                                <div className="cold"><span>FRIGO</span><strong>{fmt(c.coldHours, 2)} h</strong><small>{c.coldHours > 0 ? "massa coperta" : "non necessario"}</small></div>
+                                <div><span>APPRETTO</span><strong>{fmt(c.proofHours, 2)} h</strong><small>prima del forno</small></div>
+                                <div className="yeast"><span>LIEVITO CALCOLATO</span><strong>{result.ok ? `${fmt(result.yeast, 2)} g` : "—"}</strong><small>{c.yeast === "fresh" ? "fresco" : c.yeast === "instant" ? "secco" : "coltura naturale"}</small></div>
+                              </div>
+                              <p className="automatic-plan-note"><Sparkle /> {(["sourdough", "licoli"] as DoughConfig["yeast"][]).includes(c.yeast) ? "Orari e dose della coltura si aggiornano insieme; la vitalità reale del lievito madre va sempre verificata dalla crescita." : "Orari e lievito si aggiornano insieme in base a stile, temperature, pieghe e lavorazioni."}</p>
+                            </>
+                          ) : (
+                            <div className="notice warning"><Warning /><div><strong>Finestra non compatibile</strong><p>{automaticPlan.error}</p></div></div>
+                          )}
+                        </div>
+                      )}
+                      {c.planMode !== "automatic" && (
+                        <>
                       <div
                         className="method-toggle"
                         aria-label="Metodo di maturazione"
@@ -1284,6 +1364,8 @@ export default function App() {
                           <small>+ 20 min di impasto</small>
                         </strong>
                       </div>
+                        </>
+                      )}
                       <div className="field-grid temperature-fields slider-temperature-fields">
                         <SliderField
                           label="Temperatura ambiente"
@@ -1385,23 +1467,7 @@ export default function App() {
                           <p>Da qui costruiamo la tua tabella di marcia.</p>
                         </div>
                       </div>
-                      <div className="method-toggle">
-                        <button
-                          className={c.planMode === "date" ? "selected" : ""}
-                          onClick={() => update("planMode", "date")}
-                        >
-                          <Clock /> Data di cottura
-                        </button>
-                        <button
-                          className={
-                            c.planMode === "duration" ? "selected" : ""
-                          }
-                          onClick={() => update("planMode", "duration")}
-                        >
-                          <Timer /> Comincio adesso
-                        </button>
-                      </div>
-                      {c.planMode === "date" ? (
+                      {c.planMode !== "automatic" ? (
                         <label className="field">
                           Giorno e ora della prima infornata
                           <input
@@ -1412,21 +1478,13 @@ export default function App() {
                         </label>
                       ) : (
                         <div className="duration-result">
-                          <Clock />
+                          <Sparkle />
                           <div>
-                            <span>Impasta ora, prima infornata prevista</span>
-                            <strong>{dateLabel(c.bakeAt)}</strong>
+                            <span>PIANO AUTOMATICO</span>
+                            <strong>{dateLabel(c.startAt)} → {dateLabel(c.bakeAt)}</strong>
                           </div>
                         </div>
                       )}
-                      <button
-                        className="link-button"
-                        onClick={() => {
-                          if (result.ok) updateMany({ planMode: "duration" });
-                        }}
-                      >
-                        Ricalcola partendo da adesso <ArrowRight />
-                      </button>
                       {startPast && (
                         <div className="notice warning">
                           <Warning />

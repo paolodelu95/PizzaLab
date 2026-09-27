@@ -159,10 +159,8 @@ test("preferment, water temperature, manual yeast and oven profile work together
   await page.getByLabel("Tipo di forno").selectOption("portable-gas");
   await expect(page.getByLabel("Temperatura effettiva")).toHaveValue("500");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
-  await page.getByRole("button", { name: "Comincio adesso" }).click();
-  await expect(
-    page.getByText("Impasta ora, prima infornata prevista"),
-  ).toBeVisible();
+  await page.getByRole("button", { name: /Manuale/ }).click();
+  await expect(page.getByLabel("Giorno e ora della prima infornata")).toBeVisible();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
   await expect(page.getByText("Percorso di fermentazione")).toBeVisible();
 });
@@ -358,6 +356,27 @@ test("reserves enough room-temperature time for every fold and keeps toppings se
     page.getByRole("heading", { name: "Condimenti." }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Condimenti classici" })).toBeVisible();
+});
+
+test("automatic planning derives phases and yeast from start and meal time", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.getByRole("button", { name: /Automatica/ }).click();
+  await page.getByLabel("Voglio iniziare").fill("2026-11-13T19:40");
+  await page.getByLabel("Voglio mangiare").fill("2026-11-14T20:00");
+  await expect(page.getByText("LIEVITO CALCOLATO", { exact: true })).toBeVisible();
+  await expect(page.getByText("Dose sincronizzata con gli orari", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Puntata fuori frigo: cursore")).toHaveCount(0);
+  await expect(page.locator(".automatic-phase-grid .cold strong")).not.toHaveText("0 h");
+  await page.screenshot({ path: `test-results/automatic-plan-${test.info().project.name}.png`, fullPage: true });
+  await page.getByRole("button", { name: /Manuale/ }).click();
+  await expect(page.getByLabel("Puntata fuori frigo: cursore")).toBeVisible();
+});
+
+test("opening sourdough care does not focus the name field", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Lievito madre", exact: true }).click();
+  await expect(page.getByLabel("Come vuoi chiamarlo?")).not.toBeFocused();
 });
 
 test("stays responsive across small phones, large phones and tablets", async ({ page }, testInfo) => {

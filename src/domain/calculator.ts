@@ -26,6 +26,99 @@ export interface BakeOutcome {
   warnings: string[];
 }
 
+export type AutomaticSchedule =
+  | {
+      ok: true;
+      totalHours: number;
+      preparationHours: number;
+      fermentationHours: number;
+      bulkHours: number;
+      coldHours: number;
+      proofHours: number;
+    }
+  | { ok: false; error: string };
+
+/** Divide the available start-to-bake window into practical warm/cold phases.
+ * The yeast calculator then derives the dose from these phases and temperatures.
+ */
+export function deriveAutomaticSchedule(c: DoughConfig): AutomaticSchedule {
+  const start = new Date(c.startAt).getTime();
+  const bake = new Date(c.bakeAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(bake))
+    return { ok: false, error: "Imposta una data e un’ora valide per inizio e cottura." };
+  const totalHours = (bake - start) / 3600000;
+  const preparationHours =
+    20 / 60 +
+    (c.autolyse ? c.autolyseMinutes / 60 : 0) +
+    (c.preferment === "none" ? 0 : c.prefermentHours);
+  const fermentationHours = totalHours - preparationHours;
+  if (fermentationHours < 2)
+    return {
+      ok: false,
+      error: `Servono almeno ${preparationHours.toLocaleString("it-IT", { maximumFractionDigits: 1 })} ore di preparazione e 2 ore di fermentazione. Allontana inizio e cottura.`,
+    };
+  if (fermentationHours > 144)
+    return { ok: false, error: "La finestra supera i limiti gestibili di 6 giorni. Avvicina l’inizio alla cottura." };
+
+  const style = styles.find((item) => item.id === c.styleId) ?? styles[0];
+  const minBulk = Math.max(0.5, (c.foldCount * c.foldIntervalMinutes) / 60);
+  if (minBulk > 24)
+    return { ok: false, error: "Le pieghe richiedono una puntata più lunga del limite disponibile." };
+  if (fermentationHours < minBulk + 0.5)
+    return { ok: false, error: "La finestra non lascia abbastanza tempo per completare le pieghe e almeno mezz’ora di appretto." };
+
+  let bulkHours: number;
+  let proofHours: number;
+  let coldHours: number;
+  const prefersCold = style.cold > 0 && fermentationHours >= 10;
+  if (!prefersCold) {
+    const warmRatio = style.bulk / Math.max(0.5, style.bulk + style.proof);
+    bulkHours = Math.max(minBulk, fermentationHours * warmRatio);
+    proofHours = fermentationHours - bulkHours;
+    if (proofHours < 0.5) {
+      proofHours = 0.5;
+      bulkHours = fermentationHours - proofHours;
+    }
+    coldHours = 0;
+  } else {
+    bulkHours = Math.max(minBulk, Math.min(24, style.bulk));
+    proofHours = Math.max(1, Math.min(24, style.proof));
+    coldHours = fermentationHours - bulkHours - proofHours;
+    if (coldHours < 2) {
+      const missing = 2 - coldHours;
+      const reducibleProof = Math.max(0, proofHours - 0.5);
+      const fromProof = Math.min(missing, reducibleProof);
+      proofHours -= fromProof;
+      coldHours += fromProof;
+    }
+    if (coldHours > 96) {
+      let overflow = coldHours - 96;
+      coldHours = 96;
+      const bulkRoom = 24 - bulkHours;
+      const toBulk = Math.min(overflow, bulkRoom);
+      bulkHours += toBulk;
+      overflow -= toBulk;
+      proofHours += overflow;
+    }
+  }
+  if (bulkHours > 24 || proofHours > 24 || coldHours < 0 || coldHours > 96)
+    return { ok: false, error: "Questa finestra non può essere divisa in fasi sicure. Riduci la durata complessiva." };
+
+  const round = (value: number) => Math.round(value * 100) / 100;
+  bulkHours = round(bulkHours);
+  proofHours = round(proofHours);
+  coldHours = round(fermentationHours - bulkHours - proofHours);
+  return {
+    ok: true,
+    totalHours: round(totalHours),
+    preparationHours: round(preparationHours),
+    fermentationHours: round(fermentationHours),
+    bulkHours,
+    coldHours,
+    proofHours,
+  };
+}
+
 const clampScore = (value: number) => Math.max(0, Math.min(100, value));
 
 function bakeScores(c: DoughConfig, minutes = c.bakeMinutes) {
@@ -246,6 +339,8 @@ export function validateConfig(c: DoughConfig): string[] {
     );
   if (!["auto", "weighable", "manual"].includes(c.yeastMode))
     errors.push("Modalità del lievito non valida.");
+  if (!["date", "duration", "automatic"].includes(c.planMode))
+    errors.push("Modalità di pianificazione non valida.");
   if (!["none", "poolish", "biga"].includes(c.preferment))
     errors.push("Prefermento non valido.");
   if (!["hand", "stand", "spiral", "thermomix"].includes(c.mixer))
@@ -291,6 +386,10 @@ export function validateConfig(c: DoughConfig): string[] {
     errors.push("Prevedi almeno un’ora complessiva a temperatura ambiente.");
   if (!Number.isFinite(new Date(c.bakeAt).getTime()))
     errors.push("Imposta giorno e ora della cottura.");
+  if (c.planMode === "automatic") {
+    const automatic = deriveAutomaticSchedule(c);
+    if (!automatic.ok) errors.push(automatic.error);
+  }
   return errors;
 }
 export function calculate(c: DoughConfig, flours: Flour[]) {
