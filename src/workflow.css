@@ -80,6 +80,13 @@
 .curve-legend .crumb { color: #79c9b8; }
 .curve-legend .base { color: #e5c06e; }
 .curve-legend small { margin-left: auto; color: #9eb6bc; font-size: 8px; }
+.curve-rack-layout { display: grid; grid-template-columns: minmax(0, 1fr) 66px; align-items: center; gap: 10px; }
+.prediction-rack-rail { display: grid; gap: 4px; padding: 7px; border: 1px solid #ffffff1c; border-radius: 15px; background: #ffffff09; }
+.prediction-rack-rail > span { color: #90b8b7; font-size: 6px; font-weight: 750; letter-spacing: .8px; text-align: center; }
+.prediction-rack-rail button { display: flex; min-height: 34px; align-items: center; justify-content: center; gap: 4px; padding: 4px; border: 1px solid transparent; border-radius: 9px; color: #9eb8bd; }
+.prediction-rack-rail button.selected { border-color: #ff9a7e; color: #fff; background: #ef74552b; box-shadow: inset 0 0 0 1px #ef745533; }
+.prediction-rack-rail .mini-oven { width: 24px; height: 23px; padding: 3px; border-width: 1.5px; }
+.prediction-rack-rail button small { display: none; font-size: 6px; }
 .prediction-copy { padding-top: 14px; border-top: 1px solid #ffffff17; }
 .prediction-copy > strong { font-size: 11px; line-height: 1.55; }
 .prediction-copy p { margin-top: 6px; color: #b9ccd0; font-size: 9px; line-height: 1.6; }
@@ -116,6 +123,9 @@
   .prediction-results { gap: 6px; }
   .prediction-result { padding: 11px 7px; }
   .prediction-result > strong { font-size: 10px; }
+  .curve-rack-layout { grid-template-columns: minmax(0, 1fr) 54px; gap: 6px; }
+  .prediction-rack-rail { padding: 5px; }
+  .prediction-rack-rail button { min-height: 32px; padding: 3px; }
   .journey-next { min-height: 78px; border-radius: 20px; }
 
   /* Liquid glass: final mobile override, isolated from the desktop sidebar. */

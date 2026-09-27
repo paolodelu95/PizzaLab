@@ -58,7 +58,8 @@ export function BakingPlanner({
           ? "La superficie colora presto: abbassa il ripiano nella prima parte della cottura."
           : "I risultati registrati sono equilibrati: la correzione riguarda soprattutto il tempo reale.";
   const rack = rackOptions.find(([id]) => id === c.ovenRack)!;
-  const chartMax = Math.max(c.bakeMinutes * 1.55, outcome.recommendedMax * 1.25, 2);
+  const baseSliderMax = c.ovenTemp >= 350 ? 10 : c.ovenTemp >= 280 ? 20 : 60;
+  const chartMax = Math.max(baseSliderMax, c.bakeMinutes, outcome.recommendedMax * 1.15);
   const points = Array.from({ length: 31 }, (_, index) => {
     const time = (chartMax * index) / 30;
     return estimateBakeOutcome({ ...c, bakeMinutes: Math.max(0.05, time) });
@@ -72,7 +73,7 @@ export function BakingPlanner({
       })
       .join(" ");
   const markerX = 12 + Math.min(1, c.bakeMinutes / chartMax) * 296;
-  const bakeSliderMax = Math.max(c.bakeMinutes, c.ovenTemp >= 350 ? 10 : c.ovenTemp >= 280 ? 20 : 60);
+  const bakeSliderMax = Math.ceil(chartMax / (c.ovenTemp >= 350 ? 0.25 : 1)) * (c.ovenTemp >= 350 ? 0.25 : 1);
 
   return (
     <section className="panel baking-planner">
@@ -85,24 +86,8 @@ export function BakingPlanner({
       </div>
       <div className="baking-basics slider-basics">
         <SliderField label="Temperatura forno" value={c.ovenTemp} onChange={(v) => onUpdate({ ovenTemp: v })} min={180} max={500} step={5} unit="°C" />
-        <SliderField label="Tempo di cottura" value={c.bakeMinutes} onChange={(v) => onUpdate({ bakeMinutes: v })} min={0.5} max={60} sliderMax={bakeSliderMax} step={c.ovenTemp >= 350 ? 0.25 : 1} unit="min" hint="La scala si adatta al forno: trascina per confrontare crosta, mollica e fondo." />
       </div>
-      <p className="bake-live-time">Tempo effettivo: {formatTime(c.bakeMinutes)}</p>
       <div className="bake-topping-impact"><span>Condimento collegato</span><strong>{Math.round(c.toppingMoisture)}% umidità · {c.toppingLoad.toLocaleString("it-IT", { maximumFractionDigits: 2 })} g/cm²</strong><small>Il simulatore usa questi valori per mollica e fondo.</small></div>
-
-      <div className="bake-choice">
-        <span>Altezza nel forno</span>
-        <div className="rack-options">
-          {rackOptions.map(([id, label]) => (
-            <button key={id} className={c.ovenRack === id ? "selected" : ""} aria-pressed={c.ovenRack === id} onClick={() => onUpdate({ ovenRack: id })}>
-              <span className="mini-oven">
-                {[0, 1, 2, 3, 4].map((n) => <i key={n} className={n === rackOptions.findIndex(([rackId]) => rackId === id) ? "rack" : ""} />)}
-              </span>
-              <strong>{label}</strong>
-            </button>
-          ))}
-        </div>
-      </div>
 
       <div className="bake-choice">
         <span>Supporto di cottura</span>
@@ -120,6 +105,9 @@ export function BakingPlanner({
           <div><small>ANTEPRIMA IN TEMPO REALE</small><h3>Risultato previsto</h3></div>
           <span>{formatTime(c.bakeMinutes)}</span>
         </div>
+        <div className="prediction-time-control">
+          <SliderField label="Tempo di cottura" value={c.bakeMinutes} onChange={(v) => onUpdate({ bakeMinutes: v })} min={0.5} max={60} sliderMax={bakeSliderMax} step={c.ovenTemp >= 350 ? 0.25 : 1} unit="min" hint="Muovi il cursore: grafico, crosta, mollica e fondo cambiano in tempo reale." />
+        </div>
         <div className="prediction-results">
           {([
             ["Crosta", outcome.crustLabel, outcome.crustScore, "crust"],
@@ -133,16 +121,27 @@ export function BakingPlanner({
             </div>
           ))}
         </div>
-        <div className="bake-curve" aria-label="Evoluzione prevista durante la cottura">
-          <svg viewBox="0 0 320 138" role="img">
-            <rect x="12" y="46" width="296" height="36" rx="8" className="ideal-zone" />
-            <line x1="12" y1="126" x2="308" y2="126" className="chart-axis" />
-            <path d={path("crustScore")} className="curve crust" />
-            <path d={path("crumbScore")} className="curve crumb" />
-            <path d={path("baseScore")} className="curve base" />
-            <line x1={markerX} y1="12" x2={markerX} y2="126" className="time-marker" />
-          </svg>
-          <div className="curve-legend"><span className="crust">Crosta</span><span className="crumb">Mollica</span><span className="base">Fondo</span><small>fascia ideale</small></div>
+        <div className="curve-rack-layout">
+          <div className="bake-curve" aria-label="Evoluzione prevista durante la cottura">
+            <svg viewBox="0 0 320 138" role="img">
+              <rect x="12" y="46" width="296" height="36" rx="8" className="ideal-zone" />
+              <line x1="12" y1="126" x2="308" y2="126" className="chart-axis" />
+              <path d={path("crustScore")} className="curve crust" />
+              <path d={path("crumbScore")} className="curve crumb" />
+              <path d={path("baseScore")} className="curve base" />
+              <line x1={markerX} y1="12" x2={markerX} y2="126" className="time-marker" />
+            </svg>
+            <div className="curve-legend"><span className="crust">Crosta</span><span className="crumb">Mollica</span><span className="base">Fondo</span><small>fascia ideale</small></div>
+          </div>
+          <aside className="prediction-rack-rail" aria-label="Altezza nel forno">
+            <span>ALTEZZA</span>
+            {rackOptions.map(([id, label], rackIndex) => (
+              <button key={id} title={label} aria-label={label} className={c.ovenRack === id ? "selected" : ""} aria-pressed={c.ovenRack === id} onClick={() => onUpdate({ ovenRack: id })}>
+                <span className="mini-oven">{[0, 1, 2, 3, 4].map((n) => <i key={n} className={n === rackIndex ? "rack" : ""} />)}</span>
+                <small>{label}</small>
+              </button>
+            ))}
+          </aside>
         </div>
         <div className="prediction-copy">
           <strong>{outcome.summary}</strong>

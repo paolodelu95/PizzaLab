@@ -391,7 +391,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.10.0",
+            version: "0.10.1",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -1234,6 +1234,7 @@ export default function App() {
                           }
                           min={(c.foldCount * c.foldIntervalMinutes) / 60}
                           max={24}
+                          sliderMax={Math.max(12, c.bulkHours)}
                           step={0.25}
                           unit="ore"
                           hint={
@@ -1248,6 +1249,7 @@ export default function App() {
                           onChange={(v) => update("coldHours", v)}
                           min={0}
                           max={96}
+                          sliderMax={Math.max(72, c.coldHours)}
                           step={0.5}
                           unit="ore"
                           hint="Massa coperta al freddo"
@@ -1258,6 +1260,7 @@ export default function App() {
                           onChange={(v) => update("proofHours", v)}
                           min={0}
                           max={24}
+                          sliderMax={Math.max(12, c.proofHours)}
                           step={0.5}
                           unit="ore"
                           hint="Ultimo riposo, già diviso"
