@@ -66,6 +66,7 @@ import { EquipmentProfiles } from "./components/EquipmentProfiles";
 import { GuidedMode } from "./components/GuidedMode";
 import { ScaleMode, type ScaleItem } from "./components/ScaleMode";
 import { BakingPlanner } from "./components/BakingPlanner";
+import { OvenCalibration } from "./components/OvenCalibration";
 import { SourdoughCare } from "./components/SourdoughCare";
 import { StarterDoughLink } from "./components/StarterDoughLink";
 import { ActiveDoughJournal } from "./components/ActiveDoughJournal";
@@ -84,7 +85,7 @@ import {
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
 type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida";
-type PlannerStage = "dough" | "fermentation" | "baking";
+type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
 const nav = [
   { id: "impasto", label: "Impasto", icon: CookingPot },
   { id: "farine", label: "Farine", icon: Wheat },
@@ -120,6 +121,12 @@ function RecipeOutcome({ recipe, onEdit, collapsed }: { recipe: Recipe; onEdit: 
       Appunti per la prossima volta
       <textarea rows={3} maxLength={4000} placeholder="Com’era l’impasto? Cosa cambieresti?" value={recipe.notes} onChange={(event) => onEdit({ notes: event.target.value })} />
     </label>
+    {recipe.temperatureReadings && recipe.temperatureReadings.length > 0 && (
+      <div className="historical-readings">
+        <span>TEMPERATURE REGISTRATE</span>
+        {recipe.temperatureReadings.map((reading) => <small key={reading.id}>{reading.place === "impasto" ? "Impasto" : reading.place === "ambiente" ? "Ambiente" : "Frigo"}: <strong>{reading.temp} °C</strong></small>)}
+      </div>
+    )}
   </div>;
   return collapsed
     ? <details className="journal-outcome"><summary>Dopo la cottura · risultato e appunti</summary>{content}</details>
@@ -427,7 +434,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.12.0",
+            version: "0.13.0",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -462,7 +469,11 @@ export default function App() {
                 r?.config &&
                 !validateConfig({ ...defaultConfig(), ...r.config }).length,
             )
-            .map((r) => ({ ...r, config: { ...defaultConfig(), ...r.config } }))
+            .map((r) => ({
+              ...r,
+              status: r.status === "completed" ? "completed" as const : "saved" as const,
+              config: { ...defaultConfig(), ...r.config },
+            }))
         : [];
       const customFlours = Array.isArray(data.customFlours)
         ? data.customFlours
@@ -556,7 +567,7 @@ export default function App() {
       /* L’utente può chiudere il pannello di condivisione senza conseguenze. */
     }
   }
-  async function saveRecipe() {
+  async function saveRecipe(startNow = false) {
     if (!result.ok || loadError) return;
     const recipe: Recipe = {
       id: crypto.randomUUID(),
@@ -568,15 +579,15 @@ export default function App() {
       notes: "",
       rating: 0,
       completedStages: [],
+      status: "saved",
     };
     const next = { ...state, recipes: [recipe, ...state.recipes] };
     try {
       await writeState(next);
       setState(next);
-      setMessage(
-        "Piano salvato nel diario. Puoi attivare i promemoria dalla sua scheda.",
-      );
+      setMessage("Ricetta salvata: resta in attesa finché non scegli di iniziarla.");
       setTab("diario");
+      if (startNow) await activate(recipe);
     } catch {
       setStorageError("Piano non salvato: memoria locale non disponibile.");
     }
@@ -584,13 +595,25 @@ export default function App() {
   async function activate(recipe: Recipe) {
     setBusy(true);
     try {
+      if (state.activeId && state.activeId !== recipe.id) await cancelReminders();
       const note = await scheduleReminders(recipe);
-      setState((s) => ({ ...s, activeId: recipe.id }));
+      setState((s) => ({
+        ...s,
+        activeId: recipe.id,
+        recipes: s.recipes.map((item) => ({
+          ...item,
+          status: item.id === recipe.id ? "active" : item.status === "active" ? "saved" : item.status,
+        })),
+      }));
       setMessage(note);
     } catch (e) {
       try {
         await cancelReminders();
-        setState((s) => ({ ...s, activeId: null }));
+        setState((s) => ({
+          ...s,
+          activeId: null,
+          recipes: s.recipes.map((item) => item.status === "active" ? { ...item, status: "saved" } : item),
+        }));
       } catch {
         /* Conserva lo stato visibile se Android non conferma la cancellazione. */
       }
@@ -607,10 +630,32 @@ export default function App() {
     setBusy(true);
     try {
       await cancelReminders();
-      setState((s) => ({ ...s, activeId: null }));
-      setMessage("Piano disattivato e promemoria cancellati.");
+      setState((s) => ({
+        ...s,
+        activeId: null,
+        recipes: s.recipes.map((item) => item.id === s.activeId ? { ...item, status: "saved" } : item),
+      }));
+      setMessage("Piano messo in pausa: resta tra le ricette salvate.");
     } catch {
       setMessage("Cancellazione dei promemoria non riuscita. Riprova.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function completeRecipe(recipe: Recipe) {
+    setBusy(true);
+    try {
+      if (state.activeId === recipe.id) await cancelReminders();
+      setState((s) => ({
+        ...s,
+        activeId: s.activeId === recipe.id ? null : s.activeId,
+        recipes: s.recipes.map((item) => item.id === recipe.id
+          ? { ...item, status: "completed", completedAt: new Date().toISOString() }
+          : item),
+      }));
+      setMessage("Pizza conclusa e spostata nello storico.");
+    } catch {
+      setMessage("Non riesco a chiudere il piano e cancellare i promemoria. Riprova.");
     } finally {
       setBusy(false);
     }
@@ -744,6 +789,26 @@ export default function App() {
   const isPan = styles.find((s) => s.id === c.styleId)?.pan;
   const startPast =
     timeline.length > 0 && new Date(timeline[0].at).getTime() < now;
+  const journalGroups = [
+    {
+      id: "active",
+      title: "In lavorazione",
+      description: "La pizza che stai preparando adesso, con promemoria e controlli operativi.",
+      recipes: state.recipes.filter((recipe) => recipe.status === "active" || recipe.id === state.activeId),
+    },
+    {
+      id: "saved",
+      title: "Salvate per dopo",
+      description: "Ricette pronte da riprendere: non sono attive e non inviano notifiche.",
+      recipes: state.recipes.filter((recipe) => recipe.status === "saved" && recipe.id !== state.activeId),
+    },
+    {
+      id: "completed",
+      title: "Pizze concluse",
+      description: "Lo storico delle prove già fatte, con risultati e appunti.",
+      recipes: state.recipes.filter((recipe) => recipe.status === "completed"),
+    },
+  ] as const;
   if (!ready)
     return (
       <div className="loading">
@@ -860,12 +925,13 @@ export default function App() {
                   <div className="getting-started-copy">
                     <span className="eyebrow">PRIMA PIZZA CON PIZZALAB?</span>
                     <h2>Tu scegli il risultato. Al resto pensiamo insieme.</h2>
-                    <p>Non serve conoscere percentuali o termini tecnici: segui tre passaggi e usa le impostazioni consigliate.</p>
+                    <p>Non serve conoscere percentuali o termini tecnici: segui quattro passaggi e usa le impostazioni consigliate.</p>
                   </div>
                   <div className="getting-started-steps">
                     <div><span>1</span><strong>Scegli la pizza</strong><small>Tipo, quantità e farina.</small></div>
                     <div><span>2</span><strong>Indica gli orari</strong><small>Inizio e ora in cui vuoi mangiare.</small></div>
-                    <div><span>3</span><strong>Segui il piano</strong><small>L’app ti dice cosa fare e quando.</small></div>
+                    <div><span>3</span><strong>Imposta il forno</strong><small>Guarda la previsione di cottura.</small></div>
+                    <div><span>4</span><strong>Salva o inizia</strong><small>Decidi se conservarla o partire.</small></div>
                   </div>
                   <div className="getting-started-actions">
                     <button className="button primary" onClick={() => finishGettingStarted(true)}>Inizia, guidami tu <ArrowRight /></button>
@@ -975,6 +1041,7 @@ export default function App() {
                       Clock,
                     ],
                     ["baking", "3", "Cottura", "Come cuocerla", Fire],
+                    ["summary", "4", "Riepilogo", "Salva o inizia", CheckCircle],
                   ] as const
                 ).map(([id, number, label, detail, Icon]) => (
                   <button
@@ -993,10 +1060,10 @@ export default function App() {
                 ))}
               </nav>
               <section className={`stage-guide ${plannerStage}`} aria-live="polite">
-                <span>{plannerStage === "dough" ? "PASSO 1 DI 3" : plannerStage === "fermentation" ? "PASSO 2 DI 3" : "PASSO 3 DI 3"}</span>
+                <span>{plannerStage === "dough" ? "PASSO 1 DI 4" : plannerStage === "fermentation" ? "PASSO 2 DI 4" : plannerStage === "baking" ? "PASSO 3 DI 4" : "PASSO 4 DI 4"}</span>
                 <div>
-                  <strong>{plannerStage === "dough" ? "Partiamo dalle scelte indispensabili" : plannerStage === "fermentation" ? "Dicci quando vuoi iniziare e mangiare" : "Regola il forno guardando il risultato"}</strong>
-                  <p>{plannerStage === "dough" ? "Scegli farina, quantità e acqua. Le tecniche più complesse restano nelle opzioni avanzate." : plannerStage === "fermentation" ? "La modalità automatica calcola lievito, frigo e riposi. Usa Manuale solo se vuoi controllare ogni fase." : "Tempo, temperatura e altezza aggiornano subito la previsione di crosta, mollica e fondo."}</p>
+                  <strong>{plannerStage === "dough" ? "Partiamo dalle scelte indispensabili" : plannerStage === "fermentation" ? "Dicci quando vuoi iniziare e mangiare" : plannerStage === "baking" ? "Regola il forno guardando il risultato" : "Controlla tutto e scegli cosa fare"}</strong>
+                  <p>{plannerStage === "dough" ? "Scegli farina, quantità e acqua. Le tecniche più complesse restano nelle opzioni avanzate." : plannerStage === "fermentation" ? "La modalità automatica calcola lievito, frigo e riposi. Usa Manuale solo se vuoi controllare ogni fase." : plannerStage === "baking" ? "Tempo, temperatura e altezza aggiornano subito la previsione di crosta, mollica e fondo." : "Salva la ricetta per dopo oppure avviala: solo l’avvio crea un piano in corso e attiva i promemoria."}</p>
                 </div>
               </section>
               <div className="planner-grid">
@@ -1472,7 +1539,7 @@ export default function App() {
                       )}
                     </section>
                   )}
-                  {result.ok && plannerStage !== "baking" && (
+                  {result.ok && (plannerStage === "dough" || plannerStage === "fermentation") && (
                     <details
                       className="expert-disclosure"
                       open={expertOpen}
@@ -1514,7 +1581,7 @@ export default function App() {
                     </details>
                   )}
                   {plannerStage === "baking" && (
-                    <BakingPlanner config={c} onUpdate={updateMany} calibrations={state.bakeCalibrations} onAddCalibration={(calibration) => { setState((s) => ({ ...s, bakeCalibrations: [calibration, ...s.bakeCalibrations].slice(0, 100) })); setMessage("Risultato salvato: la taratura personale è stata aggiornata."); }} />
+                    <BakingPlanner config={c} onUpdate={updateMany} />
                   )}
                   {plannerStage === "fermentation" && (
                     <section className="panel">
@@ -1595,18 +1662,34 @@ export default function App() {
                     </button>
                   )}
                   {plannerStage === "baking" && (
-                    <section className="panel final-save-panel">
-                      <span className="eyebrow">PIANO COMPLETO</span>
-                      <h2>Pronto per il tuo diario</h2>
-                      <p>Salva dosi, lievitazione e previsione di cottura in un unico piano.</p>
+                    <button className="journey-next" onClick={() => goToPlannerStage("summary")}>
+                      <span><small>PASSAGGIO 4</small><strong>Controlla il riepilogo</strong></span>
+                      <ArrowRight />
+                    </button>
+                  )}
+                  {plannerStage === "summary" && (
+                    <section className="panel final-save-panel plan-decision">
+                      <span className="eyebrow">RICETTA COMPLETA</span>
+                      <h2>Vuoi conservarla o iniziare?</h2>
+                      <p>Le due scelte sono separate: salvare non significa che la pizza sia già in lavorazione.</p>
                       <label className="field recipe-name">
-                        Nome del piano
+                        Nome della ricetta
                         <input maxLength={80} value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder="Es. La pizza del sabato" />
                       </label>
-                      <button className="button primary full final-save-button" disabled={loadError || !result.ok} onClick={() => void saveRecipe()}>
-                        <BookmarkSimple /> Salva il piano <ArrowRight />
-                      </button>
-                      <small>Lo ritrovi nel diario, anche offline.</small>
+                      <div className="plan-choice-grid">
+                        <button className="plan-choice saved" disabled={loadError || !result.ok} onClick={() => void saveRecipe(false)}>
+                          <BookmarkSimple /><span><strong>Salva per dopo</strong><small>Finisce tra le ricette salvate. Nessuna notifica.</small></span><ArrowRight />
+                        </button>
+                        <button className="plan-choice start" disabled={loadError || !result.ok || startPast} onClick={() => void saveRecipe(true)}>
+                          <Bell /><span><strong>Salva e inizia il piano</strong><small>Diventa “in corso” e programma i promemoria.</small></span><ArrowRight />
+                        </button>
+                      </div>
+                      {startPast && <small className="decision-warning">Per iniziare, torna alla lievitazione e scegli un orario futuro. Puoi comunque salvare la ricetta.</small>}
+                      <div className="summary-tools">
+                        <span>STRUMENTI DELLA RICETTA</span>
+                        <button className="button secondary" onClick={() => setScaleOpen(true)}><Scale /> Pesa gli ingredienti</button>
+                        <button className="button secondary" onClick={() => setGuidedOpen(true)}><Play /> Apri il procedimento guidato</button>
+                      </div>
                     </section>
                   )}
                 </div>
@@ -1769,20 +1852,6 @@ export default function App() {
                             Lievito stimato: verifica la crescita reale. Le
                             quantità mostrate sono arrotondate.
                           </span>
-                        </div>
-                        <div className="recipe-tools">
-                          <button
-                            className="button secondary"
-                            onClick={() => setScaleOpen(true)}
-                          >
-                            <Scale /> Pesa
-                          </button>
-                          <button
-                            className="button secondary"
-                            onClick={() => setGuidedOpen(true)}
-                          >
-                            <Play /> Guida
-                          </button>
                         </div>
                       </>
                     ) : (
@@ -1975,18 +2044,21 @@ export default function App() {
                   </button>
                 </div>
               ) : (
-                <div className="journal-list">
-                  {[...state.recipes]
-                    .sort(
-                      (a, b) =>
-                        Number(b.id === state.activeId) -
-                          Number(a.id === state.activeId) ||
-                        Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)),
-                    )
+                <div className="journal-groups">
+                  {journalGroups.filter((group) => group.recipes.length > 0).map((group) => (
+                    <section className={`journal-group ${group.id}`} key={group.id}>
+                      <header className="journal-group-heading">
+                        <div><span>{group.id === "active" ? "ADESSO" : group.id === "saved" ? "IN ATTESA" : "STORICO"}</span><h2>{group.title}</h2><p>{group.description}</p></div>
+                        <strong>{group.recipes.length}</strong>
+                      </header>
+                      <div className="journal-list">
+                  {[...group.recipes]
+                    .sort((a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)))
                     .map((recipe) => {
                       const r = calculate(recipe.config, flours);
                       const stages = buildTimeline(recipe.config, flours);
                       const isActive = state.activeId === recipe.id;
+                      const isCompleted = recipe.status === "completed";
                       const expired =
                         new Date(recipe.config.bakeAt).getTime() <= now;
                       return (
@@ -1997,13 +2069,7 @@ export default function App() {
                           <div className="journal-title">
                             <div>
                               <span className="eyebrow">
-                                {isActive
-                                  ? "PIANO ATTIVO"
-                                  : recipe.favorite
-                                    ? "PREFERITA"
-                                    : expired
-                                      ? "DA RICORDARE"
-                                      : "IN PROGRAMMA"}
+                                {isActive ? "PIANO ATTIVO" : isCompleted ? "CONCLUSA" : recipe.favorite ? "PREFERITA" : expired ? "DA RIPROGRAMMARE" : "SALVATA · NON ATTIVA"}
                               </span>
                               <h2>{recipe.name}</h2>
                               <p>
@@ -2084,21 +2150,13 @@ export default function App() {
                             >
                               Condividi
                             </button>
-                            {isActive ? (
-                              <button
-                                className="button secondary"
-                                disabled={busy}
-                                onClick={() => void deactivate()}
-                              >
-                                <Bell /> Disattiva piano
-                              </button>
-                            ) : (
+                            {!isActive && !isCompleted && (
                               <button
                                 className="button primary"
                                 disabled={busy || expired}
                                 onClick={() => void activate(recipe)}
                               >
-                                <Bell /> Attiva piano e promemoria
+                                <Bell /> Inizia con i promemoria
                               </button>
                             )}
                           </div>
@@ -2107,12 +2165,20 @@ export default function App() {
                               <p className="small-muted active-plan-note">
                                 Questo è l’unico piano operativo. I controlli qui sotto aggiornano soltanto questa ricetta salvata.
                               </p>
+                              <div className="active-recipe-tools">
+                                <button className="button secondary" onClick={() => { setState((s) => ({ ...s, config: { ...recipe.config } })); setScaleOpen(true); }}><Scale /> Pesa gli ingredienti</button>
+                                <button className="button secondary" onClick={() => { setState((s) => ({ ...s, config: { ...recipe.config } })); setGuidedOpen(true); }}><Play /> Procedimento guidato</button>
+                              </div>
                               <ActiveDoughJournal
                                 recipe={recipe}
                                 stages={stages}
                                 onEdit={(patch) => editRecipe(recipe.id, patch)}
                                 onMessage={setMessage}
                               />
+                              <div className="active-plan-end-actions">
+                                <button className="button secondary" disabled={busy} onClick={() => void deactivate()}><BookmarkSimple /> Metti in pausa</button>
+                                <button className="button primary" disabled={busy} onClick={() => void completeRecipe(recipe)}><CheckCircle /> Concludi e archivia</button>
+                              </div>
                             </>
                           ) : (
                             <details>
@@ -2131,19 +2197,26 @@ export default function App() {
                               </div>
                             </details>
                           )}
-                          <RecipeOutcome
+                          {(isActive || isCompleted) && <RecipeOutcome
                             recipe={recipe}
                             onEdit={(patch) => editRecipe(recipe.id, patch)}
                             collapsed={isActive && recipe.completedStages.length < stages.length}
-                          />
+                          />}
                         </article>
                       );
                   })}
+                      </div>
+                    </section>
+                  ))}
                 </div>
               )}
-              {state.recipes.length > 0 && (
-                <InsightsDashboard recipes={state.recipes} flours={flours} />
+              {journalGroups[2].recipes.length > 0 && (
+                <InsightsDashboard recipes={journalGroups[2].recipes} flours={flours} />
               )}
+              <div className="diary-lab-tools">
+                <div className="section-title"><div><span className="eyebrow">STRUMENTI DEL LABORATORIO</span><h2>Impara dal tuo forno</h2></div><span>Indipendente dalle ricette in corso</span></div>
+                <OvenCalibration config={c} calibrations={state.bakeCalibrations} onUpdate={updateMany} onAddCalibration={(calibration) => { setState((s) => ({ ...s, bakeCalibrations: [calibration, ...s.bakeCalibrations].slice(0, 100) })); setMessage("Prova forno salvata: la taratura personale è stata aggiornata."); }} />
+              </div>
             </>
           )}
           <footer className="page-footer">

@@ -54,6 +54,16 @@ export async function readState(): Promise<StoredState> {
     recipe?.config
       ? {
           ...recipe,
+          status:
+            recipe.status === "saved" ||
+            recipe.status === "active" ||
+            recipe.status === "completed"
+              ? recipe.status
+              : recipe.id === parsed.activeId
+                ? "active"
+                : new Date(recipe.config.bakeAt).getTime() <= Date.now()
+                  ? "completed"
+                  : "saved",
           config: {
             ...defaultConfig(),
             ...recipe.config,

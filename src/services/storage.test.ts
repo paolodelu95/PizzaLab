@@ -57,6 +57,7 @@ describe("storage migrations", () => {
       name: "Sabato sera",
       notes: "Non perdere questa nota",
       favorite: true,
+      status: "active",
     });
     expect(migrated.recipes[0].config.hydration).toBe(68);
     expect(migrated.recipes[0].config.ovenRack).toBe(current.ovenRack);

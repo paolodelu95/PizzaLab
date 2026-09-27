@@ -1,10 +1,11 @@
 import { test, expect } from "@playwright/test";
-test("first use explains the three-step path and keeps advanced controls collapsed", async ({ page }) => {
+test("first use explains the four-step path and keeps advanced controls collapsed", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Tu scegli il risultato. Al resto pensiamo insieme." })).toBeVisible();
   await expect(page.getByText("Scegli la pizza", { exact: true })).toBeVisible();
   await expect(page.getByText("Indica gli orari", { exact: true })).toBeVisible();
-  await expect(page.getByText("Segui il piano", { exact: true })).toBeVisible();
+  await expect(page.getByText("Imposta il forno", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Guida al primo utilizzo" }).getByText("Salva o inizia", { exact: true })).toBeVisible();
   await expect(page.locator(".expert-disclosure").first()).not.toHaveAttribute("open", "");
   await page.getByRole("button", { name: /Inizia, guidami tu/ }).click();
   await expect(page.getByRole("heading", { name: "Tu scegli il risultato. Al resto pensiamo insieme." })).toHaveCount(0);
@@ -25,12 +26,15 @@ test("calculate, save, annotate, persist and delete a recipe", async ({
   await page.getByRole("button", { name: /Passa a lievitazione/ }).click();
   await expect(page.getByRole("button", { name: /^2 Lievitazione/ })).toHaveAttribute("aria-current", "step");
   await page.getByRole("button", { name: /Passa a cottura/ }).click();
-  await page.getByLabel("Nome del piano").fill("Prova teglia");
-  await page.getByRole("button", { name: "Salva il piano" }).click();
+  await page.getByRole("button", { name: /Controlla il riepilogo/ }).click();
+  await page.getByLabel("Nome della ricetta").fill("Prova teglia");
+  await page.getByRole("button", { name: /Salva per dopo/ }).click();
   await expect(
     page.getByRole("heading", { name: "Prova teglia", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Attiva piano e promemoria" }).click();
+  await expect(page.getByRole("heading", { name: "Salvate per dopo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Il tuo laboratorio nel tempo" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Inizia con i promemoria" }).click();
   await expect(page.getByRole("status")).toContainText("browser");
   await page.getByText("Dopo la cottura · risultato e appunti").click();
   await page
@@ -42,6 +46,9 @@ test("calculate, save, annotate, persist and delete a recipe", async ({
   await page.getByLabel("Temperatura misurata").fill("8");
   await page.getByRole("button", { name: "Registra" }).click();
   await expect(page.getByText("Frigo più caldo del piano")).toBeVisible();
+  await page.getByRole("button", { name: "Concludi e archivia" }).click();
+  await expect(page.getByRole("heading", { name: "Pizze concluse" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Il tuo laboratorio nel tempo" })).toBeVisible();
   await page.waitForFunction(() =>
     localStorage
       .getItem("CapacitorStorage.pizzalab-state-v1")
@@ -49,11 +56,9 @@ test("calculate, save, annotate, persist and delete a recipe", async ({
   );
   await page.reload();
   await page.getByRole("button", { name: /Diario/ }).click();
-  await page.getByText("Dopo la cottura · risultato e appunti").click();
   await expect(page.getByLabel("Appunti per la prossima volta")).toHaveValue(
     "Fondo croccante, ripetere.",
   );
-  await page.getByText("Temperature reali e controllo scostamenti").click();
   await expect(page.getByText("8 °C", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "Elimina Prova teglia" }).click();
   await page
@@ -112,7 +117,7 @@ test("invalid fields block saving and hot/weak dough produces warnings", async (
   await page.getByLabel("Peso del panetto", { exact: true }).blur();
   await expect(page.getByText("Controlla questi valori")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Salva il piano" }),
+    page.getByRole("button", { name: /Salva per dopo/ }),
   ).toHaveCount(0);
   await page.getByLabel("Peso del panetto", { exact: true }).fill("260");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
@@ -230,10 +235,11 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
   await expect(
     page.getByRole("heading", { name: "La tua attrezzatura" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Pesa" }).click();
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await page.getByRole("button", { name: /Pesa gli ingredienti/ }).click();
   await expect(page.getByText("Modalità bilancia")).toBeVisible();
   await page.getByRole("button", { name: "Chiudi modalità bilancia" }).click();
-  await page.getByRole("button", { name: "Guida", exact: true }).click();
+  await page.getByRole("button", { name: /Apri il procedimento guidato/ }).click();
   await expect(page.getByText("MODALITÀ MANI IN PASTA")).toBeVisible();
   await expect(page.getByText("Come sta andando?")).toBeVisible();
   await page.getByRole("button", { name: "Chiudi modalità guidata" }).click();
@@ -466,28 +472,29 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
   await page.getByRole("button", { name: "Impasto", exact: true }).click();
   await page.getByRole("button", { name: /^3 Cottura/ }).click();
   await expect(page.locator(".bake-topping-impact")).toContainText("82% umidità");
-  const calibration = page.locator(".bake-calibration");
-  await calibration.getByLabel("Tempo realmente usato").fill("3");
-  await calibration.getByRole("button", { name: "Umida", exact: true }).click();
-  await calibration.getByRole("button", { name: "Salva risultato reale" }).click();
-  await expect(calibration.getByText("Correzione personale", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Taratura del tuo forno" })).toHaveCount(0);
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
   await page.screenshot({ path: `test-results/connected-plan-${test.info().project.name}.png`, fullPage: true });
 
-  await page.getByRole("button", { name: "Guida", exact: true }).click();
+  await page.getByRole("button", { name: /Apri il procedimento guidato/ }).click();
   await expect(page.getByText("MODALITÀ MANI IN PASTA", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Tieni acceso lo schermo" }).click();
   await expect(page.getByRole("button", { name: "Schermo sempre acceso" })).toBeVisible();
   await page.screenshot({ path: `test-results/hands-free-${test.info().project.name}.png`, fullPage: true });
   await page.getByRole("button", { name: "Chiudi modalità guidata" }).click();
 
-  await page.getByLabel("Nome del piano").fill("Impasto controllato");
-  await page.getByRole("button", { name: "Salva il piano" }).click();
-  await page.getByRole("button", { name: "Attiva piano e promemoria" }).click();
+  await page.getByLabel("Nome della ricetta").fill("Impasto controllato");
+  await page.getByRole("button", { name: /Salva e inizia il piano/ }).click();
   await expect(page.getByText("IMPASTO IN CORSO", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Controlli impasto attivo")).toBeVisible();
   await page.getByLabel("Crescita osservata", { exact: true }).fill("2.4");
   await expect(page.getByText("Sta correndo", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Applica la correzione ai tempi" }).click();
   await expect(page.getByRole("status")).toContainText("Tempi dell’impasto attivo aggiornati");
+  const calibration = page.locator(".oven-calibration-lab");
+  await calibration.getByLabel("Tempo realmente usato").fill("3");
+  await calibration.getByRole("button", { name: "Umida", exact: true }).click();
+  await calibration.getByRole("button", { name: "Salva prova forno" }).click();
+  await expect(calibration.getByText("Correzione personale", { exact: false })).toBeVisible();
   await page.screenshot({ path: `test-results/active-diary-${test.info().project.name}.png`, fullPage: true });
 });

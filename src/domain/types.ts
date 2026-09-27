@@ -146,6 +146,8 @@ export interface Recipe {
   notes: string;
   rating: number;
   completedStages: string[];
+  status: "saved" | "active" | "completed";
+  completedAt?: string;
   temperatureReadings?: TemperatureReading[];
   favorite?: boolean;
 }

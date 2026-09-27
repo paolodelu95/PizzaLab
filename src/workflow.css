@@ -197,7 +197,7 @@
 .getting-started { display: grid; grid-template-columns: 1.05fr 1.45fr; gap: 20px 28px; margin: -8px 0 30px; padding: 24px; overflow: hidden; border: 1px solid #cfe2de; border-radius: 22px; background: radial-gradient(circle at 95% 0,#ffd6c93b,transparent 12rem),linear-gradient(145deg,#f9fdfc,#edf7f4); box-shadow: 0 15px 34px #1d465012; }
 .getting-started-copy h2 { margin: 8px 0; font-size: 23px; letter-spacing: -.6px; }
 .getting-started-copy p { font-size: 11px; line-height: 1.7; }
-.getting-started-steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; }
+.getting-started-steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 9px; }
 .getting-started-steps > div { display: grid; align-content: start; gap: 6px; padding: 14px; border: 1px solid #dce9e5; border-radius: 15px; background: #ffffffc7; }
 .getting-started-steps > div > span { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 50%; color: white; background: #ef7455; font-size: 10px; font-weight: 800; }
 .getting-started-steps strong { font-size: 11px; }
@@ -211,6 +211,7 @@
 .stage-guide p { font-size: 10px; line-height: 1.55; }
 .stage-guide.fermentation > span { color: #725a22; background: #f4e9c9; }
 .stage-guide.baking > span { color: #a34531; background: #ffe4dc; }
+.stage-guide.summary > span { color: #4f497c; background: #ebe8ff; }
 
 .expert-disclosure { margin: 0; padding: 0; border: 1px solid #dce5e6; border-radius: 16px; background: #f9fbfb; overflow: hidden; }
 .expert-disclosure > summary { display: flex; min-height: 62px; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 16px; color: #31565d; list-style: none; }
@@ -267,6 +268,35 @@
 .final-save-panel > p { margin-bottom: 20px; font-size: 11px; }
 .final-save-panel > small { display: block; margin-top: 10px; color: #839197; font-size: 9px; text-align: center; }
 .final-save-button { min-height: 56px; border-radius: 15px; font-size: 14px; }
+.plan-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.plan-choice { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; min-height: 92px; padding: 16px; border: 1px solid #dbe4e5; border-radius: 16px; text-align: left; background: #fff; }
+.plan-choice > svg { width: 24px; color: #607b80; }
+.plan-choice > svg:last-child { width: 18px; }
+.plan-choice span { display: grid; gap: 5px; }
+.plan-choice strong { font-size: 13px; }
+.plan-choice small { color: #7b898e; font-size: 9px; line-height: 1.5; }
+.plan-choice.start { border-color: #ef9b87; background: #fff2ed; }
+.plan-choice.start > svg { color: #d85c42; }
+.summary-tools { display: grid; grid-template-columns: auto 1fr 1fr; gap: 9px; align-items: center; margin-top: 20px; padding-top: 18px; border-top: 1px solid #e3e7e5; }
+.summary-tools > span { grid-column: 1 / -1; font-size: 8px; font-weight: 800; letter-spacing: 1.2px; color: #74878a; }
+.decision-warning { display: block; margin-top: 12px; padding: 10px 12px; border-radius: 10px; color: #885b30!important; background: #fff0d9; text-align: left!important; }
+.journal-groups { display: grid; gap: 34px; }
+.journal-group { display: grid; gap: 15px; }
+.journal-group-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 0 3px; }
+.journal-group-heading > div { display: grid; gap: 4px; }
+.journal-group-heading span { font-size: 8px; font-weight: 800; letter-spacing: 1.4px; color: #5b8b82; }
+.journal-group-heading h2 { font-size: 22px; }
+.journal-group-heading p { font-size: 11px; }
+.journal-group-heading > strong { display: grid; place-items: center; min-width: 38px; height: 38px; border-radius: 50%; color: #315e66; background: #e2efed; }
+.journal-group.active .journal-group-heading > strong { color: #39714a; background: #e1f0e3; }
+.journal-group.completed .journal-group-heading > strong { color: #75684c; background: #f2ead8; }
+.active-recipe-tools,.active-plan-end-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 12px 0; }
+.diary-lab-tools { margin-top: 42px; padding-top: 30px; border-top: 1px solid #dce5e8; }
+.diary-lab-tools .section-title > div { display: grid; gap: 7px; }
+.oven-calibration-lab .calibration-explainer { margin: -9px 0 20px; font-size: 11px; }
+.historical-readings { display: flex; flex-wrap: wrap; gap: 7px 12px; margin-top: 14px; padding: 12px; border-radius: 11px; background: #f2f5f3; }
+.historical-readings > span { width: 100%; font-size: 7px; font-weight: 800; letter-spacing: 1px; color: #6d8181; }
+.historical-readings small { font-size: 9px; color: #718083; }
 
 @media (max-width: 640px) {
   .surface-options { display: flex; overflow-x: auto; padding: 1px 0 6px; scrollbar-width: none; }
@@ -280,6 +310,10 @@
   .prediction-rack-rail { padding: 5px; }
   .prediction-rack-rail button { min-height: 32px; padding: 3px; }
   .journey-next { min-height: 78px; border-radius: 20px; }
+  .plan-choice-grid,.active-recipe-tools,.active-plan-end-actions { grid-template-columns: 1fr; }
+  .summary-tools { grid-template-columns: 1fr; }
+  .summary-tools > span { grid-column: 1; }
+  .journal-group-heading { align-items: flex-start; }
 
   /* Liquid glass: final mobile override, isolated from the desktop sidebar. */
   .sidebar {
