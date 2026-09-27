@@ -2,7 +2,7 @@ import { Fire, Oven, SquaresFour, Target } from "@phosphor-icons/react";
 import { useState } from "react";
 import { bakeSurfaceLabels, estimateBakeOutcome } from "../domain/calculator";
 import type { BakeCalibration, DoughConfig } from "../domain/types";
-import { NumberField } from "./Fields";
+import { NumberField, SliderField } from "./Fields";
 
 const rackOptions: [DoughConfig["ovenRack"], string, string][] = [
   ["bottom", "Basso", "Più energia al fondo"],
@@ -72,6 +72,7 @@ export function BakingPlanner({
       })
       .join(" ");
   const markerX = 12 + Math.min(1, c.bakeMinutes / chartMax) * 296;
+  const bakeSliderMax = Math.max(c.bakeMinutes, c.ovenTemp >= 350 ? 10 : c.ovenTemp >= 280 ? 20 : 60);
 
   return (
     <section className="panel baking-planner">
@@ -82,9 +83,9 @@ export function BakingPlanner({
           <p>Modifica i parametri: il risultato previsto si aggiorna da solo.</p>
         </div>
       </div>
-      <div className="field-grid baking-basics">
-        <NumberField label="Temperatura forno" value={c.ovenTemp} onChange={(v) => onUpdate({ ovenTemp: v })} min={180} max={500} step={5} unit="°C" />
-        <NumberField label="Tempo di cottura" value={c.bakeMinutes} onChange={(v) => onUpdate({ bakeMinutes: v })} min={0.5} max={60} step={c.ovenTemp >= 350 ? 0.25 : 1} unit="min" />
+      <div className="baking-basics slider-basics">
+        <SliderField label="Temperatura forno" value={c.ovenTemp} onChange={(v) => onUpdate({ ovenTemp: v })} min={180} max={500} step={5} unit="°C" />
+        <SliderField label="Tempo di cottura" value={c.bakeMinutes} onChange={(v) => onUpdate({ bakeMinutes: v })} min={0.5} max={60} sliderMax={bakeSliderMax} step={c.ovenTemp >= 350 ? 0.25 : 1} unit="min" hint="La scala si adatta al forno: trascina per confrontare crosta, mollica e fondo." />
       </div>
       <p className="bake-live-time">Tempo effettivo: {formatTime(c.bakeMinutes)}</p>
       <div className="bake-topping-impact"><span>Condimento collegato</span><strong>{Math.round(c.toppingMoisture)}% umidità · {c.toppingLoad.toLocaleString("it-IT", { maximumFractionDigits: 2 })} g/cm²</strong><small>Il simulatore usa questi valori per mollica e fondo.</small></div>

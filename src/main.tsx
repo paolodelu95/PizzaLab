@@ -6,4 +6,5 @@ import './workflow.css';
 import './components/sourdough.css';
 import './components/toppings.css';
 import './components/planning-tools.css';
+import './components/touch-controls.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);

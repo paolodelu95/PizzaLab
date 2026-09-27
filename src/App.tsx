@@ -47,7 +47,7 @@ import type {
   StarterFeeding,
   StoredState,
 } from "./domain/types";
-import { NumberField, Stepper } from "./components/Fields";
+import { NumberField, SliderField, Stepper } from "./components/Fields";
 import { FlourPicker } from "./components/FlourPicker";
 import { FlourLibrary } from "./components/FlourLibrary";
 import { Guide } from "./components/Guide";
@@ -391,7 +391,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.9.1",
+            version: "0.10.0",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -1010,27 +1010,16 @@ export default function App() {
                         </div>
                       )}
                       <div className="hydration-field">
-                        <label htmlFor="hydration">
-                          Idratazione{" "}
-                          <strong>
-                            {fmt(c.hydration, 1)}
-                            <small>%</small>
-                          </strong>
-                        </label>
-                        <input
-                          id="hydration"
-                          type="range"
-                          min="45"
-                          max="90"
+                        <SliderField
+                          label="Idratazione"
                           value={c.hydration}
-                          onChange={(e) =>
-                            update("hydration", Number(e.target.value))
-                          }
+                          onChange={(v) => update("hydration", v)}
+                          min={45}
+                          max={90}
+                          step={1}
+                          unit="%"
+                          hint="Verso il minimo è più facile da lavorare; aumentando diventa più ariosa e impegnativa."
                         />
-                        <div className="range-labels">
-                          <span>Più facile da lavorare</span>
-                          <span>Più ariosa</span>
-                        </div>
                       </div>
                       {result.ok && (
                         <HydrationChart
@@ -1230,8 +1219,8 @@ export default function App() {
                           <Leaf /> Tutto fuori frigo
                         </button>
                       </div>
-                      <div className="time-fields">
-                        <NumberField
+                      <div className="time-fields slider-time-fields">
+                        <SliderField
                           label="Puntata fuori frigo"
                           value={c.bulkHours}
                           onChange={(v) =>
@@ -1246,7 +1235,6 @@ export default function App() {
                           min={(c.foldCount * c.foldIntervalMinutes) / 60}
                           max={24}
                           step={0.25}
-                          clampToRange
                           unit="ore"
                           hint={
                             c.foldCount > 0
@@ -1254,7 +1242,7 @@ export default function App() {
                               : "Primo riposo, in massa"
                           }
                         />
-                        <NumberField
+                        <SliderField
                           label="Riposo in frigo"
                           value={c.coldHours}
                           onChange={(v) => update("coldHours", v)}
@@ -1264,7 +1252,7 @@ export default function App() {
                           unit="ore"
                           hint="Massa coperta al freddo"
                         />
-                        <NumberField
+                        <SliderField
                           label="Appretto fuori frigo"
                           value={c.proofHours}
                           onChange={(v) => update("proofHours", v)}
@@ -1293,8 +1281,8 @@ export default function App() {
                           <small>+ 20 min di impasto</small>
                         </strong>
                       </div>
-                      <div className="field-grid temperature-fields">
-                        <NumberField
+                      <div className="field-grid temperature-fields slider-temperature-fields">
+                        <SliderField
                           label="Temperatura ambiente"
                           value={c.roomTemp}
                           onChange={(v) => update("roomTemp", v)}
@@ -1303,7 +1291,7 @@ export default function App() {
                           unit="°C"
                         />
                         {c.coldHours > 0 && (
-                          <NumberField
+                          <SliderField
                             label="Temperatura del frigo"
                             value={c.fridgeTemp}
                             onChange={(v) => update("fridgeTemp", v)}

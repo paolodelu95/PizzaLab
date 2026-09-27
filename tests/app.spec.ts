@@ -256,10 +256,11 @@ test("predicts crust, crumb and base from the baking setup", async ({ page }) =>
     page.getByRole("heading", { name: "Simulatore di cottura" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Risultato previsto" })).toBeVisible();
+  await expect(page.getByRole("slider", { name: "Tempo di cottura: cursore" })).toHaveAttribute("max", "10");
   const initialCrust = await page.locator(".prediction-result.crust small").textContent();
   await page.getByRole("button", { name: "Alto", exact: true }).click();
   await page.getByRole("button", { name: "Acciaio", exact: true }).click();
-  await page.getByLabel("Tempo di cottura").fill("3");
+  await page.getByLabel("Tempo di cottura", { exact: true }).fill("3");
   await expect(page.getByText(/3 min · 450 °C · ripiano alto/)).toBeVisible();
   await expect(page.locator(".prediction-result.crust small")).not.toHaveText(initialCrust ?? "");
   await expect(page.getByText(/Finestra consigliata/)).toBeVisible();
@@ -426,7 +427,7 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
   await page.getByRole("button", { name: "Attiva piano e promemoria" }).click();
   await expect(page.getByText("IMPASTO IN CORSO", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Controlli impasto attivo")).toBeVisible();
-  await page.getByLabel("Crescita osservata").fill("2.4");
+  await page.getByLabel("Crescita osservata", { exact: true }).fill("2.4");
   await expect(page.getByText("Sta correndo", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Applica la correzione ai tempi" }).click();
   await expect(page.getByRole("status")).toContainText("Tempi dell’impasto attivo aggiornati");
