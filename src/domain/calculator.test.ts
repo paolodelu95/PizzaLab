@@ -426,6 +426,18 @@ describe("advanced planning", () => {
   });
 });
 
+describe("fridge advice", () => {
+  it("flags a cold phase too short to be useful", () => {
+    const short = calculate(config({ coldHours: 3 }), flours);
+    const long = calculate(config({ coldHours: 18 }), flours);
+    const none = calculate(config({ coldHours: 0 }), flours);
+    const has = (r: ReturnType<typeof calculate>) => r.ok && r.advice.some((a) => a.id === "short-cold");
+    expect(has(short)).toBe(true);
+    expect(has(long)).toBe(false);
+    expect(has(none)).toBe(false);
+  });
+});
+
 describe("baking prediction", () => {
   it("increases crust and crumb cooking as bake time grows", () => {
     const short = estimateBakeOutcome(config({ bakeMinutes: 1 }));

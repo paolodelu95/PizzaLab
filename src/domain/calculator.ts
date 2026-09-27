@@ -726,6 +726,15 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       "Il frigo rallenta meno del previsto",
       "Verifica con un termometro la temperatura effettiva vicino all’impasto. Il modello diventa meno affidabile sopra 5 °C: controlla la crescita e riduci i tempi.",
     );
+  // Un panetto impiega 1–2 ore solo per raffreddarsi e poi deve riscaldarsi:
+  // sotto le 8 ore il frigo rallenta poco e non aggiunge sapore.
+  if (c.coldHours > 0 && c.coldHours < 8)
+    add(
+      "short-cold",
+      "warning",
+      "Frigo troppo breve per essere utile",
+      `Con ${c.coldHours.toLocaleString("it-IT", { maximumFractionDigits: 1 })} ore l’impasto fa appena in tempo a raffreddarsi e poi deve riscaldarsi: il freddo rallenta poco e non sviluppa sapore. Tieni l’impasto tutto fuori frigo oppure allunga il frigo ad almeno 12 ore.`,
+    );
   if (c.coldHours > 0 && c.proofHours < 2)
     add(
       "short-proof",

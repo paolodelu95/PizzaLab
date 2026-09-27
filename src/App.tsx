@@ -406,7 +406,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.14.0",
+            version: "0.14.1",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
