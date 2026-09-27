@@ -391,7 +391,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.10.1",
+            version: "0.10.2",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -1798,13 +1798,18 @@ export default function App() {
           )}
           {tab === "diario" && (
             <>
-              <div className="page-heading">
+              <div className="page-heading diary-heading">
                 <div>
                   <span className="eyebrow">OGNI IMPASTO INSEGNA QUALCOSA</span>
                   <h1>Il tuo diario di pizza.</h1>
                   <p>Ricette, promemoria e piccoli progressi.</p>
                 </div>
-                <div className="heading-actions">
+                <div className="heading-illustration" aria-hidden="true">
+                  <Notebook weight="duotone" />
+                  <span>Ogni prova lascia<br />una traccia.</span>
+                </div>
+              </div>
+              <div className="heading-actions page-tools-row diary-tools">
                   <input
                     ref={importRef}
                     hidden
@@ -1834,7 +1839,6 @@ export default function App() {
                   >
                     Nuovo impasto <ArrowRight />
                   </button>
-                </div>
               </div>
               {state.recipes.length === 0 ? (
                 <div className="empty-state">

@@ -67,7 +67,8 @@
 .prediction-result.base .prediction-meter i { background: #e5c06e; }
 .bake-curve { padding: 5px 3px 12px; }
 .bake-curve svg { display: block; width: 100%; height: auto; overflow: visible; }
-.ideal-zone { fill: #7ac7b114; stroke: #8dd1bf38; stroke-dasharray: 3 4; }
+.ideal-zone { fill: #62d0ae2f; stroke: #8ce1c8b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+.ideal-zone-label { fill: #d1fff2; font-size: 7px; font-weight: 750; letter-spacing: 1px; }
 .chart-axis { stroke: #ffffff25; }
 .curve { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 .curve.crust { stroke: #ef9a63; }
@@ -79,7 +80,9 @@
 .curve-legend .crust { color: #ef9a63; }
 .curve-legend .crumb { color: #79c9b8; }
 .curve-legend .base { color: #e5c06e; }
-.curve-legend small { margin-left: auto; color: #9eb6bc; font-size: 8px; }
+.curve-legend small { margin-left: auto; color: #c6ddd9; font-size: 8px; }
+.curve-legend .ideal-legend { display: inline-flex; align-items: center; gap: 5px; font-weight: 650; }
+.ideal-legend i { width: 13px; height: 8px; border: 1px solid #8ce1c8; border-radius: 3px; background: #62d0ae42; }
 .curve-rack-layout { display: grid; grid-template-columns: minmax(0, 1fr) 66px; align-items: center; gap: 10px; }
 .prediction-rack-rail { display: grid; gap: 4px; padding: 7px; border: 1px solid #ffffff1c; border-radius: 15px; background: #ffffff09; }
 .prediction-rack-rail > span { color: #90b8b7; font-size: 6px; font-weight: 750; letter-spacing: .8px; text-align: center; }
@@ -91,6 +94,49 @@
 .prediction-copy > strong { font-size: 11px; line-height: 1.55; }
 .prediction-copy p { margin-top: 6px; color: #b9ccd0; font-size: 9px; line-height: 1.6; }
 .prediction-copy .prediction-warning { color: #ffd19f; }
+
+.page-tools-row { display: flex; justify-content: flex-end; gap: 9px; flex-wrap: wrap; margin: -21px 0 28px; }
+.page-tools-row.heading-actions { width: 100%; }
+
+@media(max-width:640px){
+  .page-tools-row { margin: -10px 0 24px; }
+  .flour-tools .button { width: 100%; }
+  .diary-tools { display: grid; grid-template-columns: 1fr 1fr; }
+  .diary-tools .button { width: 100%; }
+  .diary-tools .button:last-child { grid-column: 1 / -1; }
+}
+
+/* Galaxy Fold: cover display molto stretto. Conserva target tattili grandi,
+   riducendo soltanto spazi e decorazioni. */
+@media(max-width:380px){
+  .page-heading:has(.heading-illustration) { min-height: 202px; padding: 18px 15px; border-radius: 21px; }
+  .page-heading:has(.heading-illustration) h1 { max-width: 245px; font-size: 27px; letter-spacing: -1px; }
+  .page-heading:has(.heading-illustration) p { max-width: 215px; }
+  .heading-illustration { right: 8px; bottom: 7px; }
+  .heading-illustration > svg { width: 53px; height: 53px; }
+  .diary-tools { grid-template-columns: 1fr; }
+  .diary-tools .button:last-child { grid-column: auto; }
+  .curve-rack-layout { grid-template-columns: minmax(0, 1fr) 57px; gap: 6px; }
+  .prediction-rack-rail { padding: 5px 4px; }
+  .prediction-rack-rail button { min-height: 38px; }
+  .curve-legend { gap: 7px; flex-wrap: wrap; }
+  .curve-legend small { margin-left: 0; flex-basis: 100%; }
+}
+
+/* Display interno dei pieghevoli: evita colonne eccessivamente larghe. */
+@media(min-width:641px) and (max-width:850px){
+  .time-fields.slider-time-fields { grid-template-columns: 1fr; }
+  .time-fields.slider-time-fields .slider-field { max-width: 620px; }
+  .page-heading:has(.heading-illustration) { position: relative; isolation: isolate; min-height: 190px; padding: 25px 28px; overflow: hidden; border-radius: 24px; background: linear-gradient(142deg,#183247,#234f5b 70%,#27605d); box-shadow: 0 18px 38px #16344628; }
+  .page-heading:has(.heading-illustration):after { content: ''; position: absolute; z-index: -1; width: 190px; height: 190px; right: -75px; bottom: -105px; border: 38px solid #f0d99818; border-radius: 50%; }
+  .page-heading:has(.heading-illustration) h1 { max-width: 390px; color: #fff; }
+  .page-heading:has(.heading-illustration) h1 span { color: #ff9a7e; }
+  .page-heading:has(.heading-illustration) .eyebrow { color: #8bd0bf; }
+  .page-heading:has(.heading-illustration) p { color: #d8e8e7; }
+  .page-heading:has(.heading-illustration) .heading-illustration,
+  .page-heading:has(.heading-illustration) .heading-illustration > svg { color: #fff2da; }
+  .curve-rack-layout { grid-template-columns: minmax(0, 1fr) 72px; }
+}
 
 .journey-next {
   display: flex;

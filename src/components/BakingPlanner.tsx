@@ -125,13 +125,14 @@ export function BakingPlanner({
           <div className="bake-curve" aria-label="Evoluzione prevista durante la cottura">
             <svg viewBox="0 0 320 138" role="img">
               <rect x="12" y="46" width="296" height="36" rx="8" className="ideal-zone" />
+              <text x="21" y="58" className="ideal-zone-label">FASCIA IDEALE</text>
               <line x1="12" y1="126" x2="308" y2="126" className="chart-axis" />
               <path d={path("crustScore")} className="curve crust" />
               <path d={path("crumbScore")} className="curve crumb" />
               <path d={path("baseScore")} className="curve base" />
               <line x1={markerX} y1="12" x2={markerX} y2="126" className="time-marker" />
             </svg>
-            <div className="curve-legend"><span className="crust">Crosta</span><span className="crumb">Mollica</span><span className="base">Fondo</span><small>fascia ideale</small></div>
+            <div className="curve-legend"><span className="crust">Crosta</span><span className="crumb">Mollica</span><span className="base">Fondo</span><small className="ideal-legend"><i/> equilibrio ideale</small></div>
           </div>
           <aside className="prediction-rack-rail" aria-label="Altezza nel forno">
             <span>ALTEZZA</span>

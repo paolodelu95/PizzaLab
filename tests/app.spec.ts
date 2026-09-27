@@ -364,6 +364,7 @@ test("stays responsive across small phones, large phones and tablets", async ({ 
   test.skip(testInfo.project.name !== "desktop", "One viewport matrix is sufficient");
   const viewports = [
     { width: 320, height: 700 },
+    { width: 344, height: 882 },
     { width: 360, height: 780 },
     { width: 430, height: 900 },
     { width: 640, height: 900 },
@@ -378,6 +379,17 @@ test("stays responsive across small phones, large phones and tablets", async ({ 
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (section === "Condimenti" && [320, 768].includes(viewport.width))
         await page.screenshot({ path: `test-results/responsive-condimenti-${viewport.width}.png`, fullPage: true });
+      if (viewport.width === 344 && ["Farine", "Diario", "Impara"].includes(section))
+        await page.screenshot({ path: `test-results/fold-cover-${section.toLowerCase()}.png` });
+    }
+    if (viewport.width === 344) {
+      await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+      await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+      const sliderBox = await page.getByLabel("Puntata fuori frigo: cursore").boundingBox();
+      expect(sliderBox).not.toBeNull();
+      expect(sliderBox!.width).toBeGreaterThan(230);
+      expect(sliderBox!.height).toBeGreaterThanOrEqual(66);
+      await page.screenshot({ path: "test-results/fold-cover-lievitazione.png", fullPage: true });
     }
     const navBox = await page.locator(".sidebar").boundingBox();
     expect(navBox).not.toBeNull();
