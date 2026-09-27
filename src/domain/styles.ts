@@ -236,6 +236,24 @@ export function recommendedExtras(styleId: string) {
   };
 }
 
+/**
+ * Pieghe di rinforzo durante la puntata: utili negli impasti molto idratati,
+ * superflue in quelli più asciutti o impastati a lungo.
+ */
+export function recommendedFolds(styleId: string): { count: number; interval: number; reason: string } {
+  const table: Record<string, [number, string]> = {
+    contemporanea: [3, "l’alta idratazione ha bisogno di struttura per un cornicione arioso"],
+    teglia: [4, "l’impasto molto idratato prende forza solo con le pieghe"],
+    pala: [4, "con idratazioni così alte le pieghe sostituiscono buona parte dell’impastamento"],
+    pinsa: [4, "l’impasto è molto fluido e va rinforzato più volte"],
+    detroit: [2, "due pieghe aiutano a ottenere una mollica alta e regolare"],
+    focaccia: [2, "due pieghe danno sviluppo e alveoli più uniformi"],
+    sfincione: [2, "un paio di pieghe rendono l’impasto più facile da stendere in teglia"],
+  };
+  const [count, reason] = table[styleId] ?? [0, "l’impasto è abbastanza sostenuto: basta impastarlo bene"];
+  return { count, interval: 30, reason };
+}
+
 export function bakingDefaults(
   styleId: string,
 ): Pick<

@@ -12,6 +12,7 @@ import type { calculate } from "../domain/calculator";
 import type { DoughConfig, Flour } from "../domain/types";
 import { ovenProfiles } from "../data/ovens";
 import { mixerProfiles } from "../data/mixers";
+import { recommendedFolds, styles } from "../domain/styles";
 import { NumberField } from "./Fields";
 import { FlourPicker } from "./FlourPicker";
 
@@ -40,6 +41,8 @@ export function AdvancedPlanner({
     mixerProfiles[0];
   const naturalStarter = ["sourdough", "licoli"].includes(c.yeast);
   const minimumFoldMinutes = c.foldCount * c.foldIntervalMinutes;
+  const foldAdvice = recommendedFolds(c.styleId);
+  const styleName = styles.find((item) => item.id === c.styleId)?.name ?? "pizza";
   const optimizePreferment = () => {
     const target = c.preferment === "biga" ? 16 : 12;
     onUpdate({
@@ -262,6 +265,30 @@ export function AdvancedPlanner({
                 <strong>Pieghe di rinforzo</strong>
               </div>
               <span>Programmate durante la puntata</span>
+            </div>
+            <div className={`fold-advice ${foldAdvice.count ? "is-recommended" : ""}`}>
+              <div>
+                <strong>
+                  {foldAdvice.count
+                    ? `Consigliate per lo stile «${styleName}»: ${foldAdvice.count} pieghe ogni ${foldAdvice.interval} min`
+                    : `Non necessarie per lo stile «${styleName}»`}
+                </strong>
+                <span>Perché {foldAdvice.reason}.</span>
+              </div>
+              {c.foldCount !== foldAdvice.count && (
+                <button
+                  className="button secondary"
+                  onClick={() =>
+                    onUpdate({
+                      foldCount: foldAdvice.count,
+                      foldIntervalMinutes: foldAdvice.count ? foldAdvice.interval : c.foldIntervalMinutes,
+                      bulkHours: Math.max(c.bulkHours, (foldAdvice.count * (foldAdvice.count ? foldAdvice.interval : c.foldIntervalMinutes)) / 60),
+                    })
+                  }
+                >
+                  {foldAdvice.count ? `Usa ${foldAdvice.count} pieghe` : "Togli le pieghe"}
+                </button>
+              )}
             </div>
             <div className="field-grid">
               <NumberField

@@ -1,5 +1,5 @@
 import { Fire, Oven, SquaresFour, Target } from "@phosphor-icons/react";
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { bakeScores, bakeSurfaceLabels, estimateBakeOutcome } from "../domain/calculator";
 import type { BakeCalibration, DoughConfig } from "../domain/types";
 import { SliderField } from "./Fields";
@@ -92,11 +92,6 @@ export function BakingPlanner({
   const markerX = xOf(minutes);
   const windowX1 = xOf(outcome.recommendedMin);
   const windowX2 = xOf(outcome.recommendedMax);
-  const scrub = (event: PointerEvent<SVGSVGElement>) => {
-    const box = event.currentTarget.getBoundingClientRect();
-    const ratio = ((event.clientX - box.left) / box.width) * (W / (right - left)) - left / (right - left);
-    changeMinutes(Math.round((Math.max(0, Math.min(1, ratio)) * chartMax) / step) * step);
-  };
 
   return (
     <section className="panel baking-planner">
@@ -132,14 +127,7 @@ export function BakingPlanner({
           <svg
             viewBox={`0 0 ${W} ${H}`}
             role="img"
-            aria-label={`Evoluzione prevista durante la cottura. Finestra consigliata ${formatTime(outcome.recommendedMin)}–${formatTime(outcome.recommendedMax)}. Tocca o trascina sul grafico per scegliere il tempo.`}
-            onPointerDown={(event) => {
-              event.currentTarget.setPointerCapture(event.pointerId);
-              scrub(event);
-            }}
-            onPointerMove={(event) => {
-              if (event.currentTarget.hasPointerCapture(event.pointerId)) scrub(event);
-            }}
+            aria-label={`Evoluzione prevista durante la cottura. Finestra consigliata ${formatTime(outcome.recommendedMin)}–${formatTime(outcome.recommendedMax)}.`}
           >
             <rect x={left} y={yOf(70)} width={right - left} height={yOf(40) - yOf(70)} rx="6" className="ideal-zone" />
             <rect x={windowX1} y={top} width={Math.max(2, windowX2 - windowX1)} height={bottom - top} rx="4" className="ideal-window" />
@@ -162,7 +150,6 @@ export function BakingPlanner({
             <small className="ideal-legend"><i /> fascia ideale</small>
             <small className="window-legend"><i /> tempi consigliati</small>
           </div>
-          <p className="curve-hint">Tocca o trascina il dito sul grafico per cambiare il tempo.</p>
         </div>
         <div className="prediction-time-control">
           <SliderField label="Tempo di cottura" value={minutes} onChange={changeMinutes} min={0.5} max={60} sliderMax={chartMax} step={step} unit="min" />

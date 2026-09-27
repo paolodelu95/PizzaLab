@@ -123,6 +123,8 @@ test("mixes three flours and shows hydration and yeast charts", async ({
   page,
 }) => {
   await page.goto("/");
+  await expect(page.getByRole("button", { name: "Seconda farina", exact: true })).toBeHidden();
+  await page.getByText("Miscela di farine", { exact: true }).click();
   await page
     .getByRole("button", { name: "Seconda farina", exact: true })
     .click();
@@ -146,6 +148,7 @@ test("mixes three flours and shows hydration and yeast charts", async ({
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await expect(page.locator(".yeast-chart")).toBeVisible();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await page.getByText("Miscela di farine", { exact: true }).click();
   await page.getByRole("button", { name: "Salva questa" }).click();
   await expect(page.getByText("Miscele salvate")).toBeVisible();
 });

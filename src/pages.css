@@ -1250,14 +1250,14 @@
   height: 14px;
 }
 .prediction-time-control .touch-slider::-webkit-slider-thumb {
-  width: 40px;
-  height: 40px;
-  margin-top: -13px;
-  border-width: 4px;
+  width: 28px;
+  height: 28px;
+  margin-top: -7px;
+  border-width: 3px;
 }
 .prediction-time-control .touch-slider::-moz-range-thumb {
-  width: 34px;
-  height: 34px;
+  width: 22px;
+  height: 22px;
 }
 .prediction-time-control .touch-slider::-webkit-slider-thumb {
   background: var(--night);
@@ -1314,10 +1314,6 @@
   width: 100%;
   height: auto;
   overflow: visible;
-  cursor: pointer;
-  touch-action: pan-y;
-  user-select: none;
-  -webkit-user-select: none;
 }
 .ideal-window {
   fill: rgb(255 155 118 / 0.12);

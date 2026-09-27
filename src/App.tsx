@@ -406,7 +406,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.12.0",
+            version: "0.14.0",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -1085,11 +1085,19 @@ export default function App() {
                       <p className="field-explainer">
                         <Info size={16} /> <span><strong>W</strong> indica la forza della farina: più è alto, più l’impasto regge lievitazioni lunghe.</span>
                       </p>
-                      <div className="blend-section">
-                        <div className="blend-heading">
-                          <strong>Miscela di farine</strong>
-                          <em className="optional-badge">Facoltativo</em>
-                        </div>
+                      <details className="blend-details">
+                        <summary>
+                          <span>
+                            <b>Miscela di farine</b>
+                            <small>
+                              {c.secondFlourId
+                                ? `${result.ok ? result.flourBreakdown.length : 2} farine in miscela`
+                                : "Una sola farina · aggiungine fino ad altre tre"}
+                            </small>
+                            <em className="optional-badge">Facoltativo</em>
+                          </span>
+                        </summary>
+                        <div className="blend-section">
                         <p>Vuoi mescolare più farine? Aggiungine fino ad altre tre e scegli la quota di ciascuna.</p>
                         <div className="field-grid blend-fields">
                             <FlourPicker
@@ -1205,6 +1213,7 @@ export default function App() {
                           }
                         />
                       </div>
+                      </details>
                       <div className="field-grid quantity-fields">
                         <Stepper
                           label={isPan ? "Numero di teglie" : "Numero di pizze"}
