@@ -138,6 +138,15 @@ export interface EquipmentProfile {
   panLength: number;
   createdAt: string;
 }
+/** Un forno di casa salvato nel profilo, con la temperatura che raggiunge davvero. */
+export interface UserOven {
+  id: string;
+  name: string;
+  ovenType: string;
+  temp: number;
+  bakeSurface: DoughConfig["bakeSurface"];
+  createdAt: string;
+}
 export interface Recipe {
   id: string;
   name: string;
@@ -206,4 +215,7 @@ export interface StoredState {
   sourdoughProfiles: SourdoughProfile[];
   activeSourdoughId: string | null;
   bakeCalibrations: BakeCalibration[];
+  /** Nome con cui l’app saluta l’utente (facoltativo). */
+  profileName?: string;
+  userOvens?: UserOven[];
 }

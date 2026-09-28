@@ -22,6 +22,7 @@ import {
   Snowflake,
   Sparkle,
   Timer,
+  UserCircle,
   Warning,
   Grains as Wheat,
   X,
@@ -32,6 +33,7 @@ import {
   buildTimeline,
   calculate,
   deriveAutomaticSchedule,
+  recommendedBakeMinutes,
   validateConfig,
 } from "./domain/calculator";
 import {
@@ -57,10 +59,10 @@ import { HydrationChart, YeastChart } from "./components/DoughCharts";
 import { AdvancedPlanner } from "./components/AdvancedPlanner";
 import { DoughAnalysis } from "./components/DoughAnalysis";
 import { BlendManager } from "./components/BlendManager";
-import { ovenProfiles } from "./data/ovens";
+import { ovenById, ovenProfiles } from "./data/ovens";
 import { ToppingPlanner } from "./components/ToppingPlanner";
 import { DoughRescue } from "./components/DoughRescue";
-import { EquipmentProfiles } from "./components/EquipmentProfiles";
+import { ProfilePage } from "./components/ProfilePage";
 import { BakingPlanner } from "./components/BakingPlanner";
 import { SourdoughCare } from "./components/SourdoughCare";
 import { StarterDoughLink } from "./components/StarterDoughLink";
@@ -85,7 +87,8 @@ import { Onboarding } from "./components/Onboarding";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida";
+const APP_VERSION = "0.16.0";
+type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
 const nav = [
   { id: "impasto", label: "Il tuo impasto", short: "Impasto", icon: CookingPot },
@@ -94,6 +97,7 @@ const nav = [
   { id: "madre", label: "Lievito", short: "Lievito", icon: Jar },
   { id: "diario", label: "Diario", short: "Diario", icon: Notebook },
   { id: "guida", label: "Impara", short: "Impara", icon: BookOpen },
+  { id: "profilo", label: "Profilo", short: "Profilo", icon: UserCircle },
 ] as const;
 const plannerSteps = [
   ["dough", "1", "Impasto", "Farina e dosi", Wheat],
@@ -323,6 +327,8 @@ export default function App() {
               ? Math.min(style.oven, oven.maxTemp)
               : style.oven,
           ...bakingDefaults(id),
+          // Nei forni con pietra fissa l’altezza non si sceglie.
+          ...(oven?.fixedRack ? { ovenRack: "middle" as const } : {}),
         }),
       };
     });
@@ -419,7 +425,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.15.0",
+            version: APP_VERSION,
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -427,6 +433,8 @@ export default function App() {
             sourdoughProfiles: state.sourdoughProfiles,
             activeSourdoughId: state.activeSourdoughId,
             bakeCalibrations: state.bakeCalibrations,
+            userOvens: state.userOvens,
+            profileName: state.profileName,
           },
           null,
           2,
@@ -471,13 +479,15 @@ export default function App() {
           ? [data.sourdoughProfile]
           : [];
       const bakeCalibrations = Array.isArray(data.bakeCalibrations) ? data.bakeCalibrations : [];
+      const userOvens = Array.isArray(data.userOvens) ? data.userOvens : [];
       if (
         !recipes.length &&
         !customFlours.length &&
         !savedBlends.length &&
         !equipmentProfiles.length &&
         !sourdoughProfiles.length &&
-        !bakeCalibrations.length
+        !bakeCalibrations.length &&
+        !userOvens.length
       )
         throw new Error();
       setState((s) => ({
@@ -516,6 +526,11 @@ export default function App() {
           ...bakeCalibrations,
           ...s.bakeCalibrations.filter((old) => !bakeCalibrations.some((item) => item.id === old.id)),
         ],
+        userOvens: [
+          ...userOvens,
+          ...(s.userOvens ?? []).filter((old) => !userOvens.some((item) => item.id === old.id)),
+        ],
+        profileName: s.profileName || (typeof data.profileName === "string" ? data.profileName : ""),
       }));
       setMessage(
         `Importazione completata: ${recipes.length} ricette recuperate.`,
@@ -889,6 +904,17 @@ export default function App() {
                 <span>In corso</span>
               </button>
             )}
+            <button
+              className={`profile-button ${tab === "profilo" ? "active" : ""}`}
+              aria-label="Profilo"
+              onClick={() => openTab("profilo")}
+            >
+              {state.profileName?.trim() ? (
+                <span>{state.profileName.trim()[0].toUpperCase()}</span>
+              ) : (
+                <UserCircle size={24} weight={tab === "profilo" ? "fill" : "regular"} />
+              )}
+            </button>
             <button
               className={`learn-button ${tab === "guida" ? "active" : ""}`}
               onClick={() => openTab("guida")}
@@ -1621,21 +1647,7 @@ export default function App() {
                       result={result}
                       section={plannerStage}
                       onUpdate={updateMany}
-                    />
-                  )}
-                  {plannerStage === "dough" && (
-                    <EquipmentProfiles
-                      profiles={state.equipmentProfiles}
-                      onSave={saveEquipment}
-                      onLoad={loadEquipment}
-                      onDelete={(id) =>
-                        setState((s) => ({
-                          ...s,
-                          equipmentProfiles: s.equipmentProfiles.filter(
-                            (p) => p.id !== id,
-                          ),
-                        }))
-                      }
+                      userOvens={state.userOvens}
                     />
                   )}
                   {result.ok && plannerStage === "dough" && (
@@ -1963,16 +1975,19 @@ export default function App() {
                             Crosta {result.bakeOutcome.crustLabel.toLowerCase()} · mollica {result.bakeOutcome.crumbLabel.toLowerCase()} · fondo {result.bakeOutcome.baseLabel.toLowerCase()}
                           </span>
                           <small>
-                            Posizione nel forno:{" "}
-                            {c.ovenRack === "bottom"
-                              ? "bassa"
-                              : c.ovenRack === "lower-middle"
-                                ? "medio-bassa"
-                                : c.ovenRack === "middle"
-                                  ? "centrale"
-                                  : c.ovenRack === "upper-middle"
-                                    ? "medio-alta"
-                                    : "alta"}
+                            {ovenById(c.ovenType).fixedRack
+                              ? ovenById(c.ovenType).name
+                              : `Posizione nel forno: ${
+                                  c.ovenRack === "bottom"
+                                    ? "bassa"
+                                    : c.ovenRack === "lower-middle"
+                                      ? "medio-bassa"
+                                      : c.ovenRack === "middle"
+                                        ? "centrale"
+                                        : c.ovenRack === "upper-middle"
+                                          ? "medio-alta"
+                                          : "alta"
+                                }`}
                             {" "}· {bakeSurfaceLabels[c.bakeSurface]}.
                           </small>
                         </div>
@@ -2100,6 +2115,39 @@ export default function App() {
               onDisableReminders={() => void disableStarterReminders()}
             />
           )}
+          {tab === "profilo" && (
+            <ProfilePage
+              state={state}
+              flours={flours}
+              now={now}
+              config={c}
+              version={APP_VERSION}
+              onNameChange={(profileName) => setState((s) => ({ ...s, profileName }))}
+              onAddOven={(oven) => {
+                setState((s) => ({ ...s, userOvens: [...(s.userOvens ?? []), oven] }));
+                setMessage(`Forno «${oven.name}» salvato: lo trovi anche nel passaggio Cottura.`);
+              }}
+              onDeleteOven={(id) => setState((s) => ({ ...s, userOvens: (s.userOvens ?? []).filter((item) => item.id !== id) }))}
+              onUseOven={(oven) => {
+                const patch: Partial<DoughConfig> = {
+                  ovenType: oven.ovenType,
+                  ovenTemp: oven.temp,
+                  bakeSurface: oven.bakeSurface,
+                  ...(ovenById(oven.ovenType).fixedRack ? { ovenRack: "middle" as const } : {}),
+                };
+                updateMany({ ...patch, bakeMinutes: recommendedBakeMinutes({ ...c, ...patch }) });
+                setMessage(`Userai «${oven.name}» per i prossimi impasti.`);
+              }}
+              onSaveEquipment={saveEquipment}
+              onLoadEquipment={loadEquipment}
+              onDeleteEquipment={(id) =>
+                setState((s) => ({ ...s, equipmentProfiles: s.equipmentProfiles.filter((p) => p.id !== id) }))
+              }
+              onExport={exportArchive}
+              onImport={(file) => void importArchive(file)}
+              onShowTutorial={() => setTutorialOpen(true)}
+            />
+          )}
           {tab === "guida" && (
             <>
               <Guide onShowTutorial={() => setTutorialOpen(true)} />
@@ -2118,8 +2166,6 @@ export default function App() {
               calibrations={state.bakeCalibrations}
               onViewChange={setDiaryView}
               onNew={startNewDough}
-              onImport={(file) => void importArchive(file)}
-              onExport={exportArchive}
               onStart={(recipe) => void activate(recipe)}
               onStop={() => void deactivate()}
               onFinish={(recipe) => void finishRecipe(recipe)}

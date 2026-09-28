@@ -237,9 +237,12 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
     .getByRole("button", { name: "Il tuo impasto", exact: true })
     .click();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await expect(page.getByRole("heading", { name: "La tua attrezzatura" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Profilo", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "La tua attrezzatura" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
   await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
   await page.getByRole("button", { name: "Inizia ora" }).click();
   await page.getByRole("button", { name: "Pesa" }).click();
@@ -291,11 +294,16 @@ test("predicts crust, crumb and base from the baking setup", async ({ page }) =>
   const sliderMax = Number(await page.getByRole("slider", { name: "Tempo di cottura: cursore" }).getAttribute("max"));
   expect(sliderMax).toBeGreaterThanOrEqual(4);
   expect(sliderMax).toBeLessThan(10);
+  // Il forno elettrico per pizza ha la pietra fissa: niente scelta dell’altezza.
+  await expect(page.getByRole("group", { name: "Altezza nel forno" })).toHaveCount(0);
+  await expect(page.getByText(/la pietra è a un’altezza fissa/)).toBeVisible();
+  await page.getByLabel("Tipo di forno").selectOption("home-static");
+  await expect(page.getByRole("group", { name: "Altezza nel forno" })).toBeVisible();
   const initialCrust = await page.locator(".prediction-result.crust small").textContent();
   await page.getByRole("button", { name: "Alto", exact: true }).click();
   await page.getByRole("button", { name: "Acciaio", exact: true }).click();
   await page.getByLabel("Tempo di cottura", { exact: true }).fill("3");
-  await expect(page.getByText(/3 min · 450 °C · ripiano alto/)).toBeVisible();
+  await expect(page.getByText(/3 min · 250 °C · ripiano alto/)).toBeVisible();
   await expect(page.locator(".prediction-result.crust small")).not.toHaveText(initialCrust ?? "");
   await expect(page.getByText(/Finestra consigliata/)).toBeVisible();
 });
@@ -430,7 +438,7 @@ test("stays responsive across small phones, large phones and tablets", async ({ 
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.goto("/");
-    for (const section of ["Farine", "Condimenti", "Lievito", "Diario", "Impara"]) {
+    for (const section of ["Farine", "Condimenti", "Lievito", "Diario", "Impara", "Profilo"]) {
       await page.getByRole("button", { name: section, exact: true }).click();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (section === "Condimenti" && [320, 768].includes(viewport.width))
@@ -503,4 +511,26 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
   await page.getByRole("button", { name: /^3 Cottura/ }).click();
   await expect(page.locator(".bake-calibration").getByText("Correzione personale", { exact: false })).toBeVisible();
   await page.screenshot({ path: `test-results/active-diary-${test.info().project.name}.png`, fullPage: true });
+});
+
+test("profile keeps the name, saved ovens and settings in one place", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Profilo", exact: true }).click();
+  await page.getByLabel("Come ti chiami?").fill("Paolo");
+  await expect(page.getByRole("heading", { name: "Ciao, Paolo." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Le tue statistiche" })).toBeVisible();
+  await page.getByLabel("Modello o tipo di forno").selectOption("ariete-909");
+  await expect(page.getByLabel("Temperatura massima reale")).toHaveValue("400");
+  await page.getByLabel("Nome", { exact: true }).fill("Fornetto di casa");
+  await page.getByRole("button", { name: "Salva il forno" }).click();
+  await page.getByRole("button", { name: "Usa", exact: true }).click();
+  await expect(page.getByText("In uso")).toBeVisible();
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: /^3 Cottura/ }).click();
+  await expect(page.getByLabel("Tipo di forno")).toHaveValue("ariete-909");
+  await expect(page.getByRole("button", { name: "Fornetto di casa" })).toBeVisible();
+  await expect(page.getByText(/la pietra è a un’altezza fissa/)).toBeVisible();
+  await page.getByRole("button", { name: "Profilo", exact: true }).click();
+  await expect(page.getByRole("button", { name: /Esporta il diario/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Rivedi il tutorial" })).toBeVisible();
 });

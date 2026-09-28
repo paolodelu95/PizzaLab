@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   ArrowRight,
   Bell,
@@ -6,7 +6,6 @@ import {
   CalendarBlank,
   CheckCircle,
   ClockCounterClockwise,
-  Export,
   FlagCheckered,
   Notebook,
   PencilSimple,
@@ -15,7 +14,6 @@ import {
   ShareNetwork,
   Star,
   Trash,
-  UploadSimple,
   Warning,
 } from "@phosphor-icons/react";
 import { buildTimeline, calculate } from "../domain/calculator";
@@ -24,7 +22,6 @@ import { buildScaleItems, canStartPlan, recipeStatus, yeastLabel, type RecipeSta
 import type { BakeCalibration, Flour, Recipe, Stage } from "../domain/types";
 import { ActiveDoughJournal } from "./ActiveDoughJournal";
 import { GuidedMode } from "./GuidedMode";
-import { InsightsDashboard } from "./InsightsDashboard";
 import { OvenCalibration } from "./OvenCalibration";
 import { ScaleMode } from "./ScaleMode";
 import { SupportCard } from "./SupportCard";
@@ -74,8 +71,6 @@ type Props = {
   calibrations: BakeCalibration[];
   onViewChange: (view: DiaryView) => void;
   onNew: () => void;
-  onImport: (file: File) => void;
-  onExport: () => void;
   onStart: (recipe: Recipe) => void;
   onStop: () => void;
   onFinish: (recipe: Recipe) => void;
@@ -89,7 +84,6 @@ type Props = {
 
 export function Diary(props: Props) {
   const { recipes, activeId, flours, now, view, onViewChange } = props;
-  const importRef = useRef<HTMLInputElement>(null);
   const [tool, setTool] = useState<{ kind: "scale" | "guide"; recipe: Recipe } | null>(null);
   const grouped: Record<DiaryView, Recipe[]> = { active: [], saved: [], past: [] };
   for (const recipe of recipes) grouped[recipeStatus(recipe, activeId, now)].push(recipe);
@@ -112,23 +106,6 @@ export function Diary(props: Props) {
         </div>
       </div>
       <div className="heading-actions page-tools-row diary-tools">
-        <input
-          ref={importRef}
-          hidden
-          type="file"
-          accept="application/json,.json"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) props.onImport(file);
-            e.target.value = "";
-          }}
-        />
-        <button className="button secondary" onClick={() => importRef.current?.click()}>
-          <UploadSimple /> Importa
-        </button>
-        <button className="button secondary" disabled={!recipes.length} onClick={props.onExport}>
-          <Export /> Esporta
-        </button>
         <button className="button primary" onClick={props.onNew}>
           Nuovo impasto <ArrowRight />
         </button>
@@ -173,7 +150,6 @@ export function Diary(props: Props) {
         )}
       </section>
 
-      {view === "past" && grouped.past.length > 0 && <InsightsDashboard recipes={grouped.past} flours={flours} />}
       {view === "past" && grouped.past.length > 0 && <SupportCard />}
 
       {tool?.kind === "guide" && (

@@ -2855,3 +2855,186 @@ details > summary > svg:first-child + span {
   padding: 0 18px;
   background: var(--surface-2);
 }
+
+/* ==========================================================================
+   Profilo
+   ========================================================================== */
+.profile-avatar-large {
+  font-size: 48px;
+  font-weight: 800;
+}
+.profile-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.profile-card > * + * {
+  margin-top: 0;
+}
+.profile-card .field {
+  flex: 1;
+}
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--on-brand);
+  font-size: 24px;
+  font-weight: 800;
+}
+.profile-stats .section-title {
+  margin-bottom: 12px;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (min-width: 900px) {
+  .stat-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+.stat-grid > div {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.stat-grid strong {
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.stat-grid span {
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--ink-3);
+}
+.oven-list {
+  display: grid;
+  gap: 8px;
+}
+.oven-list article {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 10px 10px 12px;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  border: 1.5px solid transparent;
+}
+.oven-list article.in-use {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.oven-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--brand);
+}
+.oven-icon svg {
+  width: 26px;
+  height: 26px;
+}
+.oven-list article > div {
+  flex: 1 1 160px;
+  display: grid;
+  min-width: 0;
+}
+.oven-list article span {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.oven-list .button {
+  min-height: 42px;
+  padding: 0 16px;
+}
+.oven-form {
+  display: grid;
+  gap: 12px;
+}
+.oven-form-note {
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.oven-form-actions,
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.settings-actions .button {
+  flex: 1 1 220px;
+}
+.app-version {
+  display: block;
+  color: var(--ink-3);
+}
+
+/* Forni: scelta rapida e pietra fissa */
+.my-ovens-picker {
+  display: grid;
+  gap: 8px;
+}
+.my-ovens-picker > span {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+.my-ovens-picker > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.my-ovens-picker button {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.my-ovens-picker button.selected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+.fixed-rack-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: rgb(255 255 255 / 0.06);
+  border: 1px solid var(--line-night);
+  color: var(--on-night-2);
+  font-size: 13.5px;
+}
+.fixed-rack-note svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--night-accent);
+}
+.oven-hint a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 650;
+}

@@ -8,8 +8,8 @@ import {
   Thermometer,
   Timer,
 } from "@phosphor-icons/react";
-import type { calculate } from "../domain/calculator";
-import type { DoughConfig, Flour } from "../domain/types";
+import { recommendedBakeMinutes, type calculate } from "../domain/calculator";
+import type { DoughConfig, Flour, UserOven } from "../domain/types";
 import { ovenProfiles } from "../data/ovens";
 import { mixerProfiles } from "../data/mixers";
 import { recommendedFolds, styles } from "../domain/styles";
@@ -23,6 +23,7 @@ type Props = {
   result: GoodResult;
   section: "dough" | "fermentation" | "baking";
   onUpdate: (patch: Partial<DoughConfig>) => void;
+  userOvens?: UserOven[];
 };
 const fmt = (n: number, d = 1) =>
   n.toLocaleString("it-IT", { maximumFractionDigits: d });
@@ -33,6 +34,7 @@ export function AdvancedPlanner({
   result,
   section,
   onUpdate,
+  userOvens = [],
 }: Props) {
   const oven =
     ovenProfiles.find((item) => item.id === c.ovenType) ?? ovenProfiles[0];
@@ -601,17 +603,29 @@ export function AdvancedPlanner({
                   const next = ovenProfiles.find(
                     (o) => o.id === e.target.value,
                   )!;
-                  onUpdate({
+                  const patch: Partial<DoughConfig> = {
                     ovenType: next.id,
                     ...(next.id === "custom" ? {} : { ovenTemp: next.maxTemp }),
-                  });
+                    ...(next.surface ? { bakeSurface: next.surface } : {}),
+                    ...(next.fixedRack ? { ovenRack: "middle" as const } : {}),
+                  };
+                  onUpdate({ ...patch, bakeMinutes: recommendedBakeMinutes({ ...c, ...patch }) });
                 }}
               >
-                {ovenProfiles.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
+                <optgroup label="Tipi di forno">
+                  {ovenProfiles.filter((item) => item.group === "generic").map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Forni per pizza">
+                  {ovenProfiles.filter((item) => item.group === "pizza").map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </label>
             <NumberField
@@ -631,8 +645,41 @@ export function AdvancedPlanner({
                 {oven.family} · preriscaldamento indicativo {oven.preheat} min
               </strong>
               {oven.note}
+              {oven.source && (
+                <>
+                  {" "}
+                  <a href={oven.source} target="_blank" rel="noreferrer">
+                    Scheda del produttore <ArrowSquareOut />
+                  </a>
+                </>
+              )}
             </p>
           </div>
+          {userOvens.length > 0 && (
+            <div className="my-ovens-picker">
+              <span>I tuoi forni</span>
+              <div>
+                {userOvens.map((item) => (
+                  <button
+                    key={item.id}
+                    className={c.ovenType === item.ovenType && c.ovenTemp === item.temp ? "selected" : ""}
+                    onClick={() => {
+                      const model = ovenProfiles.find((o) => o.id === item.ovenType);
+                      const patch: Partial<DoughConfig> = {
+                        ovenType: item.ovenType,
+                        ovenTemp: item.temp,
+                        bakeSurface: item.bakeSurface,
+                        ...(model?.fixedRack ? { ovenRack: "middle" as const } : {}),
+                      };
+                      onUpdate({ ...patch, bakeMinutes: recommendedBakeMinutes({ ...c, ...patch }) });
+                    }}
+                  >
+                    {item.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

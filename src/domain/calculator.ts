@@ -1,5 +1,6 @@
 import { styles } from "./styles";
 import { mixerProfiles } from "../data/mixers";
+import { ovenById } from "../data/ovens";
 import type { Advice, DoughConfig, Flour, Stage } from "./types";
 export const MODEL_VERSION = "direct-v1";
 
@@ -294,9 +295,18 @@ export function estimateBakeOutcome(c: DoughConfig): BakeOutcome {
     recommendedMax,
     summary: balanced
       ? "Equilibrio previsto: crosta colorita, mollica cotta e fondo ben sviluppato."
-      : "Regola tempo, altezza o supporto finché i tre indicatori entrano nella zona ideale.",
+      : ovenById(c.ovenType).fixedRack
+        ? "Regola tempo, temperatura o supporto finché i tre indicatori entrano nella zona ideale."
+        : "Regola tempo, altezza o supporto finché i tre indicatori entrano nella zona ideale.",
     warnings,
   };
+}
+/** Tempo di cottura al centro della finestra consigliata, arrotondato a un passo comodo. */
+export function recommendedBakeMinutes(c: DoughConfig) {
+  const outcome = estimateBakeOutcome(c);
+  const step = c.ovenTemp >= 350 ? 0.25 : c.ovenTemp >= 280 ? 0.5 : 1;
+  const middle = (outcome.recommendedMin + outcome.recommendedMax) / 2;
+  return Math.max(0.5, Math.min(60, Math.round(middle / step) * step));
 }
 export function validateConfig(c: DoughConfig): string[] {
   const errors: string[] = [];
@@ -1113,19 +1123,23 @@ export function buildTimeline(c: DoughConfig, flours?: Flour[]): Stage[] {
     top: "più alto",
   };
   const bakeOutcome = estimateBakeOutcome(c);
+  // Il preriscaldamento dipende dal forno: pochi minuti per un fornetto, quasi un’ora con il biscotto.
+  const oven = ovenById(c.ovenType);
+  const preheatMinutes = Math.max(10, oven.preheat);
+  const where = oven.fixedRack ? "" : `, prepara il ripiano ${rackLabels[c.ovenRack]}`;
   stages.push({
     id: "preheat",
     title: "Preriscalda il forno",
-    at: new Date(bake - 45 * 60000).toISOString(),
+    at: new Date(bake - preheatMinutes * 60000).toISOString(),
     until: new Date(bake).toISOString(),
-    detail: `Imposta ${c.ovenTemp} °C, prepara il ripiano ${rackLabels[c.ovenRack]} e preriscalda bene ${bakeSurfaceLabels[c.bakeSurface].toLowerCase()}. Circa 45 minuti sono un promemoria: segui le indicazioni del tuo forno e del supporto.`,
+    detail: `Imposta ${c.ovenTemp} °C${where} e preriscalda bene ${bakeSurfaceLabels[c.bakeSurface].toLowerCase()}. Circa ${preheatMinutes} minuti sono un promemoria: segui le indicazioni del tuo forno e del supporto.`,
   });
   stages.push({
     id: "bake",
     title: "Si inforna!",
     at: new Date(bake).toISOString(),
     until: new Date(bake + c.bakeMinutes * 60000).toISOString(),
-    detail: `Cuoci circa ${c.bakeMinutes} min a ${c.ovenTemp} °C sul ripiano ${rackLabels[c.ovenRack]}. Previsione: crosta ${bakeOutcome.crustLabel.toLowerCase()}, mollica ${bakeOutcome.crumbLabel.toLowerCase()} e fondo ${bakeOutcome.baseLabel.toLowerCase()}. ${styles.find((s) => s.id === c.styleId)!.tip}`,
+    detail: `Cuoci circa ${c.bakeMinutes} min a ${c.ovenTemp} °C${oven.fixedRack ? "" : ` sul ripiano ${rackLabels[c.ovenRack]}`}. Previsione: crosta ${bakeOutcome.crustLabel.toLowerCase()}, mollica ${bakeOutcome.crumbLabel.toLowerCase()} e fondo ${bakeOutcome.baseLabel.toLowerCase()}. ${styles.find((s) => s.id === c.styleId)!.tip}`,
   });
   return stages.sort(
     (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),

@@ -4,6 +4,7 @@ import {
   calculate,
   deriveAutomaticSchedule,
   estimateBakeOutcome,
+  recommendedBakeMinutes,
   validateConfig,
 } from "./calculator";
 import { defaultConfig, styles } from "./styles";
@@ -435,6 +436,23 @@ describe("fridge advice", () => {
     expect(has(short)).toBe(true);
     expect(has(long)).toBe(false);
     expect(has(none)).toBe(false);
+  });
+});
+
+describe("pizza ovens", () => {
+  it("suggests a bake time inside the recommended window", () => {
+    const c = config({ ovenType: "ariete-909", ovenTemp: 400, bakeSurface: "stone", ovenRack: "middle" });
+    const minutes = recommendedBakeMinutes(c);
+    const outcome = estimateBakeOutcome(c);
+    expect(minutes).toBeGreaterThanOrEqual(outcome.recommendedMin - 0.25);
+    expect(minutes).toBeLessThanOrEqual(outcome.recommendedMax + 0.25);
+  });
+  it("uses the oven preheat time and skips the rack in the plan", () => {
+    const stages = buildTimeline(config({ ovenType: "effeuno-p134h", ovenTemp: 500, bakeSurface: "biscotto" }), flours);
+    const preheat = stages.find((stage) => stage.id === "preheat")!;
+    const bake = stages.find((stage) => stage.id === "bake")!;
+    expect((new Date(bake.at).getTime() - new Date(preheat.at).getTime()) / 60000).toBe(55);
+    expect(preheat.detail).not.toContain("ripiano");
   });
 });
 

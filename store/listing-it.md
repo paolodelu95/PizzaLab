@@ -43,6 +43,7 @@ Un percorso guidato per creare e mantenere la tua coltura: dosi dei rinfreschi, 
 • Poolish, biga, autolisi e pieghe di rinforzo, con i consigli per ogni stile
 • Grafici di idratazione, lievito e fermentazione
 • Pronto soccorso dell’impasto e glossario per chi inizia
+• Profilo con i tuoi forni (anche Ariete, G3 Ferrari, Effeuno, Ooni, Gozney), attrezzatura e statistiche
 • Esportazione e importazione del diario
 
 🔒 SENZA ACCOUNT, SENZA PUBBLICITÀ
@@ -61,9 +62,9 @@ Se PizzaLab ti è stata utile, puoi offrirmi una pizza con un contributo libero:
 - Sito web: facoltativo (per esempio la pagina GitHub del progetto)
 - Informativa sulla privacy: https://paolodelu95.github.io/PizzaLab/privacy/ (sorgente in `docs/privacy/index.md`)
 
-## Note di rilascio 0.15.0 (max 500 caratteri)
+## Note di rilascio 0.16.0 (max 500 caratteri)
 
-Nuova interfaccia per telefoni, pieghevoli e tablet, con tema scuro. Riepilogo finale per iniziare subito o salvare per dopo, diario diviso tra pizze in corso, salvate e passate, simulatore di cottura più preciso, pieghe e ingredienti consigliati per ogni stile e un breve tutorial iniziale.
+Nuova interfaccia per telefoni, pieghevoli e tablet, con tema scuro e un breve tutorial iniziale. Riepilogo per iniziare subito o salvare per dopo, diario con pizze in corso, salvate e passate. Nuovo Profilo con i tuoi forni, attrezzatura e statistiche; forni per pizza come Ariete, G3 Ferrari, Effeuno, Ooni e Gozney con preriscaldamento e tempi dedicati.
 
 ## Grafiche (cartella `store/graphics`)
 

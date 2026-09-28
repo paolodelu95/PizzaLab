@@ -14,6 +14,8 @@ export const emptyState = (): StoredState => ({
   sourdoughProfiles: [],
   activeSourdoughId: null,
   bakeCalibrations: [],
+  profileName: "",
+  userOvens: [],
 });
 export async function readState(): Promise<StoredState> {
   const { value } = await Preferences.get({ key: KEY });
@@ -35,6 +37,10 @@ export async function readState(): Promise<StoredState> {
   parsed.bakeCalibrations = Array.isArray(parsed.bakeCalibrations)
     ? parsed.bakeCalibrations
     : [];
+  parsed.userOvens = Array.isArray(parsed.userOvens)
+    ? parsed.userOvens.filter((oven) => oven && typeof oven.id === "string" && typeof oven.ovenType === "string")
+    : [];
+  parsed.profileName = typeof parsed.profileName === "string" ? parsed.profileName : "";
   const legacyStarter = (parsed as StoredState & { sourdoughProfile?: StoredState["sourdoughProfiles"][number] }).sourdoughProfile;
   parsed.sourdoughProfiles = Array.isArray(parsed.sourdoughProfiles)
     ? parsed.sourdoughProfiles

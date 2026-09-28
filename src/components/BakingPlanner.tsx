@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { bakeScores, bakeSurfaceLabels, estimateBakeOutcome } from "../domain/calculator";
 import type { BakeCalibration, DoughConfig } from "../domain/types";
 import { SliderField } from "./Fields";
+import { ovenById } from "../data/ovens";
 
 const rackOptions: [DoughConfig["ovenRack"], string, string][] = [
   ["bottom", "Basso", "Più energia al fondo"],
@@ -64,6 +65,7 @@ export function BakingPlanner({
           ? "La superficie colora presto: abbassa il ripiano nella prima parte della cottura."
           : "I risultati registrati sono equilibrati: la correzione riguarda soprattutto il tempo reale.";
   const rack = rackOptions.find(([id]) => id === c.ovenRack)!;
+  const oven = ovenById(c.ovenType);
   const fast = c.ovenTemp >= 350;
   const step = fast ? 0.25 : c.ovenTemp >= 280 ? 0.5 : 1;
   // Il grafico si concentra attorno alla finestra utile, così le curve non restano schiacciate a sinistra.
@@ -167,6 +169,11 @@ export function BakingPlanner({
             </div>
           ))}
         </div>
+        {oven.fixedRack ? (
+          <p className="fixed-rack-note">
+            <Oven /> <span>In questo forno ({oven.name}) la pietra è a un’altezza fissa: non c’è un ripiano da scegliere, regola solo tempo e temperatura.</span>
+          </p>
+        ) : (
         <div className="prediction-rack-rail" role="group" aria-label="Altezza nel forno">
           <span>ALTEZZA NEL FORNO</span>
           {rackOptions.map(([id, label], rackIndex) => (
@@ -176,6 +183,7 @@ export function BakingPlanner({
             </button>
           ))}
         </div>
+        )}
         <div className="prediction-copy">
           <strong>{outcome.summary}</strong>
           <p>Finestra consigliata: {formatTime(outcome.recommendedMin)}–{formatTime(outcome.recommendedMax)}. Controlla comunque il forno reale.</p>
@@ -185,7 +193,7 @@ export function BakingPlanner({
 
       <div className="baking-summary">
         <Oven />
-        <div><span>{formatTime(minutes)} · {c.ovenTemp} °C · ripiano {rack[1].toLowerCase()}</span><strong>{bakeSurfaceLabels[c.bakeSurface]} · {rack[2]}</strong></div>
+        <div><span>{formatTime(minutes)} · {c.ovenTemp} °C · {oven.fixedRack ? "pietra fissa" : `ripiano ${rack[1].toLowerCase()}`}</span><strong>{bakeSurfaceLabels[c.bakeSurface]}{oven.fixedRack ? ` · ${oven.name}` : ` · ${rack[2]}`}</strong></div>
       </div>
       {relevantCalibrations.length > 0 && (
         <section className="bake-calibration">
