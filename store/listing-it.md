@@ -62,7 +62,7 @@ Se PizzaLab ti è stata utile, puoi offrirmi una pizza con un contributo libero:
 - Sito web: facoltativo (per esempio la pagina GitHub del progetto)
 - Informativa sulla privacy: https://paolodelu95.github.io/PizzaLab/privacy/ (sorgente in `docs/privacy/index.md`)
 
-## Note di rilascio 0.20.1 (max 500 caratteri)
+## Note di rilascio 0.21.0 (max 500 caratteri)
 
 Nuova interfaccia per telefoni, pieghevoli e tablet, con tema scuro e tutorial iniziale. Programma una pizza e parte da sola all’orario impostato, con notifiche anche qualche minuto prima; se sei in ritardo sposti la cena o ricalcoli lievito e tempi. Profilo con forni, attrezzatura e statistiche; forni per pizza come Ariete, G3 Ferrari, Effeuno, Ooni e Gozney.
 

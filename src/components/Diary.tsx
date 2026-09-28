@@ -5,6 +5,7 @@ import {
   BellSlash,
   CalendarBlank,
   CalendarCheck,
+  CalendarPlus,
   Clock,
   CheckCircle,
   ClockCounterClockwise,
@@ -26,6 +27,7 @@ import { ActiveDoughJournal } from "./ActiveDoughJournal";
 import { GuidedMode } from "./GuidedMode";
 import { OvenCalibration } from "./OvenCalibration";
 import { ScaleMode } from "./ScaleMode";
+import { usesCalendarReminders } from "../services/platform";
 import { SupportCard } from "./SupportCard";
 
 export type DiaryView = RecipeStatus;
@@ -81,6 +83,7 @@ type Props = {
   onDelete: (id: string) => void;
   onOpenInPlanner: (recipe: Recipe, mode: "edit" | "reschedule" | "copy") => void;
   onShare: (recipe: Recipe) => void;
+  onCalendar: (recipe: Recipe) => void;
   onMessage: (message: string) => void;
   onSaveCalibration: (recipe: Recipe, calibration: BakeCalibration) => void;
 };
@@ -226,7 +229,7 @@ function StagesList({ stages, completed }: { stages: Stage[]; completed: string[
   );
 }
 
-function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFinish, onShare, onMessage, onTool }: Props & { recipe: Recipe; onTool: (kind: "scale" | "guide") => void }) {
+function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFinish, onShare, onCalendar, onMessage, onTool }: Props & { recipe: Recipe; onTool: (kind: "scale" | "guide") => void }) {
   const stages = buildTimeline(recipe.config, flours);
   const baked = new Date(recipe.config.bakeAt).getTime() <= now;
   // Programmata finché manca più di un quarto d’ora all’inizio (come per il pulsante «Programma»).
@@ -240,6 +243,18 @@ function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFin
         onEdit={onEdit}
         onDelete={onDelete}
       />
+      {usesCalendarReminders() && (
+        <div className="calendar-card">
+          <CalendarPlus weight="duotone" />
+          <div>
+            <strong>Avvisi a ogni fase</strong>
+            <p>Su iPhone e nel browser gli avvisi arrivano dal Calendario del telefono, anche ad app chiusa: aggiungi le fasi una volta sola.</p>
+          </div>
+          <button className="button primary" onClick={() => onCalendar(recipe)}>
+            <CalendarPlus /> Aggiungi al calendario
+          </button>
+        </div>
+      )}
       <ActiveDoughJournal
         recipe={recipe}
         stages={stages}

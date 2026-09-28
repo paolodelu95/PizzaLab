@@ -356,8 +356,11 @@ test("offers classic toppings and guides a starter to maturity", async ({ page }
   await liquidCard.getByRole("button", { name: "Ne ho già uno" }).click();
   await expect(page.getByText("Consolidamento", { exact: true }).first()).toBeVisible();
   await page.getByLabel("Ora preferita").fill("09:30");
-  await page.getByRole("button", { name: /Attiva promemoria/ }).click();
-  await expect(page.getByRole("status")).toContainText("Promemoria salvati");
+  // Nel browser i rinfreschi vanno nel Calendario del telefono.
+  const feeds = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Aggiungi i rinfreschi al calendario/ }).click();
+  expect((await feeds).suggestedFilename()).toMatch(/^pizzalab-lievito-.*\.ics$/);
+  await expect(page.getByRole("status")).toContainText("rinfreschi pronti");
   for (let index = 0; index < 3; index += 1)
     await page.getByRole("button", { name: /Rinfresco fatto/ }).click();
   await expect(page.getByText("Lievito maturo", { exact: true }).first()).toBeVisible();
@@ -653,4 +656,45 @@ test("pan styles work with round pans and focaccia barese starts in a round pan"
   await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
   await page.getByRole("button", { name: /Teglia tonda Ø 32 · Ø 32 cm/ }).click();
   await expect(page.getByLabel("Diametro teglia")).toHaveValue("32");
+});
+
+test("in the browser the phases go to the phone calendar with an alarm", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await page.getByLabel("Nome del piano").fill("Pizza del venerdì");
+  await page.getByRole("button", { name: "Programma" }).click();
+  await expect(page.getByText("Avvisi a ogni fase")).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Aggiungi al calendario/ }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe("pizzalab-pizza-del-venerdi.ics");
+  const ics = await (await import("node:fs/promises")).readFile(await file.path(), "utf8");
+  expect(ics).toContain("BEGIN:VEVENT");
+  expect(ics).toContain("SUMMARY:PizzaLab · Impasta e sviluppa la struttura");
+  expect(ics).toContain("BEGIN:VALARM");
+  await expect(page.getByRole("status")).toContainText("Aggiungi tutti");
+});
+
+test("on iPhone the web app explains how to add it to the home screen", async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    userAgent:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+    hasTouch: true,
+    isMobile: true,
+  });
+  await context.addInitScript(() => localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"));
+  const page = await context.newPage();
+  await page.goto("/");
+  const prompt = page.getByRole("region", { name: "Installa PizzaLab sul telefono" });
+  await expect(prompt).toBeVisible();
+  await expect(prompt).toContainText("Aggiungi alla schermata Home");
+  await prompt.getByRole("button", { name: /più tardi/ }).click();
+  await expect(prompt).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /Progetta\. Impasta/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Installa PizzaLab sul telefono" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Profilo", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Installa PizzaLab sul telefono" })).toBeVisible();
+  await context.close();
 });

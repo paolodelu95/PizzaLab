@@ -29,6 +29,14 @@ npm run dev
 
 Aprire `http://127.0.0.1:5173`. Il browser permette di provare tutti i flussi e conserva i dati localmente; le notifiche in background sono una funzione dell'app Android. L'anteprima web non è una PWA e non promette funzionamento offline dopo la chiusura del server.
 
+## Web app per iPhone (e browser)
+
+La stessa app è pubblicata gratis su GitHub Pages: **https://paolodelu95.github.io/PizzaLab/app/**. Su iPhone si installa da Safari con *Condividi → Aggiungi alla schermata Home* (su Android: menu di Chrome → *Installa app*). Funziona offline dopo la prima apertura e salva i dati nel browser del dispositivo.
+
+Nella versione web le notifiche programmate non sono disponibili: gli avvisi di ogni fase (e dei rinfreschi del lievito madre) si aggiungono al Calendario del telefono con «Aggiungi al calendario», che crea un file `.ics` con un allarme per ogni evento. L’app Android continua a usare le notifiche locali.
+
+La pubblicazione è automatica a ogni push su `main` (`.github/workflows/pages.yml`): esegue i test del modello, costruisce la web app con `--base=/PizzaLab/app/` e la pubblica insieme alle pagine di `docs/` (compresa l’informativa sulla privacy).
+
 ## Android
 
 Richiede JDK 21, SDK Android 36 e Build Tools 36.0.0. Minimo Android 7 / API 24. ID applicazione: `it.pizzalab.app`.

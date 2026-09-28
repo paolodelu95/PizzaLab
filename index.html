@@ -7,6 +7,14 @@
     <meta name="theme-color" content="#12100e" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
     <meta name="description" content="Il tuo compagno per impasti, farine e tempi della pizza fatta in casa." />
+    <!-- Installazione come app: Android (manifest) e iPhone («Aggiungi alla schermata Home») -->
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%icons/favicon-32.png" />
+    <link rel="apple-touch-icon" href="%BASE_URL%icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="PizzaLab" />
     <title>PizzaLab — Il tuo laboratorio della pizza.</title>
   </head>
   <body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>

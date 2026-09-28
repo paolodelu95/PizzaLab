@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-web/
 .cache/
 .android-sdk/
 .gradle/

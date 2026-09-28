@@ -3231,3 +3231,73 @@ details > summary > svg:first-child + span {
   color: var(--brand);
   opacity: 1;
 }
+
+/* Invito a installare la web app */
+.install-prompt {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 48px 16px 16px;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  border: 1.5px solid color-mix(in srgb, var(--brand) 35%, var(--line));
+  box-shadow: var(--shadow-sm);
+}
+.install-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.install-icon svg {
+  width: 28px;
+  height: 28px;
+}
+.install-prompt > div {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.install-prompt strong {
+  font-size: 16px;
+}
+.install-prompt ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+.install-prompt ol svg {
+  width: 20px;
+  height: 20px;
+  color: var(--cold);
+  vertical-align: -4px;
+}
+.install-prompt p {
+  font-size: 13.5px;
+}
+.install-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+.diary-tabs button {
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .diary-tabs button {
+    gap: 5px;
+    padding: 0 4px;
+    font-size: 14px;
+  }
+  .diary-tabs .live-dot {
+    display: none;
+  }
+}

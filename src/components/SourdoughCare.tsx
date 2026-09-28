@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Alarm,
   BellRinging,
+  CalendarPlus,
   CheckCircle,
   Clock,
   Flask,
@@ -22,6 +23,7 @@ import {
 } from "../domain/sourdough";
 import type { SourdoughProfile, StarterFeeding } from "../domain/types";
 import { NumberField } from "./Fields";
+import { usesCalendarReminders } from "../services/platform";
 import { HelpTip } from "./HelpTip";
 
 const phaseCopy = {
@@ -50,6 +52,7 @@ export function SourdoughCare({
   onLog,
   onSchedule,
   onDisableReminders,
+  onCalendar,
 }: {
   profiles: SourdoughProfile[];
   profile: SourdoughProfile | null;
@@ -61,6 +64,7 @@ export function SourdoughCare({
   onLog: (feeding: StarterFeeding) => void;
   onSchedule: () => void;
   onDisableReminders: () => void;
+  onCalendar: (profile: SourdoughProfile) => void;
 }) {
   const [rise, setRise] = useState(2);
   const [peakHours, setPeakHours] = useState(6);
@@ -220,7 +224,9 @@ export function SourdoughCare({
             <label className="field">Farina abituale<input value={profile.flourName} maxLength={60} onChange={(event) => onChange({ ...profile, flourName: event.target.value })} /></label>
             {profile.phase === "mature" && <div className="storage-choice"><span>Dove lo conservi?</span><button className={profile.storage === "room" ? "selected" : ""} onClick={() => onChange({ ...profile, storage: "room" })}><Thermometer /> Ambiente</button><button className={profile.storage === "fridge" ? "selected" : ""} onClick={() => onChange({ ...profile, storage: "fridge" })}><Snowflake /> Frigo</button></div>}
             <div className="routine-summary"><Clock /><div><strong>Ogni {interval === 168 ? "7 giorni" : `${interval} ore`}</strong><span>{profile.phase === "mature" && profile.storage === "fridge" ? "Mantenimento settimanale" : "Rinfresco a temperatura ambiente"}</span></div></div>
-            {profile.remindersEnabled ? <button className="button secondary full" onClick={onDisableReminders}>Disattiva promemoria</button> : <button className="button primary full" onClick={onSchedule}><BellRinging /> Attiva promemoria</button>}
+            {usesCalendarReminders() ? (
+              <button className="button primary full" onClick={() => onCalendar(profile)}><CalendarPlus /> Aggiungi i rinfreschi al calendario</button>
+            ) : profile.remindersEnabled ? <button className="button secondary full" onClick={onDisableReminders}>Disattiva promemoria</button> : <button className="button primary full" onClick={onSchedule}><BellRinging /> Attiva promemoria</button>}
             <small>Gli orari sono promemoria: se il lievito è ancora in piena crescita, osserva il picco prima di intervenire.</small>
             {!deleteConfirm ? <button className="starter-delete" onClick={() => setDeleteConfirm(true)}><Trash /> Elimina questo lievito</button> : <div className="starter-delete-confirm"><strong>Eliminare “{profile.name}”?</strong><p>Il diario e i promemoria di questa coltura verranno rimossi.</p><div><button className="button secondary" onClick={() => setDeleteConfirm(false)}>Annulla</button><button className="button danger" onClick={() => { onDelete(profile.id); setDeleteConfirm(false); }}>Elimina definitivamente</button></div></div>}
           </section>

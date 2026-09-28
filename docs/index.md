@@ -8,6 +8,8 @@ lang: it
 Il tuo laboratorio della pizza: dosi, lievitazione e cottura per la pizza fatta in casa, passo dopo passo.
 Nessun account, nessuna pubblicità: i dati restano sul telefono e l’app funziona anche offline.
 
+**[Apri PizzaLab](app/)**: funziona nel browser e si installa sul telefono. Su iPhone tocca *Condividi* → *Aggiungi alla schermata Home*; su Android, dal menu di Chrome scegli *Installa app*.
+
 - [Informativa sulla privacy](privacy/)
 - [Come funziona il modello di calcolo](MODELLO.html)
 - [Catalogo delle farine](CATALOGO.html)

@@ -20,7 +20,7 @@ const notifyAt = (at: string | Date, leadMinutes: number) =>
   new Date(Math.max(Date.now() + 5000, new Date(at).getTime() - leadMinutes * 60000));
 
 export async function scheduleReminders(recipe: Recipe, leadMinutes = 0): Promise<string> {
-  if (!Capacitor.isNativePlatform()) return 'Nel browser puoi seguire la tabella di marcia. Le notifiche a schermo spento sono disponibili nell’app Android.';
+  if (!Capacitor.isNativePlatform()) return 'Per ricevere un avviso a ogni fase, premi «Aggiungi al calendario» nella scheda della pizza.';
   const stages = buildTimeline(recipe.config).filter(s => new Date(s.at).getTime() > Date.now());
   if (!stages.length) throw new Error('Questo piano è terminato. Imposta una nuova data.');
   const permission = await LocalNotifications.requestPermissions();
@@ -48,7 +48,7 @@ export async function cancelStarterReminders(profileId?: string) {
 
 export async function scheduleStarterReminders(profile: SourdoughProfile, leadMinutes = 0): Promise<string> {
   if (!Capacitor.isNativePlatform())
-    return 'Promemoria salvati. Le notifiche a schermo spento saranno attive nell’app Android.';
+    return 'Routine salvata. Per ricevere gli avvisi dei rinfreschi, premi «Aggiungi al calendario».';
   const permission = await LocalNotifications.requestPermissions();
   if (permission.display !== 'granted')
     throw new Error('Notifiche non autorizzate. Puoi abilitarle nelle impostazioni Android.');

@@ -45,6 +45,7 @@ import {
   styles,
 } from "./domain/styles";
 import type {
+  SourdoughProfile,
   UserPan,
   BakeCalibration,
   DoughConfig,
@@ -83,17 +84,21 @@ import {
   addStarterFeeding,
   createStarterProfile,
   nextStarterFeedAt,
+  starterReminderDates,
 } from "./domain/sourdough";
 import { useCloseOnBack } from "./services/backNavigation";
+import { buildCalendar, downloadCalendar, stagesToEvents } from "./services/calendar";
+import { usesCalendarReminders } from "./services/platform";
 import { markTutorialSeen, tutorialSeen } from "./services/tutorial";
 import { Onboarding } from "./components/Onboarding";
+import { InstallPrompt } from "./components/InstallPrompt";
 import { LateStartDialog } from "./components/LateStartDialog";
 import { SelectSheet } from "./components/SelectSheet";
 import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.20.1";
+const APP_VERSION = "0.21.0";
 type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
 const nav = [
@@ -374,6 +379,31 @@ export default function App() {
     });
     setMessage(`Miscela “${blend.name}” caricata.`);
   }
+  const fileSlug = (text: string) =>
+    text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "pizza";
+  /** Sul web (iPhone o browser) gli avvisi a orario arrivano dal Calendario del telefono. */
+  function addRecipeToCalendar(recipe: Recipe) {
+    const events = stagesToEvents(recipe.id, recipe.name, buildTimeline(recipe.config, flours));
+    if (!events.length) {
+      setMessage("Non ci sono fasi future da aggiungere al calendario.");
+      return;
+    }
+    downloadCalendar(`pizzalab-${fileSlug(recipe.name)}.ics`, buildCalendar(`PizzaLab · ${recipe.name}`, events, leadMinutes));
+    setMessage(
+      `${events.length} fasi pronte: nel Calendario conferma «Aggiungi tutti» e riceverai un avviso ${leadMinutes ? `${leadMinutes} minuti prima di ogni fase` : "all’inizio di ogni fase"}.`,
+    );
+  }
+  function addStarterToCalendar(profile: SourdoughProfile) {
+    const events = starterReminderDates(profile, 14).map((at, index) => ({
+      uid: `${profile.id}-feed-${at.getTime()}@pizzalab`,
+      title: `PizzaLab · Rinfresca ${profile.name}`,
+      description: index === 0 ? "Osserva il lievito e procedi con il rinfresco." : "Rinfresco programmato dalla routine del lievito.",
+      start: at,
+      end: new Date(at.getTime() + 15 * 60000),
+    }));
+    downloadCalendar(`pizzalab-lievito-${fileSlug(profile.name)}.ics`, buildCalendar(`PizzaLab · ${profile.name}`, events, leadMinutes));
+    setMessage(`${events.length} rinfreschi pronti: nel Calendario conferma «Aggiungi tutti» per ricevere gli avvisi.`);
+  }
   function usePan(pan: UserPan) {
     const round = pan.shape === "round";
     updateMany({
@@ -592,7 +622,9 @@ export default function App() {
       const future = first && new Date(first.at).getTime() > Date.now() + 15 * 60000;
       setMessage(
         future
-          ? `Programmata! Si parte ${dateLabel(first.at)}: riceverai una notifica a ogni fase. ${note}`
+          ? usesCalendarReminders()
+            ? `Programmata! Si parte ${dateLabel(first.at)}. ${note}`
+            : `Programmata! Si parte ${dateLabel(first.at)}: riceverai una notifica a ogni fase. ${note}`
           : `Si parte! ${note}`,
       );
     } catch (e) {
@@ -964,6 +996,7 @@ export default function App() {
                   <Pizza weight="duotone" />
                 </div>
               </div>
+              <InstallPrompt />
               {active && (
                 <button
                   className="active-banner"
@@ -2088,7 +2121,9 @@ export default function App() {
                         </button>
                         <p>
                           {timing === "future"
-                            ? `Partirà da sola ${timeline[0] ? dateLabel(timeline[0].at) : ""}: riceverai una notifica a ogni fase${leadMinutes ? `, ${leadMinutes} minuti prima` : ""}. La trovi nel diario tra quelle «In corso».`
+                            ? usesCalendarReminders()
+                              ? `Partirà da sola ${timeline[0] ? dateLabel(timeline[0].at) : ""}. Nel diario, tra quelle «In corso», potrai aggiungere le fasi al Calendario per ricevere gli avvisi.`
+                              : `Partirà da sola ${timeline[0] ? dateLabel(timeline[0].at) : ""}: riceverai una notifica a ogni fase${leadMinutes ? `, ${leadMinutes} minuti prima` : ""}. La trovi nel diario tra quelle «In corso».`
                             : timing === "now"
                               ? "È l’ora giusta: si parte subito e ricevi una notifica a ogni fase. Bilancia e guida passo passo ti aspettano nel diario."
                               : timing === "late"
@@ -2178,6 +2213,7 @@ export default function App() {
               onLog={logStarterFeeding}
               onSchedule={() => void enableStarterReminders()}
               onDisableReminders={() => void disableStarterReminders()}
+              onCalendar={addStarterToCalendar}
             />
           )}
           {tab === "profilo" && (
@@ -2242,6 +2278,7 @@ export default function App() {
               onDelete={setDeleteId}
               onOpenInPlanner={openInPlanner}
               onShare={(recipe) => void shareRecipe(recipe)}
+              onCalendar={addRecipeToCalendar}
               onMessage={setMessage}
               onSaveCalibration={saveCalibration}
             />

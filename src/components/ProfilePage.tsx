@@ -19,6 +19,8 @@ import { recipeStatus } from "../domain/recipes";
 import type { DoughConfig, Flour, Recipe, StoredState, UserOven, UserPan } from "../domain/types";
 import { ovenById } from "../data/ovens";
 import { UserPans } from "./UserPans";
+import { InstallPrompt } from "./InstallPrompt";
+import { usesCalendarReminders } from "../services/platform";
 import { SelectSheet } from "./SelectSheet";
 import { mixerOptions, ovenOptions, planetaryOptions, surfaceOptions } from "../data/options";
 import { InsightsDashboard } from "./InsightsDashboard";
@@ -138,7 +140,11 @@ export function ProfilePage(props: Props) {
           <span className="section-icon"><BellRinging /></span>
           <div>
             <h2 id="notifications-title">Notifiche</h2>
-            <p>Sono normali notifiche del telefono: non creano promemoria né eventi nel calendario.</p>
+            <p>
+              {usesCalendarReminders()
+                ? "Su iPhone e nel browser gli avvisi arrivano dal Calendario del telefono: dalla pizza in corso premi «Aggiungi al calendario». L’anticipo che scegli qui vale per quegli eventi."
+                : "Sono normali notifiche del telefono: non creano promemoria né eventi nel calendario."}
+            </p>
           </div>
         </div>
         <div className="lead-options" role="radiogroup" aria-label="Quando avvisarti">
@@ -180,12 +186,18 @@ export function ProfilePage(props: Props) {
         <p className="small-muted profile-empty-stats">Quando concludi le prime pizze qui compaiono idratazione media, tempi e lo stile che prepari di più.</p>
       )}
 
+      <InstallPrompt always />
+
       <section className="panel settings-panel">
         <div className="panel-title">
           <span className="section-icon"><Gear /></span>
           <div>
             <h2>Backup e impostazioni</h2>
-            <p>Salva una copia del diario o spostalo su un altro telefono.</p>
+            <p>
+              {usesCalendarReminders()
+                ? "Nel browser i dati restano su questo telefono: esporta ogni tanto una copia del diario, così non la perdi se svuoti i dati di Safari."
+                : "Salva una copia del diario o spostalo su un altro telefono."}
+            </p>
           </div>
         </div>
         <input
