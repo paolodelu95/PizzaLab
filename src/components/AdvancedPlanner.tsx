@@ -9,6 +9,7 @@ import {
   Timer,
 } from "@phosphor-icons/react";
 import { recommendedBakeMinutes, type calculate } from "../domain/calculator";
+import { durationLabel } from "../domain/duration";
 import type { DoughConfig, Flour, UserOven } from "../domain/types";
 import { ovenProfiles } from "../data/ovens";
 import { mixerProfiles } from "../data/mixers";
@@ -337,7 +338,7 @@ export function AdvancedPlanner({
             {c.foldCount > 0 && (
               <div className="folds-summary">
                 <strong>
-                  Puntata minima: {fmt(minimumFoldMinutes / 60, 2)} ore
+                  Puntata minima: {durationLabel(minimumFoldMinutes / 60)}
                 </strong>
                 <span>
                   {c.foldCount} {c.foldCount === 1 ? "piega" : "pieghe"} · ai
@@ -541,15 +542,15 @@ export function AdvancedPlanner({
                       <div className="compensation-times">
                         <span>
                           <small>PUNTATA</small>
-                          {fmt(result.yeastAdjustment.bulkHours, 1)} h
+                          {durationLabel(result.yeastAdjustment.bulkHours)}
                         </span>
                         <span>
                           <small>FRIGO</small>
-                          {fmt(result.yeastAdjustment.coldHours, 1)} h
+                          {durationLabel(result.yeastAdjustment.coldHours)}
                         </span>
                         <span>
                           <small>APPRETTO</small>
-                          {fmt(result.yeastAdjustment.proofHours, 1)} h
+                          {durationLabel(result.yeastAdjustment.proofHours)}
                         </span>
                       </div>
                       <button

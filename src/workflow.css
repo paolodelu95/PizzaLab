@@ -1021,6 +1021,16 @@
 .advice.warning > svg {
   color: var(--amber);
 }
+.advice.error {
+  background: var(--danger-soft);
+  border-color: transparent;
+}
+.advice.error > svg {
+  color: var(--danger);
+}
+.advice.error strong {
+  color: var(--danger-ink);
+}
 .advice strong {
   display: block;
   font-size: 14.5px;

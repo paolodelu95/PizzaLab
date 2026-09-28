@@ -71,6 +71,7 @@ import { BakingPlanner } from "./components/BakingPlanner";
 import { SourdoughCare } from "./components/SourdoughCare";
 import { StarterDoughLink } from "./components/StarterDoughLink";
 import { Diary, type DiaryView } from "./components/Diary";
+import { durationLabel } from "./domain/duration";
 import { applyAutomaticPlan, recipeStatus, startTiming } from "./domain/recipes";
 import { emptyState, readState, writeState } from "./services/storage";
 import {
@@ -98,7 +99,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.21.0";
+const APP_VERSION = "0.21.1";
 type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
 const nav = [
@@ -1552,9 +1553,9 @@ export default function App() {
                           {automaticPlan.ok ? (
                             <>
                               <div className="automatic-phase-grid">
-                                <div><span>PUNTATA</span><strong>{fmt(c.bulkHours, 2)} h</strong><small>fuori frigo</small></div>
-                                <div className="cold"><span>FRIGO</span><strong>{fmt(c.coldHours, 2)} h</strong><small>{c.coldHours > 0 ? "massa coperta" : "non necessario"}</small></div>
-                                <div><span>APPRETTO</span><strong>{fmt(c.proofHours, 2)} h</strong><small>prima del forno</small></div>
+                                <div><span>PUNTATA</span><strong>{durationLabel(c.bulkHours)}</strong><small>fuori frigo</small></div>
+                                <div className="cold"><span>FRIGO</span><strong>{c.coldHours > 0 ? durationLabel(c.coldHours) : "—"}</strong><small>{c.coldHours > 0 ? "massa coperta" : "non necessario"}</small></div>
+                                <div><span>APPRETTO</span><strong>{durationLabel(c.proofHours)}</strong><small>prima del forno</small></div>
                                 <div className="yeast"><span>LIEVITO CALCOLATO</span><strong>{result.ok ? `${fmt(result.yeast, 2)} g` : "—"}</strong><small>{c.yeast === "fresh" ? "fresco" : c.yeast === "instant" ? "secco" : "coltura naturale"}</small></div>
                               </div>
                               <p className="automatic-plan-note"><Sparkle /> {(["sourdough", "licoli"] as DoughConfig["yeast"][]).includes(c.yeast) ? "Orari e dose della coltura si aggiornano insieme; la vitalità reale del lievito madre va sempre verificata dalla crescita." : "Orari e lievito si aggiornano insieme in base a stile, temperature, pieghe e lavorazioni."}</p>
@@ -1611,7 +1612,7 @@ export default function App() {
                           unit="ore"
                           hint={
                             c.foldCount > 0
-                              ? `Minimo ${fmt((c.foldCount * c.foldIntervalMinutes) / 60, 2)} ore per completare le pieghe`
+                              ? `Minimo ${durationLabel((c.foldCount * c.foldIntervalMinutes) / 60)} per completare le pieghe`
                               : "Primo riposo dell’impasto intero, prima di dividerlo in panetti"
                           }
                         />
@@ -1652,14 +1653,14 @@ export default function App() {
                         <span style={{ flex: Math.max(0.1, c.proofHours) }} />
                       </div>
                       <div className="time-legend" aria-hidden="true">
-                        <span>Puntata {fmt(c.bulkHours, 1)} h</span>
-                        {c.coldHours > 0 && <span className="cold">Frigo {fmt(c.coldHours, 1)} h</span>}
-                        <span className="proof">Appretto {fmt(c.proofHours, 1)} h</span>
+                        <span>Puntata {durationLabel(c.bulkHours)}</span>
+                        {c.coldHours > 0 && <span className="cold">Frigo {durationLabel(c.coldHours)}</span>}
+                        <span className="proof">Appretto {durationLabel(c.proofHours)}</span>
                       </div>
                       <div className="time-total">
                         <span>Tempo di fermentazione</span>
                         <strong>
-                          {result.ok ? fmt(result.hours, 1) : "—"} ore{" "}
+                          {result.ok ? durationLabel(result.hours) : "—"}{" "}
                           <small>+ 20 min di impasto</small>
                         </strong>
                       </div>
@@ -1818,7 +1819,7 @@ export default function App() {
                       <div className="summary-facts">
                         <div><span>Inizi</span><strong>{timeline[0] ? dateLabel(timeline[0].at) : "—"}</strong></div>
                         <div><span>Inforni</span><strong>{dateLabel(c.bakeAt)}</strong></div>
-                        <div><span>Lievitazione</span><strong>{result.ok ? `${fmt(result.hours, 1)} ore` : "—"}</strong></div>
+                        <div><span>Lievitazione</span><strong>{result.ok ? durationLabel(result.hours) : "—"}</strong></div>
                         <div><span>{isPan ? "Teglie" : "Pizze"}</span><strong>{c.count} · {currentStyle.name}</strong></div>
                       </div>
                       {startPast && (
@@ -1878,7 +1879,7 @@ export default function App() {
                       ) : (
                         result.advice.map((a) => (
                           <div key={a.id} className={`advice ${a.level}`}>
-                            {a.level === "warning" ? <Warning /> : <Info />}
+                            {a.level === "info" ? <Info /> : <Warning />}
                             <div>
                               <strong>{a.title}</strong>
                               <p>{a.text}</p>
@@ -1946,7 +1947,7 @@ export default function App() {
                           </span>
                           <span>
                             <Clock />
-                            {fmt(result.hours, 1)} h
+                            {durationLabel(result.hours)}
                           </span>
                           <span>
                             <Fire />

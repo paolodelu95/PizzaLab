@@ -420,7 +420,7 @@ test("reserves enough room-temperature time for every fold and keeps toppings se
   await page.getByLabel("Puntata fuori frigo", { exact: true }).fill("1");
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
   await page.getByLabel("Numero di pieghe").fill("3");
-  await expect(page.getByText("Puntata minima: 1,5 ore")).toBeVisible();
+  await expect(page.getByText("Puntata minima: 1 h 30 min")).toBeVisible();
   await expect(page.getByText(/minuti 30, 60, 90/)).toBeVisible();
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   const bulk = page.getByLabel("Puntata fuori frigo", { exact: true });
@@ -620,7 +620,7 @@ test("a late start can keep dinner time by recalculating yeast and rise", async 
   await expect(page.getByText(/L’orario di inizio è già passato/)).toBeVisible();
   await page.getByRole("button", { name: "Parti adesso" }).click();
   const dialog = page.getByRole("dialog", { name: "Parti in ritardo?" });
-  await expect(dialog.getByText(/Lievitazione da 24 a/)).toBeVisible();
+  await expect(dialog.getByText(/Lievitazione da 24 h a/)).toBeVisible();
   await dialog.getByRole("button", { name: /Mangio comunque/ }).click();
   await expect(page.getByText("IMPASTO IN CORSO", { exact: true })).toBeVisible();
   await expect(page.locator(".journal-card .eyebrow").first()).toHaveText("In corso");

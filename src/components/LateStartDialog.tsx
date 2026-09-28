@@ -1,5 +1,6 @@
 import { ArrowRight, CalendarBlank, Clock, Warning } from "@phosphor-icons/react";
 import { buildTimeline, calculate } from "../domain/calculator";
+import { durationLabel } from "../domain/duration";
 import { keepMealTimeFromNow, shiftPlanToNow, yeastLabel } from "../domain/recipes";
 import type { DoughConfig, Flour } from "../domain/types";
 import { useCloseOnBack } from "../services/backNavigation";
@@ -55,7 +56,7 @@ export function LateStartDialog({
             <span>
               <strong>Mangio comunque {time(config.bakeAt)}</strong>
               <small>
-                Lievitazione da {fmt(hours(config))} a {fmt(hours(kept.config))} ore;{" "}
+                Lievitazione da {durationLabel(hours(config))} a {durationLabel(hours(kept.config))};{" "}
                 {yeastLabel(config.yeast).toLowerCase()} da {fmt(before.yeast, natural ? 0 : 2)} a {fmt(after.yeast, natural ? 0 : 2)} g.
               </small>
             </span>

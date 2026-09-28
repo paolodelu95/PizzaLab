@@ -1,6 +1,7 @@
 import { styles } from "./styles";
 import { mixerProfiles } from "../data/mixers";
 import { ovenById } from "../data/ovens";
+import { durationLabel } from "./duration";
 import type { Advice, DoughConfig, Flour, Stage } from "./types";
 export const MODEL_VERSION = "direct-v1";
 
@@ -56,7 +57,7 @@ export function deriveAutomaticSchedule(c: DoughConfig): AutomaticSchedule {
   if (fermentationHours < 2)
     return {
       ok: false,
-      error: `Servono almeno ${preparationHours.toLocaleString("it-IT", { maximumFractionDigits: 1 })} ore di preparazione e 2 ore di fermentazione. Allontana inizio e cottura.`,
+      error: `Servono almeno ${durationLabel(preparationHours)} di preparazione e 2 ore di fermentazione. Allontana inizio e cottura.`,
     };
   if (fermentationHours > 144)
     return { ok: false, error: "La finestra supera i limiti gestibili di 6 giorni. Avvicina l’inizio alla cottura." };
@@ -676,6 +677,30 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
     title: string,
     text: string,
   ) => advice.push({ id, level, title, text });
+  // Lievitare e maturare sono due cose diverse: il lievito gonfia l’impasto in poche ore,
+  // gli enzimi che scompongono amidi e glutine hanno bisogno di molte di più. Sotto le 4 ore
+  // manca la maturazione, fra le 4 e le 8 c’è ma appena accennata.
+  if (hours < 4)
+    add(
+      "too-fast",
+      "error",
+      "Troppo poco tempo: meglio rinviare",
+      `Con ${durationLabel(hours)} di fermentazione l’impasto si gonfia ma non matura. Aspettati una pizza tenace, che si ritira mentre la stendi, con mollica compatta, poco profumo, crosta pallida e digeribilità scarsa; serve anche molto più lievito, che lascia il suo retrogusto. Se puoi, sposta la cottura più avanti: 8 ore fuori frigo sono il minimo sensato, 24 ore in frigo cambiano davvero il risultato.`,
+    );
+  else if (hours < 8)
+    add(
+      "fast-dough",
+      "warning",
+      "Lievitazione di corsa",
+      `Con ${durationLabel(hours)} la pizza viene, ma resta una lievitazione breve: meno profumo e sapore, mollica più chiusa, crosta più pallida e digeribilità inferiore rispetto a un impasto lungo. Usa una farina delicata, tieni l’impasto a 24–26 °C e non aspettarti l’alveolatura dei tempi lunghi.`,
+    );
+  if (w !== null && w >= 280 && hours < 8)
+    add(
+      "strong-flour-fast",
+      "warning",
+      "Farina troppo forte per questi tempi",
+      `Una farina da W ${w} ha bisogno di tempo per cedere elasticità: in poche ore l’impasto resta gommoso e difficile da stendere. Per una pizza veloce scegli una farina intorno a W 180–240.`,
+    );
   if (w === null)
     add(
       "unknown-w",
@@ -747,7 +772,7 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       "short-cold",
       "warning",
       "Frigo troppo breve per essere utile",
-      `Con ${c.coldHours.toLocaleString("it-IT", { maximumFractionDigits: 1 })} ore l’impasto fa appena in tempo a raffreddarsi e poi deve riscaldarsi: il freddo rallenta poco e non sviluppa sapore. Tieni l’impasto tutto fuori frigo oppure allunga il frigo ad almeno 12 ore.`,
+      `Con ${durationLabel(c.coldHours)} l’impasto fa appena in tempo a raffreddarsi e poi deve riscaldarsi: il freddo rallenta poco e non sviluppa sapore. Tieni l’impasto tutto fuori frigo oppure allunga il frigo ad almeno 12 ore.`,
     );
   if (c.coldHours > 0 && c.proofHours < 2)
     add(

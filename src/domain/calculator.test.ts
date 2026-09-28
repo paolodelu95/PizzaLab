@@ -440,6 +440,37 @@ describe("fridge advice", () => {
   });
 });
 
+describe("short fermentation advice", () => {
+  const ids = (c: Partial<DoughConfig>) => {
+    const r = calculate(config(c), flours);
+    return r.ok ? r.advice.map((a) => a.id) : [];
+  };
+  const fast = { bulkHours: 1.5, coldHours: 0, proofHours: 1 };
+
+  it("discourages a dough with no time to mature", () => {
+    const list = ids(fast);
+    expect(list).toContain("too-fast");
+    expect(list).not.toContain("fast-dough");
+  });
+
+  it("warns about a rushed but workable window", () => {
+    const list = ids({ bulkHours: 3, coldHours: 0, proofHours: 3 });
+    expect(list).toContain("fast-dough");
+    expect(list).not.toContain("too-fast");
+  });
+
+  it("stays quiet on a long fermentation", () => {
+    const list = ids({ bulkHours: 2, coldHours: 24, proofHours: 4 });
+    expect(list).not.toContain("too-fast");
+    expect(list).not.toContain("fast-dough");
+  });
+
+  it("flags a strong flour paired with a short window", () => {
+    expect(ids({ ...fast, flourId: "strong" })).toContain("strong-flour-fast");
+    expect(ids({ flourId: "strong" })).not.toContain("strong-flour-fast");
+  });
+});
+
 describe("round pans", () => {
   it("computes the dough on the circle area", () => {
     expect(panArea({ panShape: "round", panDiameter: 28, panWidth: 30, panLength: 40 })).toBeCloseTo(Math.PI * 14 * 14, 5);
