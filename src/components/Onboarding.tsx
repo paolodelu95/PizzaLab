@@ -37,8 +37,8 @@ const slides = [
   {
     icon: BellRinging,
     eyebrow: "Parti quando vuoi",
-    title: "Inizia ora o salva per dopo",
-    text: "Dal riepilogo scegli «Inizia ora» per ricevere un promemoria a ogni fase, oppure «Salva per dopo» e avvialo un altro giorno.",
+    title: "Programma o salva per dopo",
+    text: "Dal riepilogo premi «Programma»: la pizza parte da sola all’orario impostato e ricevi una notifica a ogni fase. Oppure «Salva per dopo» e la programmi un altro giorno.",
     points: [
       { icon: Notebook, text: "Nel Diario trovi le pizze in corso, salvate e passate" },
       { icon: Scale, text: "Mentre impasti: bilancia e guida passo passo" },

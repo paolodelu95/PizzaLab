@@ -15,6 +15,9 @@ import { mixerProfiles } from "../data/mixers";
 import { recommendedFolds, styles } from "../domain/styles";
 import { NumberField } from "./Fields";
 import { FlourPicker } from "./FlourPicker";
+import { SelectSheet } from "./SelectSheet";
+import { HelpTip } from "./HelpTip";
+import { mixerOptions, ovenOptions, planetaryOptions } from "../data/options";
 
 type GoodResult = Extract<ReturnType<typeof calculate>, { ok: true }>;
 type Props = {
@@ -85,6 +88,7 @@ export function AdvancedPlanner({
               <div>
                 <MagicWand />
                 <strong>Metodo</strong>
+                <HelpTip topic="metodo" />
               </div>
               <span>Diretto, poolish o biga</span>
             </div>
@@ -156,7 +160,7 @@ export function AdvancedPlanner({
                 </div>
                 <div className="maturity-row">
                   <div>
-                    <span>MATURITÀ STIMATA</span>
+                    <span>MATURITÀ STIMATA <HelpTip topic="maturita" /></span>
                     <strong>{result.preferment.maturity}</strong>
                   </div>
                   <div className="maturity-track">
@@ -200,6 +204,7 @@ export function AdvancedPlanner({
               <div>
                 <Drop />
                 <strong>Autolisi breve</strong>
+                <HelpTip topic="autolisi" />
               </div>
               <span>Utile per impasti molto idratati</span>
             </div>
@@ -265,6 +270,7 @@ export function AdvancedPlanner({
               <div>
                 <Timer />
                 <strong>Pieghe di rinforzo</strong>
+                <HelpTip topic="pieghe" />
               </div>
               <span>Programmate durante la puntata</span>
             </div>
@@ -354,24 +360,18 @@ export function AdvancedPlanner({
               <div>
                 <Thermometer />
                 <strong>Temperatura impasto</strong>
+                <HelpTip topic="temperatura" />
               </div>
               <span>Metodo del fattore 3</span>
             </div>
             <div className="field-grid">
-              <label className="field">
-                Lavorazione
-                <select
-                  value={c.mixer}
-                  onChange={(e) =>
-                    onUpdate({ mixer: e.target.value as DoughConfig["mixer"] })
-                  }
-                >
-                  <option value="hand">A mano</option>
-                  <option value="stand">Planetaria</option>
-                  <option value="spiral">Spirale</option>
-                  <option value="thermomix">Robot riscaldante</option>
-                </select>
-              </label>
+              <SelectSheet
+                label="Lavorazione"
+                help="lavorazione"
+                value={c.mixer}
+                options={mixerOptions}
+                onChange={(mixer) => onUpdate({ mixer })}
+              />
               <NumberField
                 label="Temperatura farina"
                 value={c.flourTemp}
@@ -396,21 +396,12 @@ export function AdvancedPlanner({
             </div>
             {c.mixer === "stand" && (
               <div className="mixer-guide">
-                <label className="field">
-                  La tua planetaria
-                  <select
-                    value={mixerProfile.id}
-                    onChange={(e) =>
-                      onUpdate({ mixerProfileId: e.target.value })
-                    }
-                  >
-                    {mixerProfiles.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <SelectSheet
+                  label="La tua planetaria"
+                  value={mixerProfile.id}
+                  options={planetaryOptions}
+                  onChange={(mixerProfileId) => onUpdate({ mixerProfileId })}
+                />
                 <div className="mixer-steps">
                   <div>
                     <span>INSERTO</span>
@@ -451,6 +442,7 @@ export function AdvancedPlanner({
             <div>
               <Timer />
               <strong>Controllo lievito</strong>
+                <HelpTip topic="dosaggio" />
             </div>
             <span>
               {naturalStarter
@@ -595,39 +587,22 @@ export function AdvancedPlanner({
             <span>Indicazioni coerenti con l’attrezzatura</span>
           </div>
           <div className="field-grid">
-            <label className="field">
-              Tipo di forno
-              <select
-                value={c.ovenType}
-                onChange={(e) => {
-                  const next = ovenProfiles.find(
-                    (o) => o.id === e.target.value,
-                  )!;
-                  const patch: Partial<DoughConfig> = {
-                    ovenType: next.id,
-                    ...(next.id === "custom" ? {} : { ovenTemp: next.maxTemp }),
-                    ...(next.surface ? { bakeSurface: next.surface } : {}),
-                    ...(next.fixedRack ? { ovenRack: "middle" as const } : {}),
-                  };
-                  onUpdate({ ...patch, bakeMinutes: recommendedBakeMinutes({ ...c, ...patch }) });
-                }}
-              >
-                <optgroup label="Tipi di forno">
-                  {ovenProfiles.filter((item) => item.group === "generic").map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Forni per pizza">
-                  {ovenProfiles.filter((item) => item.group === "pizza").map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-            </label>
+            <SelectSheet
+              label="Tipo di forno"
+              value={c.ovenType}
+              options={ovenOptions()}
+              searchPlaceholder="Cerca Ariete, Ooni, legna…"
+              onChange={(id) => {
+                const next = ovenProfiles.find((o) => o.id === id)!;
+                const patch: Partial<DoughConfig> = {
+                  ovenType: next.id,
+                  ...(next.id === "custom" ? {} : { ovenTemp: next.maxTemp }),
+                  ...(next.surface ? { bakeSurface: next.surface } : {}),
+                  ...(next.fixedRack ? { ovenRack: "middle" as const } : {}),
+                };
+                onUpdate({ ...patch, bakeMinutes: recommendedBakeMinutes({ ...c, ...patch }) });
+              }}
+            />
             <NumberField
               label="Temperatura effettiva"
               value={c.ovenTemp}

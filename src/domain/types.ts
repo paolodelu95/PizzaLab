@@ -31,6 +31,11 @@ export interface PizzaStyle {
   bake: string;
   tip: string;
   pan: boolean;
+  /** Stili nati in teglia tonda (es. focaccia barese). */
+  panShape?: "rect" | "round";
+  panDiameter?: number;
+  /** Grammi di impasto per cm² tipici dello stile. */
+  panDensity?: number;
 }
 export interface DoughConfig {
   styleId: string;
@@ -45,6 +50,9 @@ export interface DoughConfig {
   ballWeight: number;
   panWidth: number;
   panLength: number;
+  /** Forma della teglia negli stili in teglia: rettangolare (larghezza × lunghezza) o tonda (diametro). */
+  panShape: "rect" | "round";
+  panDiameter: number;
   panDensity: number;
   hydration: number;
   salt: number;
@@ -138,6 +146,18 @@ export interface EquipmentProfile {
   panLength: number;
   createdAt: string;
 }
+/** Una teglia salvata nel profilo: misure interne e materiale. */
+export interface UserPan {
+  id: string;
+  name: string;
+  /** Assente nelle teglie salvate prima delle teglie tonde: vale come rettangolare. */
+  shape?: "rect" | "round";
+  diameter?: number;
+  width: number;
+  length: number;
+  surface: DoughConfig["bakeSurface"];
+  createdAt: string;
+}
 /** Un forno di casa salvato nel profilo, con la temperatura che raggiunge davvero. */
 export interface UserOven {
   id: string;
@@ -157,7 +177,7 @@ export interface Recipe {
   completedStages: string[];
   temperatureReadings?: TemperatureReading[];
   favorite?: boolean;
-  /** Momento in cui il piano è stato avviato con «Inizia ora». */
+  /** Momento in cui il piano è stato avviato con «Programma» o «Inizia ora». */
   startedAt?: string;
   /** Momento in cui la pizza è stata conclusa e archiviata tra le passate. */
   finishedAt?: string;
@@ -218,4 +238,7 @@ export interface StoredState {
   /** Nome con cui l’app saluta l’utente (facoltativo). */
   profileName?: string;
   userOvens?: UserOven[];
+  userPans?: UserPan[];
+  /** Minuti di anticipo delle notifiche rispetto a ogni fase (0 = all’orario esatto). */
+  reminderLeadMinutes?: number;
 }

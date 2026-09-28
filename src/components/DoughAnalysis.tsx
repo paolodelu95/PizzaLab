@@ -1,6 +1,7 @@
 import { ChartLine, Gauge, Sparkle } from '@phosphor-icons/react';
 import type { calculate } from '../domain/calculator';
 import type { DoughConfig } from '../domain/types';
+import { HelpTip } from './HelpTip';
 
 type GoodResult=Extract<ReturnType<typeof calculate>,{ok:true}>;
 const fmt=(n:number,d=1)=>n.toLocaleString('it-IT',{maximumFractionDigits:d});
@@ -15,7 +16,7 @@ export function DoughAnalysis({config:c,result}:{config:DoughConfig;result:GoodR
   const bakeX=10+(result.hours/(result.hours*1.35))*280;
   const state=speed<.8?'Probabilmente indietro':speed<=1.15?'Finestra favorevole':'Probabilmente in anticipo';
   return <section className="panel dough-analysis">
-    <div className="panel-title"><span className="section-icon"><ChartLine/></span><div><h2>Profilo dell’impasto</h2><p>Una lettura visiva delle scelte attuali.</p></div></div>
+    <div className="panel-title"><span className="section-icon"><ChartLine/></span><div><h2>Profilo dell’impasto <HelpTip topic="profilo"/></h2><p>Una lettura visiva delle scelte attuali.</p></div></div>
     <div className="score-grid">{Object.entries(result.scores).map(([label,value])=><div className="score" key={label}><div><span>{label}</span><strong>{value}</strong></div><div><span style={{width:`${value}%`}}/></div></div>)}</div>
     <div className="terrain">
       <div className="advanced-heading"><div><Gauge/><strong>Percorso di fermentazione</strong></div><span>{state}</span></div>

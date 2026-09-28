@@ -2,6 +2,7 @@ import { CheckCircle, Target } from "@phosphor-icons/react";
 import { useState } from "react";
 import type { BakeCalibration, Recipe } from "../domain/types";
 import { NumberField } from "./Fields";
+import { HelpTip } from "./HelpTip";
 
 /** Registra l’esito reale di una pizza già cotta per tarare le previsioni del forno. */
 export function OvenCalibration({
@@ -21,7 +22,7 @@ export function OvenCalibration({
   return (
     <details className="oven-calibration" open={!calibration}>
       <summary>
-        <span>Taratura del forno</span>
+        <span>Taratura del forno <HelpTip topic="taratura" /></span>
         {calibration && <em className="optional-badge saved-badge"><CheckCircle weight="fill" /> Registrata</em>}
       </summary>
       <div className="oven-calibration-body">

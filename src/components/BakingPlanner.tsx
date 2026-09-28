@@ -1,9 +1,11 @@
 import { Fire, Oven, SquaresFour, Target } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { bakeScores, bakeSurfaceLabels, estimateBakeOutcome } from "../domain/calculator";
-import type { BakeCalibration, DoughConfig } from "../domain/types";
+import type { BakeCalibration, DoughConfig, UserPan } from "../domain/types";
 import { SliderField } from "./Fields";
 import { ovenById } from "../data/ovens";
+import { isPanInUse, panSize } from "./UserPans";
+import { HelpTip } from "./HelpTip";
 
 const rackOptions: [DoughConfig["ovenRack"], string, string][] = [
   ["bottom", "Basso", "Più energia al fondo"],
@@ -32,10 +34,16 @@ export function BakingPlanner({
   config: c,
   onUpdate,
   calibrations,
+  userPans = [],
+  onUsePan,
+  onOpenProfile,
 }: {
   config: DoughConfig;
   onUpdate: (patch: Partial<DoughConfig>) => void;
   calibrations: BakeCalibration[];
+  userPans?: UserPan[];
+  onUsePan?: (pan: UserPan) => void;
+  onOpenProfile?: () => void;
 }) {
   // Il tempo di cottura segue il dito subito; l’app intera si aggiorna appena il dito si ferma.
   const [minutes, setMinutes] = useState(c.bakeMinutes);
@@ -110,7 +118,32 @@ export function BakingPlanner({
       <div className="bake-topping-impact"><span>Condimento collegato</span><strong>{Math.round(c.toppingMoisture)}% umidità · {c.toppingLoad.toLocaleString("it-IT", { maximumFractionDigits: 2 })} g/cm²</strong><small>Il simulatore usa questi valori per mollica e fondo.</small></div>
 
       <div className="bake-choice">
-        <span>Supporto di cottura</span>
+        <span>Supporto di cottura <HelpTip topic="supporto" /></span>
+        {userPans.length > 0 && onUsePan && (
+          <div className="my-pans-support" role="group" aria-label="Le tue teglie">
+            <small>Le tue teglie</small>
+            <div>
+              {userPans.map((pan) => {
+                const inUse = isPanInUse(pan, c);
+                return (
+                  <button key={pan.id} className={inUse ? "selected" : ""} aria-pressed={inUse} onClick={() => onUsePan(pan)}>
+                    <span className={`shape-icon ${pan.shape === "round" ? "round" : "rect"}`} aria-hidden="true" />
+                    <span>
+                      <strong>{pan.name}</strong>
+                      <small>{panSize(pan)} · {bakeSurfaceLabels[pan.surface].toLowerCase()}</small>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <small>Oppure un supporto generico:</small>
+          </div>
+        )}
+        {userPans.length === 0 && onOpenProfile && (
+          <p className="small-muted pan-tip">
+            Le tue teglie, salvate nel <button className="text-button inline-link" aria-label="Apri il profilo" onClick={onOpenProfile}>Profilo</button>, compaiono qui con misure e materiale.
+          </p>
+        )}
         <div className="surface-options">
           {surfaceOptions.map(([id, label]) => (
             <button key={id} className={c.bakeSurface === id ? "selected" : ""} aria-pressed={c.bakeSurface === id} onClick={() => onUpdate({ bakeSurface: id })}>
@@ -122,7 +155,7 @@ export function BakingPlanner({
 
       <div className="bake-prediction-window">
         <div className="prediction-heading">
-          <div><small>ANTEPRIMA IN TEMPO REALE</small><h3>Risultato previsto</h3></div>
+          <div><small>ANTEPRIMA IN TEMPO REALE</small><h3>Risultato previsto <HelpTip topic="fascia" /></h3></div>
           <span aria-live="polite">{formatTime(minutes)}</span>
         </div>
         <div className="bake-curve">

@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import {
   ArrowSquareOut,
+  BellRinging,
   CheckCircle,
   Export,
   Fire,
@@ -11,16 +12,18 @@ import {
   ShieldCheck,
   Trash,
   UploadSimple,
+  Wrench,
 } from "@phosphor-icons/react";
 import { bakeSurfaceLabels } from "../domain/calculator";
 import { recipeStatus } from "../domain/recipes";
-import type { DoughConfig, EquipmentProfile, Flour, Recipe, StoredState, UserOven } from "../domain/types";
-import { ovenById, ovenProfiles } from "../data/ovens";
-import { EquipmentProfiles } from "./EquipmentProfiles";
+import type { DoughConfig, Flour, Recipe, StoredState, UserOven, UserPan } from "../domain/types";
+import { ovenById } from "../data/ovens";
+import { UserPans } from "./UserPans";
+import { SelectSheet } from "./SelectSheet";
+import { mixerOptions, ovenOptions, planetaryOptions, surfaceOptions } from "../data/options";
 import { InsightsDashboard } from "./InsightsDashboard";
 import { SupportCard } from "./SupportCard";
 
-const surfaces = Object.entries(bakeSurfaceLabels) as [DoughConfig["bakeSurface"], string][];
 const PRIVACY_URL = "https://paolodelu95.github.io/PizzaLab/privacy/";
 
 type Props = {
@@ -33,12 +36,14 @@ type Props = {
   onAddOven: (oven: UserOven) => void;
   onDeleteOven: (id: string) => void;
   onUseOven: (oven: UserOven) => void;
-  onSaveEquipment: (name: string) => void;
-  onLoadEquipment: (profile: EquipmentProfile) => void;
-  onDeleteEquipment: (id: string) => void;
+  onAddPan: (pan: UserPan) => void;
+  onDeletePan: (id: string) => void;
+  onUsePan: (pan: UserPan) => void;
+  onMixerChange: (patch: Pick<DoughConfig, "mixer" | "mixerProfileId">) => void;
   onExport: () => void;
   onImport: (file: File) => void;
   onShowTutorial: () => void;
+  onLeadChange: (minutes: number) => void;
 };
 
 const initials = (name: string) =>
@@ -54,16 +59,14 @@ export function ProfilePage(props: Props) {
   const importRef = useRef<HTMLInputElement>(null);
   const name = state.profileName ?? "";
   const ovens = state.userOvens ?? [];
+  const pans = state.userPans ?? [];
   const counts = { active: 0, saved: 0, past: 0 };
   for (const recipe of state.recipes) counts[recipeStatus(recipe, state.activeId, now)] += 1;
   const past: Recipe[] = state.recipes.filter((recipe) => recipeStatus(recipe, state.activeId, now) === "past");
   const stats = [
-    ["Pizze sfornate", counts.past],
-    ["In corso", counts.active],
-    ["Salvate", counts.saved],
     ["Lieviti madre", state.sourdoughProfiles.length],
     ["Farine personali", state.customFlours.length],
-    ["Tarature forno", state.bakeCalibrations.length],
+    ["Tarature del forno", state.bakeCalibrations.length],
   ] as const;
 
   return (
@@ -72,7 +75,7 @@ export function ProfilePage(props: Props) {
         <div>
           <span className="eyebrow">Il tuo profilo</span>
           <h1>{name.trim() ? `Ciao, ${name.trim().split(/\s+/)[0]}.` : "Il tuo profilo."}</h1>
-          <p>Il tuo nome, i tuoi forni, l’attrezzatura, le statistiche e le impostazioni, tutto in un posto.</p>
+          <p>Salva qui una volta sola la tua cucina: forni, teglie e impastatrice li ritrovi già pronti a ogni impasto.</p>
         </div>
         <div className="heading-illustration profile-avatar-large" aria-hidden="true">
           {initials(name) || <Gear weight="duotone" />}
@@ -80,12 +83,81 @@ export function ProfilePage(props: Props) {
       </div>
 
       <section className="panel profile-card">
-        <div className="profile-avatar" aria-hidden="true">{initials(name) || "?"}</div>
-        <label className="field">
-          Come ti chiami?
-          <input value={name} maxLength={40} placeholder="Il tuo nome" onChange={(event) => props.onNameChange(event.target.value)} />
-          <small>Serve solo per salutarti: resta sul telefono, come tutto il resto.</small>
-        </label>
+        <div className="profile-card-top">
+          <div className="profile-avatar" aria-hidden="true">{initials(name) || "?"}</div>
+          <label className="field">
+            Come ti chiami?
+            <input value={name} maxLength={40} placeholder="Il tuo nome" onChange={(event) => props.onNameChange(event.target.value)} />
+          </label>
+        </div>
+        <div className="profile-summary" aria-label="Le tue pizze">
+          <div><strong>{counts.past}</strong><span>sfornate</span></div>
+          <div><strong>{counts.active}</strong><span>in corso</span></div>
+          <div><strong>{counts.saved}</strong><span>salvate</span></div>
+        </div>
+      </section>
+
+      <div className="profile-group-title">
+        <h2>La tua cucina</h2>
+        <span>Quello che salvi qui compare come scelta rapida nei passaggi dell’impasto.</span>
+      </div>
+
+      <UserOvens ovens={ovens} config={config} onAdd={props.onAddOven} onDelete={props.onDeleteOven} onUse={props.onUseOven} />
+
+      <UserPans pans={pans} config={config} onAdd={props.onAddPan} onDelete={props.onDeletePan} onUse={props.onUsePan} />
+
+      <section className="panel kneading-panel" aria-labelledby="kneading-title">
+        <div className="panel-title">
+          <span className="section-icon"><Wrench /></span>
+          <div>
+            <h2 id="kneading-title">Come impasti</h2>
+            <p>Serve a calcolare la temperatura dell’acqua e, per la planetaria, a suggerirti velocità e tempi.</p>
+          </div>
+        </div>
+        <div className="field-grid">
+          <SelectSheet
+            label="Lavorazione"
+            help="lavorazione"
+            value={config.mixer}
+            options={mixerOptions}
+            onChange={(mixer) => props.onMixerChange({ mixer, mixerProfileId: config.mixerProfileId })}
+          />
+          {config.mixer === "stand" && (
+            <SelectSheet
+              label="La tua planetaria"
+              value={config.mixerProfileId || planetaryOptions[0].value}
+              options={planetaryOptions}
+              onChange={(mixerProfileId) => props.onMixerChange({ mixer: config.mixer, mixerProfileId })}
+            />
+          )}
+        </div>
+      </section>
+
+      <section className="panel notifications-panel" aria-labelledby="notifications-title">
+        <div className="panel-title">
+          <span className="section-icon"><BellRinging /></span>
+          <div>
+            <h2 id="notifications-title">Notifiche</h2>
+            <p>Sono normali notifiche del telefono: non creano promemoria né eventi nel calendario.</p>
+          </div>
+        </div>
+        <div className="lead-options" role="radiogroup" aria-label="Quando avvisarti">
+          <span>Avvisami</span>
+          <div>
+            {[0, 5, 10, 15, 30].map((minutes) => (
+              <button
+                key={minutes}
+                role="radio"
+                aria-checked={(state.reminderLeadMinutes ?? 0) === minutes}
+                className={(state.reminderLeadMinutes ?? 0) === minutes ? "selected" : ""}
+                onClick={() => props.onLeadChange(minutes)}
+              >
+                {minutes === 0 ? "All’orario esatto" : `${minutes} min prima`}
+              </button>
+            ))}
+          </div>
+        </div>
+        <small>Vale per le fasi dell’impasto e per i rinfreschi del lievito madre. Le notifiche già programmate si aggiornano da sole.</small>
       </section>
 
       <section className="profile-stats" aria-labelledby="stats-title">
@@ -102,16 +174,11 @@ export function ProfilePage(props: Props) {
           ))}
         </div>
       </section>
-      {past.length > 0 && <InsightsDashboard recipes={past} flours={flours} />}
-
-      <UserOvens ovens={ovens} config={config} onAdd={props.onAddOven} onDelete={props.onDeleteOven} onUse={props.onUseOven} />
-
-      <EquipmentProfiles
-        profiles={state.equipmentProfiles}
-        onSave={props.onSaveEquipment}
-        onLoad={props.onLoadEquipment}
-        onDelete={props.onDeleteEquipment}
-      />
+      {past.length > 0 ? (
+        <InsightsDashboard recipes={past} flours={flours} />
+      ) : (
+        <p className="small-muted profile-empty-stats">Quando concludi le prime pizze qui compaiono idratazione media, tempi e lo stile che prepari di più.</p>
+      )}
 
       <section className="panel settings-panel">
         <div className="panel-title">
@@ -229,17 +296,13 @@ function UserOvens({
           }}
         >
           <div className="field-grid">
-            <label className="field">
-              Modello o tipo di forno
-              <select value={model} onChange={(event) => chooseModel(event.target.value)}>
-                <optgroup label="Tipi di forno">
-                  {ovenProfiles.filter((item) => item.group === "generic").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                </optgroup>
-                <optgroup label="Forni per pizza">
-                  {ovenProfiles.filter((item) => item.group === "pizza").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                </optgroup>
-              </select>
-            </label>
+            <SelectSheet
+              label="Modello o tipo di forno"
+              value={model}
+              options={ovenOptions()}
+              searchPlaceholder="Cerca Ariete, Ooni, legna…"
+              onChange={chooseModel}
+            />
             <label className="field">
               Nome
               <input value={name} maxLength={40} placeholder={modelInfo.name} onChange={(event) => setName(event.target.value)} />
@@ -252,12 +315,13 @@ function UserOvens({
               </div>
               <small>Dichiarata dal produttore: {modelInfo.maxTemp} °C. Se hai un termometro, metti quella misurata.</small>
             </label>
-            <label className="field">
-              Supporto di cottura
-              <select value={surface} onChange={(event) => setSurface(event.target.value as DoughConfig["bakeSurface"])}>
-                {surfaces.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-              </select>
-            </label>
+            <SelectSheet
+              label="Supporto di cottura"
+              help="supporto"
+              value={surface}
+              options={surfaceOptions}
+              onChange={setSurface}
+            />
           </div>
           <p className="oven-form-note">{modelInfo.note}</p>
           <div className="oven-form-actions">

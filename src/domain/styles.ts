@@ -127,6 +127,27 @@ export const styles: PizzaStyle[] = [
     pan: true,
   },
   {
+    id: "focaccia-barese",
+    name: "Focaccia barese",
+    subtitle: "Alta e morbida, in teglia tonda con pomodorini e olive.",
+    hydration: 75,
+    hydrationRange: [68, 82],
+    ballWeight: 450,
+    salt: 2.5,
+    oil: 2,
+    cold: 0,
+    bulk: 2,
+    proof: 2,
+    minW: 220,
+    oven: 240,
+    bake: "Circa 25–30 minuti sul ripiano basso, finché il fondo è dorato e croccante.",
+    tip: "Ungi abbondantemente la teglia tonda con olio extravergine, allarga l’impasto con le dita e lascialo lievitare in teglia. Prima di infornare schiaccia i pomodorini sulla superficie e aggiungi olive, origano e sale grosso. Per il gusto tradizionale usa metà semola rimacinata di grano duro, dalla miscela di farine.",
+    pan: true,
+    panShape: "round",
+    panDiameter: 28,
+    panDensity: 0.7,
+  },
+  {
     id: "new-york",
     name: "New York",
     subtitle: "Pieghevole, saporita, dal bordo dorato.",
@@ -248,6 +269,7 @@ export function recommendedFolds(styleId: string): { count: number; interval: nu
     pinsa: [4, "l’impasto è molto fluido e va rinforzato più volte"],
     detroit: [2, "due pieghe aiutano a ottenere una mollica alta e regolare"],
     focaccia: [2, "due pieghe danno sviluppo e alveoli più uniformi"],
+    "focaccia-barese": [2, "con tanta acqua e semola, due pieghe rendono la massa più facile da allargare in teglia"],
     sfincione: [2, "un paio di pieghe rendono l’impasto più facile da stendere in teglia"],
   };
   const [count, reason] = table[styleId] ?? [0, "l’impasto è abbastanza sostenuto: basta impastarlo bene"];
@@ -267,12 +289,12 @@ export function bakingDefaults(
       bakeSurface: "biscotto",
     };
   if (
-    ["teglia", "focaccia", "detroit", "sfincione", "padellino"].includes(
+    ["teglia", "focaccia", "focaccia-barese", "detroit", "sfincione", "padellino"].includes(
       styleId,
     )
   )
     return {
-      bakeMinutes: styleId === "focaccia" || styleId === "sfincione" ? 25 : 16,
+      bakeMinutes: ["focaccia", "focaccia-barese", "sfincione"].includes(styleId) ? 25 : 16,
       ovenRack: "lower-middle",
       bakeSurface: "dark-pan",
     };
@@ -302,6 +324,8 @@ export function defaultConfig(): DoughConfig {
     ballWeight: 260,
     panWidth: 30,
     panLength: 40,
+    panShape: "rect",
+    panDiameter: 28,
     panDensity: 0.6,
     hydration: 63,
     salt: 2.8,

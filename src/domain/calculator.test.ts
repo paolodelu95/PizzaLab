@@ -4,6 +4,7 @@ import {
   calculate,
   deriveAutomaticSchedule,
   estimateBakeOutcome,
+  panArea,
   recommendedBakeMinutes,
   validateConfig,
 } from "./calculator";
@@ -436,6 +437,23 @@ describe("fridge advice", () => {
     expect(has(short)).toBe(true);
     expect(has(long)).toBe(false);
     expect(has(none)).toBe(false);
+  });
+});
+
+describe("round pans", () => {
+  it("computes the dough on the circle area", () => {
+    expect(panArea({ panShape: "round", panDiameter: 28, panWidth: 30, panLength: 40 })).toBeCloseTo(Math.PI * 14 * 14, 5);
+    const round = result({ styleId: "teglia", count: 1, panShape: "round", panDiameter: 28, panDensity: 0.6 });
+    const rect = result({ styleId: "teglia", count: 1, panShape: "rect", panWidth: 30, panLength: 40, panDensity: 0.6 });
+    expect(round.ok && rect.ok).toBe(true);
+    if (!round.ok || !rect.ok) return;
+    expect(round.total).toBeCloseTo(Math.PI * 14 * 14 * 0.6, 0);
+    expect(rect.total).toBeCloseTo(1200 * 0.6, 0);
+  });
+  it("offers focaccia barese as a round-pan style", () => {
+    const barese = styles.find((style) => style.id === "focaccia-barese");
+    expect(barese?.pan).toBe(true);
+    expect(barese?.panShape).toBe("round");
   });
 });
 

@@ -14,8 +14,13 @@ async function cancelRange(min: number, max: number) {
 export async function cancelReminders() {
   await cancelRange(1000, 1999);
 }
-export async function scheduleReminders(recipe: Recipe): Promise<string> {
-  if (!Capacitor.isNativePlatform()) return 'Nel browser puoi seguire la tabella di marcia. I promemoria a schermo spento sono disponibili nell’app Android.';
+const leadText = (minutes: number) => (minutes > 0 ? `Tra ${minutes} minuti: ` : '');
+/** Orario della notifica: la fase meno l’anticipo scelto, ma mai nel passato. */
+const notifyAt = (at: string | Date, leadMinutes: number) =>
+  new Date(Math.max(Date.now() + 5000, new Date(at).getTime() - leadMinutes * 60000));
+
+export async function scheduleReminders(recipe: Recipe, leadMinutes = 0): Promise<string> {
+  if (!Capacitor.isNativePlatform()) return 'Nel browser puoi seguire la tabella di marcia. Le notifiche a schermo spento sono disponibili nell’app Android.';
   const stages = buildTimeline(recipe.config).filter(s => new Date(s.at).getTime() > Date.now());
   if (!stages.length) throw new Error('Questo piano è terminato. Imposta una nuova data.');
   const permission = await LocalNotifications.requestPermissions();
@@ -23,10 +28,10 @@ export async function scheduleReminders(recipe: Recipe): Promise<string> {
   await LocalNotifications.createChannel({ id: CHANNEL, name: 'Il tuo impasto', description: 'Promemoria per ogni fase della pizza', importance: 4, visibility: 1, vibration: true });
   await cancelReminders();
   await LocalNotifications.schedule({ notifications: stages.map((stage,index) => ({
-    id: 1000+index, title: `PizzaLab · ${stage.title}`, body: stage.detail,
-    channelId: CHANNEL, isExactNotification: false, schedule: { at: new Date(stage.at), allowWhileIdle: true }, extra: { recipeId: recipe.id },
+    id: 1000+index, title: `PizzaLab · ${stage.title}`, body: `${leadText(leadMinutes)}${stage.detail}`,
+    channelId: CHANNEL, isExactNotification: false, schedule: { at: notifyAt(stage.at, leadMinutes), allowWhileIdle: true }, extra: { recipeId: recipe.id },
   })) });
-  return `${stages.length} promemoria programmati. Android può ritardarli in base al risparmio energetico; gli orari restano visibili nel piano.`;
+  return `${stages.length} notifiche programmate${leadMinutes ? `, ${leadMinutes} minuti prima di ogni fase` : ''}. Android può ritardarle leggermente per il risparmio energetico; gli orari restano visibili nel piano.`;
 }
 
 function starterNotificationBase(profileId: string) {
@@ -41,7 +46,7 @@ export async function cancelStarterReminders(profileId?: string) {
   await cancelRange(base, base + 31);
 }
 
-export async function scheduleStarterReminders(profile: SourdoughProfile): Promise<string> {
+export async function scheduleStarterReminders(profile: SourdoughProfile, leadMinutes = 0): Promise<string> {
   if (!Capacitor.isNativePlatform())
     return 'Promemoria salvati. Le notifiche a schermo spento saranno attive nell’app Android.';
   const permission = await LocalNotifications.requestPermissions();
@@ -63,13 +68,13 @@ export async function scheduleStarterReminders(profile: SourdoughProfile): Promi
     title: `PizzaLab · Rinfresca ${profile.name}`,
     body: profile.phase === 'mature' && profile.storage === 'fridge'
       ? 'Togli il lievito dal frigo, osservalo e procedi con il rinfresco settimanale.'
-      : `È il momento del rinfresco. Intervallo previsto: ${starterIntervalHours(profile, at)} ore.`,
+      : `${leadText(leadMinutes)}${leadMinutes ? 'rinfresco' : 'È il momento del rinfresco'}. Intervallo previsto: ${starterIntervalHours(profile, at)} ore.`,
     channelId: STARTER_CHANNEL,
     isExactNotification: false,
-    schedule: { at, allowWhileIdle: true },
+    schedule: { at: notifyAt(at, leadMinutes), allowWhileIdle: true },
     extra: { section: 'sourdough', profileId: profile.id },
   })) });
-  return `${dates.length} promemoria del lievito madre programmati. Android può ritardarli leggermente per il risparmio energetico.`;
+  return `${dates.length} notifiche del lievito madre programmate. Android può ritardarli leggermente per il risparmio energetico.`;
 }
 
 /** Toccando una notifica, l’app si apre sulla sezione giusta. */

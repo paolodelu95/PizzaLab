@@ -14,17 +14,17 @@ PizzaLab è il tuo laboratorio della pizza: scegli lo stile, dimmi quando vuoi m
 
 Pensata per chi inizia e per chi vuole migliorare: ogni termine tecnico è spiegato in una riga, i valori consigliati si impostano da soli e puoi personalizzare tutto quando ti senti pronto.
 
-🍕 12 STILI DI PIZZA
-Napoletana, contemporanea, romana tonda, in teglia, alla pala, al padellino, focaccia, New York, Detroit, pinsa, sfincione e tonda al forno di casa. Tocchi lo stile e idratazione, sale, olio e tempi partono già dai valori giusti.
+🍕 13 STILI DI PIZZA
+Napoletana, contemporanea, romana tonda, in teglia, alla pala, al padellino, focaccia, focaccia barese, New York, Detroit, pinsa, sfincione e tonda al forno di casa. Tocchi lo stile e idratazione, sale, olio e tempi partono già dai valori giusti.
 
 ⚖️ DOSI PRECISE IN 4 PASSAGGI
 1. Impasto: farina, numero e peso dei panetti o misure della teglia, idratazione.
 2. Lievitazione: puntata, frigo e appretto, oppure il piano automatico che parte dall’orario in cui inizi e da quello in cui vuoi mangiare.
 3. Cottura: tipo di forno, supporto e altezza, con l’anteprima di crosta, mollica e fondo.
-4. Riepilogo: tabella di marcia completa, poi scegli se iniziare subito o salvare per dopo.
+4. Riepilogo: tabella di marcia completa, poi programmi la partenza o salvi per dopo. Se sei in ritardo, l’app sposta la cena oppure ricalcola lievito e tempi per mangiare alla stessa ora.
 
-⏰ PROMEMORIA A OGNI FASE
-Premi «Inizia ora» e ricevi una notifica quando è il momento di impastare, fare le pieghe, formare i panetti, toglierli dal frigo e infornare.
+⏰ UNA NOTIFICA A OGNI FASE
+Premi «Programma»: la pizza parte da sola all’orario impostato e ricevi una notifica quando è il momento di impastare, fare le pieghe, formare i panetti, toglierli dal frigo e infornare. Puoi farti avvisare anche qualche minuto prima.
 
 📓 DIARIO DELLE TUE PIZZE
 Pizze in corso, salvate da riprendere e già sfornate, ognuna al suo posto. Durante l’impasto hai la bilancia che ti fa pesare un ingrediente alla volta e la guida passo passo con timer. Dopo la cottura dai un voto, annoti cosa cambiare e registri il risultato per tarare le previsioni sul tuo forno.
@@ -36,14 +36,14 @@ Farine italiane con forza W e proteine riprese dalle schede dei produttori, più
 Un percorso guidato per creare e mantenere la tua coltura: dosi dei rinfreschi, registro della crescita, promemoria e controlli di sicurezza. Quando è pronta, la colleghi al tuo impasto.
 
 🧀 CONDIMENTI NELLE GIUSTE DOSI
-15 ricette classiche, dalla margherita alla salsiccia e friarielli, con grammature calcolate sulla superficie reale delle tue pizze, l’ordine giusto degli ingredienti e la lista della spesa.
+16 ricette classiche, dalla margherita alla salsiccia e friarielli, con grammature calcolate sulla superficie reale delle tue pizze, l’ordine giusto degli ingredienti e la lista della spesa.
 
 🌡️ E ANCORA
 • Temperatura dell’acqua consigliata per il tuo impasto
 • Poolish, biga, autolisi e pieghe di rinforzo, con i consigli per ogni stile
 • Grafici di idratazione, lievito e fermentazione
 • Pronto soccorso dell’impasto e glossario per chi inizia
-• Profilo con i tuoi forni (anche Ariete, G3 Ferrari, Effeuno, Ooni, Gozney), attrezzatura e statistiche
+• Profilo con i tuoi forni (anche Ariete, G3 Ferrari, Effeuno, Ooni, Gozney), le tue teglie, l’impastatrice e le statistiche
 • Esportazione e importazione del diario
 
 🔒 SENZA ACCOUNT, SENZA PUBBLICITÀ
@@ -62,9 +62,9 @@ Se PizzaLab ti è stata utile, puoi offrirmi una pizza con un contributo libero:
 - Sito web: facoltativo (per esempio la pagina GitHub del progetto)
 - Informativa sulla privacy: https://paolodelu95.github.io/PizzaLab/privacy/ (sorgente in `docs/privacy/index.md`)
 
-## Note di rilascio 0.16.0 (max 500 caratteri)
+## Note di rilascio 0.20.1 (max 500 caratteri)
 
-Nuova interfaccia per telefoni, pieghevoli e tablet, con tema scuro e un breve tutorial iniziale. Riepilogo per iniziare subito o salvare per dopo, diario con pizze in corso, salvate e passate. Nuovo Profilo con i tuoi forni, attrezzatura e statistiche; forni per pizza come Ariete, G3 Ferrari, Effeuno, Ooni e Gozney con preriscaldamento e tempi dedicati.
+Nuova interfaccia per telefoni, pieghevoli e tablet, con tema scuro e tutorial iniziale. Programma una pizza e parte da sola all’orario impostato, con notifiche anche qualche minuto prima; se sei in ritardo sposti la cena o ricalcoli lievito e tempi. Profilo con forni, attrezzatura e statistiche; forni per pizza come Ariete, G3 Ferrari, Effeuno, Ooni e Gozney.
 
 ## Grafiche (cartella `store/graphics`)
 

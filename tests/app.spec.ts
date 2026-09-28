@@ -1,4 +1,27 @@
 import { test, expect } from "@playwright/test";
+
+/** Sceglie un’opzione dai pannelli di selezione dell’app (al posto delle tendine native). */
+async function pick(
+  page: import("@playwright/test").Page,
+  trigger: import("@playwright/test").Locator,
+  option: string | RegExp,
+) {
+  await trigger.click();
+  await page.getByRole("dialog").last().getByRole("button", { name: option }).first().click();
+}
+
+/** Porta la cottura a tra 3 ore: l’inizio risulta passato e si parte subito spostando la cena. */
+async function startNowFromSummary(page: import("@playwright/test").Page) {
+  const soon = await page.evaluate(() => {
+    const d = new Date(Date.now() + 3 * 3600000);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  });
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.getByLabel("Giorno e ora della prima infornata").fill(soon);
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await page.getByRole("button", { name: "Parti adesso" }).click();
+  await page.getByRole("button", { name: /Sposta la cena/ }).click();
+}
 test.beforeEach(async ({ page }, testInfo) => {
   if (testInfo.title.includes("tutorial")) return;
   await page.addInitScript(() =>
@@ -45,11 +68,22 @@ test("calculate, save, annotate, persist and delete a recipe", async ({
     page.getByRole("heading", { name: "Prova teglia", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("tab", { name: /Salvate/ })).toHaveAttribute("aria-selected", "true");
-  await page.getByRole("button", { name: "Inizia ora" }).click();
-  await expect(page.getByRole("status")).toContainText("browser");
+  // Una pizza per un giorno futuro si programma: partirà da sola all’orario impostato.
+  await expect(page.getByRole("button", { name: "Inizia ora" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Programma" }).click();
+  await expect(page.getByRole("status")).toContainText("Programmata");
   await expect(page.getByRole("tab", { name: /In corso/ })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText(/^Programmata · parte/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Pizza sfornata/ })).toHaveCount(0);
+  await page.getByRole("button", { name: /Annulla la programmazione/ }).click();
+  await expect(page.getByRole("tab", { name: /Salvate/ })).toHaveAttribute("aria-selected", "true");
+  // Cambio idea: la faccio subito. L’inizio risulta passato e sposto la cena.
+  await page.getByRole("button", { name: "Modifica" }).click();
+  await startNowFromSummary(page);
+  await expect(page.getByRole("tab", { name: /In corso/ })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "Prova teglia", exact: true })).toBeVisible();
   await page.getByText("Temperature reali e controllo scostamenti").click();
-  await page.getByLabel("Punto di misura").selectOption("frigo");
+  await pick(page, page.getByLabel("Punto di misura"), /^Frigo/);
   await page.getByLabel("Temperatura misurata").fill("8");
   await page.getByRole("button", { name: "Registra" }).click();
   await expect(page.getByText("Frigo più caldo del piano")).toBeVisible();
@@ -185,7 +219,7 @@ test("preferment, water temperature, manual yeast and oven profile work together
   await page.getByRole("button", { name: "Percentuale" }).click();
   await page.getByLabel("Lievito fresco sulla farina").fill("0.12");
   await page.getByRole("button", { name: /^3 Cottura/ }).click();
-  await page.getByLabel("Tipo di forno").selectOption("portable-gas");
+  await pick(page, page.getByLabel("Tipo di forno"), /^Forno pizza portatile a gas/);
   await expect(page.getByLabel("Temperatura effettiva")).toHaveValue("500");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await page.getByRole("button", { name: /Manuale/ }).click();
@@ -214,8 +248,8 @@ test("temperature editing stays mounted and autolyse and mixer guidance are expl
   await expect(
     page.getByText("Autolisi breve", { exact: true }).last(),
   ).toBeVisible();
-  await page.getByLabel("Lavorazione").selectOption("stand");
-  await page.getByLabel("La tua planetaria").selectOption("kitchenaid-tilt");
+  await pick(page, page.getByLabel("Lavorazione"), /^Planetaria/);
+  await pick(page, page.getByLabel("La tua planetaria"), /^KitchenAid/);
   await expect(page.getByText(/Velocità 2 · max 4–6 min/)).toBeVisible();
   await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
   await expect(page.getByText("FARINA TOTALE")).toBeVisible();
@@ -225,7 +259,7 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
-  await page.locator(".temperature-fields select").selectOption("licoli");
+  await pick(page, page.getByRole("button", { name: /^Lievito (Di birra|Secco|Pasta|Licoli)/ }), /^Licoli/);
   await expect(page.getByLabel("Licoli sulla farina")).toBeVisible();
   await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
   await expect(
@@ -237,14 +271,11 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
     .getByRole("button", { name: "Il tuo impasto", exact: true })
     .click();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
-  await expect(page.getByRole("heading", { name: "La tua attrezzatura" })).toHaveCount(0);
   await page.getByRole("button", { name: "Profilo", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "La tua attrezzatura" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Le tue teglie" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "La tua attrezzatura" })).toHaveCount(0);
   await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
-  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
-  await page.getByRole("button", { name: "Inizia ora" }).click();
+  await startNowFromSummary(page);
   await page.getByRole("button", { name: "Pesa" }).click();
   await expect(page.getByText("Modalità bilancia")).toBeVisible();
   await page.getByRole("button", { name: "Chiudi modalità bilancia" }).click();
@@ -297,7 +328,7 @@ test("predicts crust, crumb and base from the baking setup", async ({ page }) =>
   // Il forno elettrico per pizza ha la pietra fissa: niente scelta dell’altezza.
   await expect(page.getByRole("group", { name: "Altezza nel forno" })).toHaveCount(0);
   await expect(page.getByText(/la pietra è a un’altezza fissa/)).toBeVisible();
-  await page.getByLabel("Tipo di forno").selectOption("home-static");
+  await pick(page, page.getByLabel("Tipo di forno"), /^Domestico statico/);
   await expect(page.getByRole("group", { name: "Altezza nel forno" })).toBeVisible();
   const initialCrust = await page.locator(".prediction-result.crust small").textContent();
   await page.getByRole("button", { name: "Alto", exact: true }).click();
@@ -470,7 +501,7 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
 
   await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
-  await page.locator(".temperature-fields select").selectOption("licoli");
+  await pick(page, page.getByRole("button", { name: /^Lievito (Di birra|Secco|Pasta|Licoli)/ }), /^Licoli/);
   await page.locator(".starter-link-options").getByRole("button", { name: /Levain sabato/ }).click();
   await expect(page.getByText("Rinfresco preparatorio", { exact: true })).toBeVisible();
   await expect(page.getByText("Rinfresca indicativamente", { exact: true })).toBeVisible();
@@ -486,7 +517,7 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
   await expect(page.locator(".bake-topping-impact")).toContainText("82% umidità");
   await page.getByRole("button", { name: /Passaggio 4 di 4/ }).click();
   await page.getByLabel("Nome del piano").fill("Impasto controllato");
-  await page.getByRole("button", { name: "Inizia ora" }).click();
+  await startNowFromSummary(page);
   await expect(page.getByText("IMPASTO IN CORSO", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Controlli impasto attivo")).toBeVisible();
   await page.getByLabel("Crescita osservata", { exact: true }).fill("2.4");
@@ -519,18 +550,107 @@ test("profile keeps the name, saved ovens and settings in one place", async ({ p
   await page.getByLabel("Come ti chiami?").fill("Paolo");
   await expect(page.getByRole("heading", { name: "Ciao, Paolo." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Le tue statistiche" })).toBeVisible();
-  await page.getByLabel("Modello o tipo di forno").selectOption("ariete-909");
+  await pick(page, page.getByLabel("Modello o tipo di forno"), /^Ariete 909/);
   await expect(page.getByLabel("Temperatura massima reale")).toHaveValue("400");
-  await page.getByLabel("Nome", { exact: true }).fill("Fornetto di casa");
-  await page.getByRole("button", { name: "Salva il forno" }).click();
-  await page.getByRole("button", { name: "Usa", exact: true }).click();
-  await expect(page.getByText("In uso")).toBeVisible();
+  const ovens = page.locator(".user-ovens");
+  await ovens.getByLabel("Nome", { exact: true }).fill("Fornetto di casa");
+  await ovens.getByRole("button", { name: "Salva il forno" }).click();
+  await ovens.getByRole("button", { name: "Usa", exact: true }).click();
+  await expect(ovens.getByText("In uso")).toBeVisible();
   await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
   await page.getByRole("button", { name: /^3 Cottura/ }).click();
-  await expect(page.getByLabel("Tipo di forno")).toHaveValue("ariete-909");
+  await expect(page.getByLabel("Tipo di forno")).toContainText("Ariete 909");
   await expect(page.getByRole("button", { name: "Fornetto di casa" })).toBeVisible();
   await expect(page.getByText(/la pietra è a un’altezza fissa/)).toBeVisible();
   await page.getByRole("button", { name: "Profilo", exact: true }).click();
   await expect(page.getByRole("button", { name: /Esporta il diario/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Rivedi il tutorial" })).toBeVisible();
+});
+
+test("profile stores several pans and the kneading tool without repeating the oven", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Profilo", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "La tua attrezzatura" })).toHaveCount(0);
+  const pans = page.locator(".user-pans");
+  await pans.getByRole("button", { name: "Aggiungi una teglia" }).click();
+  await pans.getByLabel("Nome").fill("Teglia romana");
+  await pans.getByLabel("Larghezza interna").fill("30");
+  await pans.getByLabel("Lunghezza interna").fill("40");
+  await pans.getByRole("button", { name: "Salva la teglia" }).click();
+  await pans.getByRole("button", { name: "Aggiungi un’altra teglia" }).click();
+  await pans.getByLabel("Nome").fill("Teglia Detroit");
+  await pans.getByLabel("Larghezza interna").fill("25");
+  await pans.getByLabel("Lunghezza interna").fill("35");
+  await pick(page, pans.getByLabel("Materiale"), /^Ghisa/);
+  await pans.getByRole("button", { name: "Salva la teglia" }).click();
+  await expect(pans.locator(".oven-list article")).toHaveCount(2);
+  await pick(page, page.locator(".kneading-panel").getByLabel("Lavorazione"), /^Planetaria/);
+  await pick(page, page.locator(".kneading-panel").getByLabel("La tua planetaria"), /^KitchenAid/);
+
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await expect(page.getByLabel("Lavorazione")).toContainText("Planetaria");
+  await page.getByRole("button", { name: "In teglia Da condividere" }).click();
+  await page.getByRole("button", { name: /Teglia Detroit · 25×35/ }).click();
+  await expect(page.getByLabel("Larghezza teglia", { exact: true })).toHaveValue("25");
+  await expect(page.getByLabel("Lunghezza teglia", { exact: true })).toHaveValue("35");
+  await page.getByRole("button", { name: /Teglia romana · 30×40/ }).click();
+  await expect(page.getByLabel("Larghezza teglia", { exact: true })).toHaveValue("30");
+  // Le teglie salvate si scelgono anche come supporto di cottura.
+  await page.getByRole("button", { name: /^3 Cottura/ }).click();
+  const support = page.getByRole("group", { name: "Le tue teglie" });
+  await support.getByRole("button", { name: /Teglia Detroit/ }).click();
+  await expect(support.getByRole("button", { name: /Teglia Detroit/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Ghisa", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await expect(page.getByLabel("Larghezza teglia", { exact: true })).toHaveValue("25");
+});
+
+test("a late start can keep dinner time by recalculating yeast and rise", async ({ page }) => {
+  await page.goto("/");
+  const soon = await page.evaluate(() => {
+    const d = new Date(Date.now() + 5 * 3600000);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  });
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.getByLabel("Giorno e ora della prima infornata").fill(soon);
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await expect(page.getByText(/L’orario di inizio è già passato/)).toBeVisible();
+  await page.getByRole("button", { name: "Parti adesso" }).click();
+  const dialog = page.getByRole("dialog", { name: "Parti in ritardo?" });
+  await expect(dialog.getByText(/Lievitazione da 24 a/)).toBeVisible();
+  await dialog.getByRole("button", { name: /Mangio comunque/ }).click();
+  await expect(page.getByText("IMPASTO IN CORSO", { exact: true })).toBeVisible();
+  await expect(page.locator(".journal-card .eyebrow").first()).toHaveText("In corso");
+  await expect(page.getByRole("button", { name: /Pizza sfornata/ })).toBeVisible();
+});
+
+test("pan styles work with round pans and focaccia barese starts in a round pan", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "In teglia Da condividere" }).click();
+  await page.getByRole("button", { name: "Tonda", exact: true }).click();
+  await expect(page.getByLabel("Larghezza teglia", { exact: true })).toHaveCount(0);
+  await page.getByLabel("Diametro teglia").fill("28");
+  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Quanto misura ogni teglia?" })).toBeVisible();
+  await expect(page.getByLabel("Diametro teglia")).toHaveValue("28");
+  await expect(page.locator(".topping-area")).toContainText("2463 cm²");
+
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: /Focaccia barese/ }).click();
+  await expect(page.getByRole("button", { name: "Tonda", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("Diametro teglia")).toHaveValue("28");
+  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await expect(page.locator(".selected-topping-heading")).toContainText("Focaccia barese");
+  await expect(page.locator(".topping-ingredients")).toContainText("Pomodorini");
+
+  await page.getByRole("button", { name: "Profilo", exact: true }).click();
+  const pans = page.locator(".user-pans");
+  await pans.getByRole("button", { name: "Aggiungi una teglia" }).click();
+  await pans.getByRole("button", { name: "Tonda", exact: true }).click();
+  await pans.getByLabel("Diametro interno").fill("32");
+  await pans.getByRole("button", { name: "Salva la teglia" }).click();
+  await expect(pans.getByText("Tonda · Ø 32 cm")).toBeVisible();
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: /Teglia tonda Ø 32 · Ø 32 cm/ }).click();
+  await expect(page.getByLabel("Diametro teglia")).toHaveValue("32");
 });

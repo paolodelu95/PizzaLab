@@ -15,6 +15,7 @@ import {
   Info,
   Jar,
   Leaf,
+  CalendarCheck,
   ListChecks,
   Notebook,
   PencilSimple,
@@ -44,6 +45,7 @@ import {
   styles,
 } from "./domain/styles";
 import type {
+  UserPan,
   BakeCalibration,
   DoughConfig,
   Flour,
@@ -63,11 +65,12 @@ import { ovenById, ovenProfiles } from "./data/ovens";
 import { ToppingPlanner } from "./components/ToppingPlanner";
 import { DoughRescue } from "./components/DoughRescue";
 import { ProfilePage } from "./components/ProfilePage";
+import { isPanInUse, panSize } from "./components/UserPans";
 import { BakingPlanner } from "./components/BakingPlanner";
 import { SourdoughCare } from "./components/SourdoughCare";
 import { StarterDoughLink } from "./components/StarterDoughLink";
 import { Diary, type DiaryView } from "./components/Diary";
-import { canStartPlan, recipeStatus } from "./domain/recipes";
+import { applyAutomaticPlan, recipeStatus, startTiming } from "./domain/recipes";
 import { emptyState, readState, writeState } from "./services/storage";
 import {
   cancelReminders,
@@ -84,10 +87,13 @@ import {
 import { useCloseOnBack } from "./services/backNavigation";
 import { markTutorialSeen, tutorialSeen } from "./services/tutorial";
 import { Onboarding } from "./components/Onboarding";
+import { LateStartDialog } from "./components/LateStartDialog";
+import { SelectSheet } from "./components/SelectSheet";
+import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.16.0";
+const APP_VERSION = "0.20.1";
 type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
 const nav = [
@@ -113,6 +119,7 @@ const styleTaglines: Record<string, string> = {
   pala: "Leggera e croccante",
   padellino: "Soffice e dorata",
   focaccia: "Soffice e oliata",
+  "focaccia-barese": "Pomodorini e olive",
   "new-york": "Grande e pieghevole",
   detroit: "Alta, bordi croccanti",
   pinsa: "Ovale e leggera",
@@ -144,6 +151,7 @@ export default function App() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [lateStart, setLateStart] = useState<{ source: "planner" } | { source: "recipe"; recipe: Recipe } | null>(null);
   const [diaryView, setDiaryView] = useState<DiaryView>("active");
   useEffect(() => {
     if (!message) return;
@@ -229,30 +237,7 @@ export default function App() {
     ? buildTimeline(active.config).find((s) => new Date(s.at).getTime() > now)
     : undefined;
   function normalizePlanning(config: DoughConfig) {
-    if (config.planMode === "automatic") {
-      const automatic = deriveAutomaticSchedule(config);
-      if (!automatic.ok) return config;
-      const naturalStarter = ["sourdough", "licoli"].includes(config.yeast);
-      const roomRate = 2 ** ((config.roomTemp - 22) / 10);
-      const coldRate = 0.08 * 2 ** ((config.fridgeTemp - 4) / 5);
-      const equivalentHours =
-        (automatic.bulkHours + automatic.proofHours) * roomRate +
-        automatic.coldHours * coldRate;
-      const automaticStarterPercent = Math.max(
-        5,
-        Math.min(50, 20 * (8 / Math.max(0.5, equivalentHours)) ** 0.65),
-      );
-      return {
-        ...config,
-        yeastMode: naturalStarter ? config.yeastMode : "auto" as const,
-        starterPercent: naturalStarter
-          ? Math.round(automaticStarterPercent * 10) / 10
-          : config.starterPercent,
-        bulkHours: automatic.bulkHours,
-        coldHours: automatic.coldHours,
-        proofHours: automatic.proofHours,
-      };
-    }
+    if (config.planMode === "automatic") return applyAutomaticPlan(config);
     if (config.planMode === "duration") {
       const total =
         config.bulkHours +
@@ -278,6 +263,7 @@ export default function App() {
         ...(key === "count" ? { toppingCount: value as number } : {}),
         ...(key === "panWidth" ? { toppingWidth: value as number } : {}),
         ...(key === "panLength" ? { toppingLength: value as number } : {}),
+        ...(key === "panDiameter" ? { pizzaDiameter: value as number } : {}),
       }),
     }));
   }
@@ -305,12 +291,17 @@ export default function App() {
     const style = styles.find((s) => s.id === id)!;
     setState((s) => {
       const oven = ovenProfiles.find((o) => o.id === s.config.ovenType);
+      // Alcuni stili nascono in teglia tonda (focaccia barese): si parte da forma e spessore tipici.
+      const panShape = style.panShape ?? s.config.panShape;
+      const panDiameter = style.panDiameter ?? s.config.panDiameter;
       return {
         ...s,
         config: normalizePlanning({
           ...s.config,
           styleId: id,
-          pizzaDiameter: id === "padellino" ? 20 : id === "new-york" ? 35 : 32,
+          ...(style.pan ? { panShape, panDiameter, panDensity: style.panDensity ?? 0.6 } : {}),
+          ...(id === "focaccia-barese" ? { toppingPresetId: "barese" } : {}),
+          pizzaDiameter: style.pan && panShape === "round" ? panDiameter : id === "padellino" ? 20 : id === "new-york" ? 35 : 32,
           toppingCount: s.config.count,
           toppingWidth: s.config.panWidth,
           toppingLength: s.config.panLength,
@@ -383,40 +374,16 @@ export default function App() {
     });
     setMessage(`Miscela “${blend.name}” caricata.`);
   }
-  function saveEquipment(name: string) {
-    setState((s) => ({
-      ...s,
-      equipmentProfiles: [
-        {
-          id: crypto.randomUUID(),
-          name,
-          mixer: c.mixer,
-          mixerProfileId: c.mixerProfileId,
-          ovenType: c.ovenType,
-          ovenTemp: c.ovenTemp,
-          ovenRack: c.ovenRack,
-          bakeSurface: c.bakeSurface,
-          panWidth: c.panWidth,
-          panLength: c.panLength,
-          createdAt: new Date().toISOString(),
-        },
-        ...s.equipmentProfiles,
-      ],
-    }));
-    setMessage("Profilo attrezzatura salvato.");
-  }
-  function loadEquipment(p: StoredState["equipmentProfiles"][number]) {
+  function usePan(pan: UserPan) {
+    const round = pan.shape === "round";
     updateMany({
-      mixer: p.mixer,
-      mixerProfileId: p.mixerProfileId,
-      ovenType: p.ovenType,
-      ovenTemp: p.ovenTemp,
-      ovenRack: p.ovenRack ?? c.ovenRack,
-      bakeSurface: p.bakeSurface ?? c.bakeSurface,
-      panWidth: p.panWidth,
-      panLength: p.panLength,
+      panShape: round ? "round" : "rect",
+      ...(round
+        ? { panDiameter: pan.diameter ?? 28, pizzaDiameter: pan.diameter ?? 28 }
+        : { panWidth: pan.width, panLength: pan.length, toppingWidth: pan.width, toppingLength: pan.length }),
+      bakeSurface: pan.surface,
     });
-    setMessage(`Profilo “${p.name}” applicato.`);
+    setMessage(`Userai «${pan.name}» (${panSize(pan)}) per gli impasti in teglia.`);
   }
   function exportArchive() {
     const blob = new Blob(
@@ -434,6 +401,7 @@ export default function App() {
             activeSourdoughId: state.activeSourdoughId,
             bakeCalibrations: state.bakeCalibrations,
             userOvens: state.userOvens,
+            userPans: state.userPans,
             profileName: state.profileName,
           },
           null,
@@ -480,6 +448,7 @@ export default function App() {
           : [];
       const bakeCalibrations = Array.isArray(data.bakeCalibrations) ? data.bakeCalibrations : [];
       const userOvens = Array.isArray(data.userOvens) ? data.userOvens : [];
+      const userPans = Array.isArray(data.userPans) ? data.userPans : [];
       if (
         !recipes.length &&
         !customFlours.length &&
@@ -487,7 +456,8 @@ export default function App() {
         !equipmentProfiles.length &&
         !sourdoughProfiles.length &&
         !bakeCalibrations.length &&
-        !userOvens.length
+        !userOvens.length &&
+        !userPans.length
       )
         throw new Error();
       setState((s) => ({
@@ -530,6 +500,10 @@ export default function App() {
           ...userOvens,
           ...(s.userOvens ?? []).filter((old) => !userOvens.some((item) => item.id === old.id)),
         ],
+        userPans: [
+          ...userPans,
+          ...(s.userPans ?? []).filter((old) => !userPans.some((item) => item.id === old.id)),
+        ],
         profileName: s.profileName || (typeof data.profileName === "string" ? data.profileName : ""),
       }));
       setMessage(
@@ -562,8 +536,9 @@ export default function App() {
     }
   }
   /** Salva il piano del calcolatore: "later" lo mette tra le salvate, "start" lo avvia con i promemoria. */
-  async function saveRecipe(mode: "later" | "start") {
+  async function saveRecipe(mode: "later" | "start", configOverride?: DoughConfig) {
     if (!result.ok || loadError) return;
+    const cfg = configOverride ?? c;
     const existing = editingId ? state.recipes.find((r) => r.id === editingId) : undefined;
     const recipe: Recipe = {
       ...(existing ?? { notes: "", rating: 0, createdAt: new Date().toISOString() }),
@@ -571,8 +546,8 @@ export default function App() {
       name:
         recipeName.trim() ||
         existing?.name ||
-        `${result.style.name} · ${new Date(c.bakeAt).toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`,
-      config: { ...c },
+        `${result.style.name} · ${new Date(cfg.bakeAt).toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`,
+      config: { ...cfg },
       completedStages: [],
       temperatureReadings: [],
       startedAt: undefined,
@@ -580,6 +555,7 @@ export default function App() {
     } as Recipe;
     const next = {
       ...state,
+      config: { ...cfg },
       recipes: existing
         ? state.recipes.map((r) => (r.id === recipe.id ? recipe : r))
         : [recipe, ...state.recipes],
@@ -594,7 +570,7 @@ export default function App() {
         await activate(recipe);
       } else {
         setDiaryView("saved");
-        setMessage("Pizza salvata per dopo: la trovi nel diario, tra le salvate. Quando vuoi, premi «Inizia ora».");
+        setMessage("Pizza salvata per dopo: la trovi nel diario, tra le salvate. Quando vuoi, premi «Programma» e partirà da sola all’orario impostato.");
       }
       openTab("diario");
     } catch {
@@ -604,7 +580,7 @@ export default function App() {
   async function activate(recipe: Recipe) {
     setBusy(true);
     try {
-      const note = await scheduleReminders(recipe);
+      const note = await scheduleReminders(recipe, leadMinutes);
       const startedAt = new Date().toISOString();
       setState((s) => ({
         ...s,
@@ -612,7 +588,13 @@ export default function App() {
         recipes: s.recipes.map((r) => (r.id === recipe.id ? { ...r, startedAt, finishedAt: undefined } : r)),
       }));
       setDiaryView("active");
-      setMessage(`Si parte! ${note}`);
+      const first = buildTimeline(recipe.config, flours)[0];
+      const future = first && new Date(first.at).getTime() > Date.now() + 15 * 60000;
+      setMessage(
+        future
+          ? `Programmata! Si parte ${dateLabel(first.at)}: riceverai una notifica a ogni fase. ${note}`
+          : `Si parte! ${note}`,
+      );
     } catch (e) {
       setMessage(
         e instanceof Error
@@ -710,7 +692,7 @@ export default function App() {
       ),
     }));
     if (scheduleChanged && updated.remindersEnabled)
-      void scheduleStarterReminders(updated).catch(() =>
+      void scheduleStarterReminders(updated, leadMinutes).catch(() =>
         setMessage("Routine aggiornata, ma non ho potuto riprogrammare le notifiche."),
       );
   }
@@ -729,7 +711,7 @@ export default function App() {
         : `Rinfresco registrato. Prossimo controllo: ${dateLabel(updated.nextFeedAt)}.`,
     );
     if (updated.remindersEnabled)
-      void scheduleStarterReminders(updated).catch(() =>
+      void scheduleStarterReminders(updated, leadMinutes).catch(() =>
         setMessage("Rinfresco salvato, ma non ho potuto aggiornare le notifiche."),
       );
   }
@@ -737,7 +719,7 @@ export default function App() {
     if (!activeSourdough) return;
     try {
       const profile = { ...activeSourdough, remindersEnabled: true };
-      const note = await scheduleStarterReminders(profile);
+      const note = await scheduleStarterReminders(profile, leadMinutes);
       changeSourdough(profile);
       setMessage(note);
     } catch (error) {
@@ -797,9 +779,22 @@ export default function App() {
     }));
     // Se il check di fermentazione cambia i tempi dell’impasto in corso, i promemoria vanno riallineati.
     if (current && patch.config && state.activeId === id)
-      void scheduleReminders({ ...current, ...patch }).catch(() =>
+      void scheduleReminders({ ...current, ...patch }, leadMinutes).catch(() =>
         setMessage("Tempi aggiornati, ma non ho potuto riprogrammare i promemoria."),
       );
+  }
+  async function changeLeadMinutes(minutes: number) {
+    setState((s) => ({ ...s, reminderLeadMinutes: minutes }));
+    const label = minutes ? `${minutes} minuti prima di ogni fase` : "all’orario esatto di ogni fase";
+    try {
+      const running = state.recipes.find((r) => r.id === state.activeId);
+      if (running) await scheduleReminders(running, minutes);
+      for (const profile of state.sourdoughProfiles.filter((item) => item.remindersEnabled))
+        await scheduleStarterReminders(profile, minutes);
+      setMessage(`Ti avviserò ${label}.`);
+    } catch {
+      setMessage(`Impostazione salvata (${label}), ma non ho potuto aggiornare le notifiche già programmate.`);
+    }
   }
   function saveCalibration(recipe: Recipe, calibration: BakeCalibration) {
     setState((s) => ({
@@ -812,7 +807,8 @@ export default function App() {
   const isPan = styles.find((s) => s.id === c.styleId)?.pan;
   const startPast =
     timeline.length > 0 && new Date(timeline[0].at).getTime() < now;
-  const canStart = canStartPlan(timeline, now);
+  const timing = startTiming(timeline, c.bakeAt, now);
+  const leadMinutes = state.reminderLeadMinutes ?? 0;
   const recommended = recommendedExtras(c.styleId);
   const extrasMatch =
     Math.abs(c.salt - recommended.salt) < 0.05 &&
@@ -1111,6 +1107,7 @@ export default function App() {
                             ? `W ${selectedFlour.w.join("–")}`
                             : "W non disponibile"}
                         </span>
+                        <HelpTip topic="forza" />
                         <span>
                           {selectedFlour?.protein !== null &&
                           selectedFlour?.protein !== undefined
@@ -1121,9 +1118,6 @@ export default function App() {
                           Esplora le farine <ArrowRight />
                         </button>
                       </div>
-                      <p className="field-explainer">
-                        <Info size={16} /> <span><strong>W</strong> indica la forza della farina: più è alto, più l’impasto regge lievitazioni lunghe.</span>
-                      </p>
                       <details className="blend-details">
                         <summary>
                           <span>
@@ -1137,7 +1131,7 @@ export default function App() {
                           </span>
                         </summary>
                         <div className="blend-section">
-                        <p>Vuoi mescolare più farine? Aggiungine fino ad altre tre e scegli la quota di ciascuna.</p>
+                        <p>Vuoi mescolare più farine? Aggiungine fino ad altre tre e scegli la quota di ciascuna. <HelpTip topic="miscela" /></p>
                         <div className="field-grid blend-fields">
                             <FlourPicker
                               label="Seconda farina"
@@ -1274,26 +1268,81 @@ export default function App() {
                           />
                         )}
                       </div>
+                      {isPan && (state.userPans ?? []).length > 0 && (
+                        <div className="my-ovens-picker pan-picker">
+                          <span>Le tue teglie</span>
+                          <div>
+                            {(state.userPans ?? []).map((pan) => (
+                              <button
+                                key={pan.id}
+                                className={isPanInUse(pan, c) ? "selected" : ""}
+                                aria-pressed={isPanInUse(pan, c)}
+                                onClick={() => usePan(pan)}
+                              >
+                                {pan.name} · {panSize(pan)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {isPan && (state.userPans ?? []).length === 0 && (
+                        <p className="small-muted pan-tip">
+                          Hai più teglie? Salvale nel <button className="text-button inline-link" aria-label="Apri il profilo" onClick={() => openTab("profilo")}>Profilo</button> e le sceglierai con un tocco.
+                        </p>
+                      )}
+                      {isPan && (
+                        <div className="method-toggle pan-shape-toggle" role="group" aria-label="Forma della teglia">
+                          <button
+                            className={c.panShape !== "round" ? "selected" : ""}
+                            aria-pressed={c.panShape !== "round"}
+                            onClick={() => update("panShape", "rect")}
+                          >
+                            <span className="shape-icon rect" aria-hidden="true" /> Rettangolare
+                          </button>
+                          <button
+                            className={c.panShape === "round" ? "selected" : ""}
+                            aria-pressed={c.panShape === "round"}
+                            onClick={() => updateMany({ panShape: "round", pizzaDiameter: c.panDiameter })}
+                          >
+                            <span className="shape-icon round" aria-hidden="true" /> Tonda
+                          </button>
+                        </div>
+                      )}
                       {isPan && (
                         <div className="field-grid">
-                          <NumberField
-                            label="Larghezza teglia"
-                            value={c.panWidth}
-                            onChange={(v) => update("panWidth", v)}
-                            min={10}
-                            max={80}
-                            unit="cm"
-                          />
-                          <NumberField
-                            label="Lunghezza teglia"
-                            value={c.panLength}
-                            onChange={(v) => update("panLength", v)}
-                            min={10}
-                            max={100}
-                            unit="cm"
-                          />
+                          {c.panShape === "round" ? (
+                            <NumberField
+                              label="Diametro teglia"
+                              value={c.panDiameter}
+                              onChange={(v) => update("panDiameter", v)}
+                              min={14}
+                              max={60}
+                              unit="cm"
+                              hint="Misurato sul fondo, da bordo interno a bordo interno."
+                            />
+                          ) : (
+                            <>
+                              <NumberField
+                                label="Larghezza teglia"
+                                value={c.panWidth}
+                                onChange={(v) => update("panWidth", v)}
+                                min={10}
+                                max={80}
+                                unit="cm"
+                              />
+                              <NumberField
+                                label="Lunghezza teglia"
+                                value={c.panLength}
+                                onChange={(v) => update("panLength", v)}
+                                min={10}
+                                max={100}
+                                unit="cm"
+                              />
+                            </>
+                          )}
                           <NumberField
                             label="Impasto per superficie"
+                            help="superficie"
                             value={c.panDensity}
                             onChange={(v) => update("panDensity", v)}
                             min={0.3}
@@ -1307,6 +1356,7 @@ export default function App() {
                       <div className="hydration-field">
                         <SliderField
                           label="Idratazione"
+                          help="idratazione"
                           value={c.hydration}
                           onChange={(v) => update("hydration", v)}
                           min={45}
@@ -1433,7 +1483,7 @@ export default function App() {
                       </div>
                       <div className="planning-mode-card">
                         <div>
-                          <span className="eyebrow">COME VUOI PIANIFICARE?</span>
+                          <span className="eyebrow">COME VUOI PIANIFICARE? <HelpTip topic="pianificazione" /></span>
                           <strong>{c.planMode === "automatic" ? "L’app costruisce il piano" : "Decidi tu ogni fase"}</strong>
                           <p>{c.planMode === "automatic" ? "Indica quando inizi e quando vuoi mangiare: tempi e lievito li calcola PizzaLab." : "Scegli tu le ore di ogni riposo. Consigliato se conosci già il tuo impasto."}</p>
                         </div>
@@ -1510,6 +1560,7 @@ export default function App() {
                       <div className="time-fields slider-time-fields">
                         <SliderField
                           label="Puntata fuori frigo"
+                          help="puntata"
                           value={c.bulkHours}
                           onChange={(v) =>
                             update(
@@ -1533,6 +1584,7 @@ export default function App() {
                         />
                         <SliderField
                           label="Riposo in frigo"
+                          help="frigo"
                           value={c.coldHours}
                           onChange={(v) => update("coldHours", v)}
                           min={0}
@@ -1544,6 +1596,7 @@ export default function App() {
                         />
                         <SliderField
                           label="Appretto fuori frigo"
+                          help="appretto"
                           value={c.proofHours}
                           onChange={(v) => update("proofHours", v)}
                           min={0}
@@ -1599,34 +1652,27 @@ export default function App() {
                             unit="°C"
                           />
                         )}
-                        <label className="field">
-                          Lievito
-                          <select
-                            value={c.yeast}
-                            onChange={(e) => {
-                              const yeast = e.target
-                                .value as DoughConfig["yeast"];
-                              updateMany({
-                                yeast,
-                                ...(yeast === "sourdough"
-                                  ? { preferment: "none", starterHydration: 50 }
-                                  : yeast === "licoli"
-                                    ? {
-                                        preferment: "none",
-                                        starterHydration: 100,
-                                      }
-                                    : {}),
-                              });
-                            }}
-                          >
-                            <option value="fresh">Di birra fresco</option>
-                            <option value="instant">Secco istantaneo</option>
-                            <option value="sourdough">
-                              Pasta madre solida
-                            </option>
-                            <option value="licoli">Licoli</option>
-                          </select>
-                        </label>
+                        <SelectSheet
+                          label="Lievito"
+                          help="lievito"
+                          value={c.yeast}
+                          options={[
+                            { value: "fresh", label: "Di birra fresco", description: "Il panetto del banco frigo" },
+                            { value: "instant", label: "Secco istantaneo", description: "In bustina, circa 3 volte più concentrato" },
+                            { value: "sourdough", label: "Pasta madre solida", description: "Lievito naturale, idratazione circa 50%" },
+                            { value: "licoli", label: "Licoli", description: "Lievito naturale liquido, idratazione 100%" },
+                          ]}
+                          onChange={(yeast) =>
+                            updateMany({
+                              yeast,
+                              ...(yeast === "sourdough"
+                                ? { preferment: "none", starterHydration: 50 }
+                                : yeast === "licoli"
+                                  ? { preferment: "none", starterHydration: 100 }
+                                  : {}),
+                            })
+                          }
+                        />
                       </div>
                       {result.ok &&
                         !["sourdough", "licoli"].includes(c.yeast) && (
@@ -1654,7 +1700,14 @@ export default function App() {
                     <DoughAnalysis config={c} result={result} />
                   )}
                   {plannerStage === "baking" && (
-                    <BakingPlanner config={c} onUpdate={updateMany} calibrations={state.bakeCalibrations} />
+                    <BakingPlanner
+                      config={c}
+                      onUpdate={updateMany}
+                      calibrations={state.bakeCalibrations}
+                      userPans={state.userPans}
+                      onUsePan={usePan}
+                      onOpenProfile={() => openTab("profilo")}
+                    />
                   )}
                   {plannerStage === "fermentation" && (
                     <section className="panel">
@@ -2026,12 +2079,24 @@ export default function App() {
                         <input maxLength={80} value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder="Es. La pizza del sabato" />
                       </label>
                       <div className="final-choice">
-                        <button className="button primary full final-start-button" disabled={loadError || !result.ok || !canStart || busy} onClick={() => void saveRecipe("start")}>
-                          <Bell /> Inizia ora
+                        <button
+                          className="button primary full final-start-button"
+                          disabled={loadError || !result.ok || timing === "expired" || busy}
+                          onClick={() => (timing === "late" ? setLateStart({ source: "planner" }) : void saveRecipe("start"))}
+                        >
+                          {timing === "future" ? <><CalendarCheck /> Programma</> : timing === "late" ? <><Clock /> Parti adesso</> : <><Bell /> Inizia ora</>}
                         </button>
-                        <p>{canStart ? "Si attivano i promemoria di ogni fase e la pizza compare nel diario, «In corso». Bilancia e guida passo passo ti aspettano lì." : "Non puoi iniziare adesso: l’orario di inizio è già passato. Sposta la cottura al passaggio 2."}</p>
-                        {canStart && activeRecipe && activeRecipe.id !== editingId && (
-                          <p className="replace-note"><Warning /> Hai già «{activeRecipe.name}» in corso: iniziando questa, l’altra tornerà tra le salvate.</p>
+                        <p>
+                          {timing === "future"
+                            ? `Partirà da sola ${timeline[0] ? dateLabel(timeline[0].at) : ""}: riceverai una notifica a ogni fase${leadMinutes ? `, ${leadMinutes} minuti prima` : ""}. La trovi nel diario tra quelle «In corso».`
+                            : timing === "now"
+                              ? "È l’ora giusta: si parte subito e ricevi una notifica a ogni fase. Bilancia e guida passo passo ti aspettano nel diario."
+                              : timing === "late"
+                                ? "L’orario di inizio è già passato: puoi partire adesso spostando la cena, oppure mantenerla e ricalcolare lievito e tempi."
+                                : "Anche l’orario di cottura è passato: scegli una nuova data al passaggio 2, oppure salvala per dopo."}
+                        </p>
+                        {timing !== "expired" && activeRecipe && activeRecipe.id !== editingId && (
+                          <p className="replace-note"><Warning /> Hai già «{activeRecipe.name}» in corso: {timing === "future" ? "programmando" : "iniziando"} questa, l’altra tornerà tra le salvate.</p>
                         )}
                       </div>
                       <div className="final-choice">
@@ -2138,14 +2203,17 @@ export default function App() {
                 updateMany({ ...patch, bakeMinutes: recommendedBakeMinutes({ ...c, ...patch }) });
                 setMessage(`Userai «${oven.name}» per i prossimi impasti.`);
               }}
-              onSaveEquipment={saveEquipment}
-              onLoadEquipment={loadEquipment}
-              onDeleteEquipment={(id) =>
-                setState((s) => ({ ...s, equipmentProfiles: s.equipmentProfiles.filter((p) => p.id !== id) }))
-              }
+              onAddPan={(pan) => {
+                setState((s) => ({ ...s, userPans: [...(s.userPans ?? []), pan] }));
+                setMessage(`Teglia «${pan.name}» salvata: la ritrovi negli stili in teglia.`);
+              }}
+              onDeletePan={(id) => setState((s) => ({ ...s, userPans: (s.userPans ?? []).filter((item) => item.id !== id) }))}
+              onUsePan={usePan}
+              onMixerChange={(patch) => updateMany(patch)}
               onExport={exportArchive}
               onImport={(file) => void importArchive(file)}
               onShowTutorial={() => setTutorialOpen(true)}
+              onLeadChange={(minutes) => void changeLeadMinutes(minutes)}
             />
           )}
           {tab === "guida" && (
@@ -2167,6 +2235,7 @@ export default function App() {
               onViewChange={setDiaryView}
               onNew={startNewDough}
               onStart={(recipe) => void activate(recipe)}
+              onLateStart={(recipe) => setLateStart({ source: "recipe", recipe })}
               onStop={() => void deactivate()}
               onFinish={(recipe) => void finishRecipe(recipe)}
               onEdit={editRecipe}
@@ -2213,6 +2282,23 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+      {lateStart && (
+        <LateStartDialog
+          config={lateStart.source === "planner" ? c : lateStart.recipe.config}
+          flours={flours}
+          now={now}
+          onClose={() => setLateStart(null)}
+          onChoose={(config) => {
+            const target = lateStart;
+            setLateStart(null);
+            if (target.source === "planner") void saveRecipe("start", config);
+            else {
+              editRecipe(target.recipe.id, { config });
+              void activate({ ...target.recipe, config });
+            }
+          }}
+        />
       )}
       {tutorialOpen && ready && <Onboarding onClose={closeTutorial} />}
     </div>

@@ -105,6 +105,26 @@ describe("storage migrations", () => {
     expect(migrated.sourdoughProfiles[0].name).toBe("Gino");
     expect(migrated.activeSourdoughId).toBe("starter-uno");
   });
+
+  it("turns the pans of old equipment profiles into saved pans", async () => {
+    const equipment = (id: string, panWidth: number, panLength: number) => ({
+      id, name: id, mixer: "hand", mixerProfileId: "generic-planetary", ovenType: "home-static",
+      ovenTemp: 250, bakeSurface: "dark-pan", panWidth, panLength, createdAt: "2026-09-01T10:00:00.000Z",
+    });
+    preferences.get.mockResolvedValue({
+      value: JSON.stringify({
+        version: 1,
+        config: defaultConfig(),
+        recipes: [],
+        activeId: null,
+        customFlours: [],
+        equipmentProfiles: [equipment("a", 30, 40), equipment("b", 30, 40), equipment("c", 25, 35)],
+      }),
+    });
+    const state = await readState();
+    expect(state.userPans?.map((pan) => `${pan.width}x${pan.length}`)).toEqual(["30x40", "25x35"]);
+    expect(state.userPans?.every((pan) => pan.surface === "dark-pan")).toBe(true);
+  });
 });
 
 function emptyLegacyState() {

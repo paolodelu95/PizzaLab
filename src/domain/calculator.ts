@@ -308,6 +308,11 @@ export function recommendedBakeMinutes(c: DoughConfig) {
   const middle = (outcome.recommendedMin + outcome.recommendedMax) / 2;
   return Math.max(0.5, Math.min(60, Math.round(middle / step) * step));
 }
+/** Superficie di una teglia in cm²: rettangolare o tonda. */
+export function panArea(c: Pick<DoughConfig, "panShape" | "panWidth" | "panLength" | "panDiameter">) {
+  return c.panShape === "round" ? Math.PI * (c.panDiameter / 2) ** 2 : c.panWidth * c.panLength;
+}
+
 export function validateConfig(c: DoughConfig): string[] {
   const errors: string[] = [];
   const ranges: [keyof DoughConfig, number, number, string][] = [
@@ -315,6 +320,7 @@ export function validateConfig(c: DoughConfig): string[] {
     ["ballWeight", 100, 2000, "Peso panetto"],
     ["panWidth", 10, 80, "Larghezza teglia"],
     ["panLength", 10, 100, "Lunghezza teglia"],
+    ["panDiameter", 14, 60, "Diametro teglia"],
     ["panDensity", 0.3, 1, "Impasto per cm²"],
     ["hydration", 45, 90, "Idratazione"],
     ["salt", 0, 4, "Sale"],
@@ -484,9 +490,7 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
     c.yeastMode === "manual"
       ? c.manualYeastPercent * (c.yeast === "instant" ? 3 : 1)
       : Math.max(0.02, Math.min(3, rawFreshPercent));
-  const unitWeight = style.pan
-    ? c.panWidth * c.panLength * c.panDensity
-    : c.ballWeight;
+  const unitWeight = style.pan ? panArea(c) * c.panDensity : c.ballWeight;
   const total = c.count * unitWeight;
   const baseRatio =
     1 +

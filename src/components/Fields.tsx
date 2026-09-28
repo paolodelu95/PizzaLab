@@ -1,5 +1,6 @@
 import { Minus, Plus } from "@phosphor-icons/react";
 import { useEffect, useId, useState, type CSSProperties } from "react";
+import { HelpTip, type HelpTopic } from "./HelpTip";
 
 export function parseNumberDraft(draft: string, min: number, max: number) {
   if (draft.trim() === "") return null;
@@ -19,6 +20,7 @@ export function NumberField({
   unit,
   hint,
   clampToRange = false,
+  help,
 }: {
   label: string;
   value: number;
@@ -29,6 +31,7 @@ export function NumberField({
   unit?: string;
   hint?: string;
   clampToRange?: boolean;
+  help?: HelpTopic;
 }) {
   const id = useId();
   const [draft, setDraft] = useState(String(value));
@@ -37,7 +40,10 @@ export function NumberField({
   }, [value]);
   return (
     <div className="field">
-      <label htmlFor={id}>{label}</label>
+      <div className="field-head">
+        <label htmlFor={id}>{label}</label>
+        {help && <HelpTip topic={help} />}
+      </div>
       <div className="number-input">
         <input
           id={id}
@@ -84,6 +90,7 @@ export function SliderField({
   hint,
   sliderMin = min,
   sliderMax = max,
+  help,
 }: {
   label: string;
   value: number;
@@ -95,6 +102,7 @@ export function SliderField({
   hint?: string;
   sliderMin?: number;
   sliderMax?: number;
+  help?: HelpTopic;
 }) {
   const [draft, setDraft] = useState(String(value));
   useEffect(() => {
@@ -108,7 +116,10 @@ export function SliderField({
   return (
     <div className="field slider-field">
       <div className="slider-field-head">
-        <span className="field-label">{label}</span>
+        <span className="field-label">
+          {label}
+          {help && <HelpTip topic={help} />}
+        </span>
         <div className="slider-value">
           <input
             aria-label={label}
@@ -157,6 +168,7 @@ export function Stepper({
   max,
   step = 1,
   unit = "",
+  help,
 }: {
   label: string;
   value: number;
@@ -165,10 +177,14 @@ export function Stepper({
   max: number;
   step?: number;
   unit?: string;
+  help?: HelpTopic;
 }) {
   return (
     <div className="field">
-      <span className="field-label">{label}</span>
+      <span className="field-label">
+        {label}
+        {help && <HelpTip topic={help} />}
+      </span>
       <div className="stepper">
         <button
           aria-label={`Riduci ${label.toLowerCase()}`}

@@ -4,6 +4,8 @@ import {
   Bell,
   BellSlash,
   CalendarBlank,
+  CalendarCheck,
+  Clock,
   CheckCircle,
   ClockCounterClockwise,
   FlagCheckered,
@@ -18,7 +20,7 @@ import {
 } from "@phosphor-icons/react";
 import { buildTimeline, calculate } from "../domain/calculator";
 import { styles } from "../domain/styles";
-import { buildScaleItems, canStartPlan, recipeStatus, yeastLabel, type RecipeStatus } from "../domain/recipes";
+import { buildScaleItems, recipeStatus, startTiming, yeastLabel, type RecipeStatus } from "../domain/recipes";
 import type { BakeCalibration, Flour, Recipe, Stage } from "../domain/types";
 import { ActiveDoughJournal } from "./ActiveDoughJournal";
 import { GuidedMode } from "./GuidedMode";
@@ -40,7 +42,7 @@ const views: { id: DiaryView; label: string; empty: [string, string] }[] = [
     label: "In corso",
     empty: [
       "Nessun impasto in corso",
-      "Quando sei pronto, dal riepilogo del piano o da una pizza salvata premi «Inizia ora»: qui troverai fasi, promemoria, bilancia e guida passo passo.",
+      "Dal riepilogo o da una pizza salvata premi «Programma» (o «Inizia ora» se è già l’ora): qui troverai fasi, notifiche, bilancia e guida passo passo.",
     ],
   },
   {
@@ -72,6 +74,7 @@ type Props = {
   onViewChange: (view: DiaryView) => void;
   onNew: () => void;
   onStart: (recipe: Recipe) => void;
+  onLateStart: (recipe: Recipe) => void;
   onStop: () => void;
   onFinish: (recipe: Recipe) => void;
   onEdit: (id: string, patch: Partial<Recipe>) => void;
@@ -226,9 +229,17 @@ function StagesList({ stages, completed }: { stages: Stage[]; completed: string[
 function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFinish, onShare, onMessage, onTool }: Props & { recipe: Recipe; onTool: (kind: "scale" | "guide") => void }) {
   const stages = buildTimeline(recipe.config, flours);
   const baked = new Date(recipe.config.bakeAt).getTime() <= now;
+  // Programmata finché manca più di un quarto d’ora all’inizio (come per il pulsante «Programma»).
+  const scheduled = startTiming(stages, recipe.config.bakeAt, now) === "future";
   return (
     <article className="journal-card active-recipe">
-      <CardHeader recipe={recipe} eyebrow="In corso" meta={`Infornata ${dateLabel(recipe.config.bakeAt)} · ${describe(recipe)}`} onEdit={onEdit} onDelete={onDelete} />
+      <CardHeader
+        recipe={recipe}
+        eyebrow={scheduled ? `Programmata · parte ${stages[0] ? dateLabel(stages[0].at) : ""}` : "In corso"}
+        meta={`Infornata ${dateLabel(recipe.config.bakeAt)} · ${describe(recipe)}`}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
       <ActiveDoughJournal
         recipe={recipe}
         stages={stages}
@@ -261,11 +272,13 @@ function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFin
         </div>
       )}
       <div className="journal-actions">
-        <button className="button primary" onClick={() => onFinish(recipe)}>
-          <FlagCheckered /> Pizza sfornata: concludi
-        </button>
+        {!scheduled && (
+          <button className="button primary" onClick={() => onFinish(recipe)}>
+            <FlagCheckered /> Pizza sfornata: concludi
+          </button>
+        )}
         <button className="button secondary" disabled={busy} onClick={() => onStop()}>
-          <BellSlash /> Interrompi e salva per dopo
+          <BellSlash /> {scheduled ? "Annulla la programmazione" : "Interrompi e salva per dopo"}
         </button>
         <button className="button secondary" onClick={() => onShare(recipe)}>
           <ShareNetwork /> Condividi
@@ -275,40 +288,56 @@ function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFin
   );
 }
 
-function SavedCard({ recipe, activeRecipe, flours, now, busy, onEdit, onDelete, onStart, onOpenInPlanner, onShare }: Props & { recipe: Recipe; activeRecipe?: Recipe }) {
+function SavedCard({ recipe, activeRecipe, flours, now, busy, onEdit, onDelete, onStart, onLateStart, onOpenInPlanner, onShare }: Props & { recipe: Recipe; activeRecipe?: Recipe }) {
   const stages = buildTimeline(recipe.config, flours);
-  const startable = canStartPlan(stages, now);
+  const timing = startTiming(stages, recipe.config.bakeAt, now);
+  const eyebrow =
+    timing === "expired"
+      ? "Da riprogrammare"
+      : timing === "late"
+        ? "Orario di inizio passato"
+        : recipe.startedAt
+          ? "Interrotta"
+          : "Salvata";
   return (
-    <article className={`journal-card saved-recipe ${startable ? "" : "needs-reschedule"}`}>
-      <CardHeader
-        recipe={recipe}
-        eyebrow={startable ? (recipe.startedAt ? "Interrotta" : "Pronta da iniziare") : "Da riprogrammare"}
-        meta={`Infornata ${dateLabel(recipe.config.bakeAt)} · ${describe(recipe)}`}
-        onEdit={onEdit}
-        onDelete={onDelete}
-      />
+    <article className={`journal-card saved-recipe ${timing === "expired" || timing === "late" ? "needs-reschedule" : ""}`}>
+      <CardHeader recipe={recipe} eyebrow={eyebrow} meta={`Infornata ${dateLabel(recipe.config.bakeAt)} · ${describe(recipe)}`} onEdit={onEdit} onDelete={onDelete} />
       {stages[0] && (
-        <div className={`plan-window ${startable ? "" : "is-late"}`}>
+        <div className={`plan-window ${timing === "expired" || timing === "late" ? "is-late" : ""}`}>
           <CalendarBlank />
           <div>
-            <span>{startable ? "Si comincia" : "L’inizio previsto è già passato"}</span>
+            <span>
+              {timing === "future" ? "Si comincia" : timing === "now" ? "Si comincia adesso" : "Doveva cominciare"}
+            </span>
             <strong>{dateLabel(stages[0].at)}</strong>
-            {!startable && <small>Scegli una nuova data di cottura per riprendere questa pizza.</small>}
+            {timing === "late" && <small>Puoi partire adesso spostando la cena, oppure mantenerla e ricalcolare lievito e tempi.</small>}
+            {timing === "expired" && <small>Anche l’orario di cottura è passato: scegli una nuova data per riprendere questa pizza.</small>}
           </div>
         </div>
       )}
       <Ingredients recipe={recipe} flours={flours} />
-      {startable && activeRecipe && (
+      {timing !== "expired" && activeRecipe && (
         <p className="small-muted replace-note">
-          <Warning /> Hai già «{activeRecipe.name}» in corso: iniziando questa, l’altra tornerà tra le salvate.
+          <Warning /> Hai già «{activeRecipe.name}» in corso: {timing === "future" ? "programmando" : "iniziando"} questa, l’altra tornerà tra le salvate.
         </p>
       )}
       <div className="journal-actions">
-        {startable ? (
+        {timing === "future" && (
+          <button className="button primary" disabled={busy} onClick={() => onStart(recipe)}>
+            <CalendarCheck /> Programma
+          </button>
+        )}
+        {timing === "now" && (
           <button className="button primary" disabled={busy} onClick={() => onStart(recipe)}>
             <Bell /> Inizia ora
           </button>
-        ) : (
+        )}
+        {timing === "late" && (
+          <button className="button primary" disabled={busy} onClick={() => onLateStart(recipe)}>
+            <Clock /> Parti adesso
+          </button>
+        )}
+        {timing === "expired" && (
           <button className="button primary" onClick={() => onOpenInPlanner(recipe, "reschedule")}>
             <CalendarBlank /> Riprogramma
           </button>
@@ -320,6 +349,9 @@ function SavedCard({ recipe, activeRecipe, flours, now, busy, onEdit, onDelete, 
           <ShareNetwork /> Condividi
         </button>
       </div>
+      {timing === "future" && (
+        <p className="small-muted schedule-note">«Programma» attiva le notifiche: la pizza partirà da sola all’orario impostato.</p>
+      )}
       <details>
         <summary><span>Consulta le fasi pianificate</span></summary>
         <StagesList stages={stages} completed={recipe.completedStages} />

@@ -16,6 +16,7 @@ export const emptyState = (): StoredState => ({
   bakeCalibrations: [],
   profileName: "",
   userOvens: [],
+  userPans: [],
 });
 export async function readState(): Promise<StoredState> {
   const { value } = await Preferences.get({ key: KEY });
@@ -41,6 +42,20 @@ export async function readState(): Promise<StoredState> {
     ? parsed.userOvens.filter((oven) => oven && typeof oven.id === "string" && typeof oven.ovenType === "string")
     : [];
   parsed.profileName = typeof parsed.profileName === "string" ? parsed.profileName : "";
+  // Le vecchie «attrezzature» contenevano una teglia: la recuperiamo come teglia salvata.
+  parsed.userPans = Array.isArray(parsed.userPans)
+    ? parsed.userPans.filter((pan) => pan && typeof pan.id === "string" && Number.isFinite(pan.width) && Number.isFinite(pan.length))
+    : parsed.equipmentProfiles
+        .filter((profile, index, all) => all.findIndex((other) => other.panWidth === profile.panWidth && other.panLength === profile.panLength) === index)
+        .map((profile) => ({
+          id: `pan-${profile.id}`,
+          name: `Teglia ${profile.panWidth}×${profile.panLength}`,
+          width: profile.panWidth,
+          length: profile.panLength,
+          surface: profile.bakeSurface && ["light-pan", "dark-pan", "perforated-pan", "cast-iron"].includes(profile.bakeSurface) ? profile.bakeSurface : "dark-pan",
+          createdAt: profile.createdAt,
+        }));
+  parsed.reminderLeadMinutes = [0, 5, 10, 15, 30].includes(parsed.reminderLeadMinutes ?? 0) ? parsed.reminderLeadMinutes ?? 0 : 0;
   const legacyStarter = (parsed as StoredState & { sourdoughProfile?: StoredState["sourdoughProfiles"][number] }).sourdoughProfile;
   parsed.sourdoughProfiles = Array.isArray(parsed.sourdoughProfiles)
     ? parsed.sourdoughProfiles

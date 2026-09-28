@@ -1,5 +1,6 @@
 import { FirstAid, Warning } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { SelectSheet } from './SelectSheet';
 
 const fixes={
   sticky:['Troppo appiccicoso','Ferma la macchina 10 minuti, bagna leggermente le mani e fai una piega. Non aggiungere farina di scatto: prima verifica se una pausa restituisce struttura.'],
@@ -9,4 +10,4 @@ const fixes={
   slow:['Non sta crescendo','Porta l’impasto in un punto più tiepido e attendi senza aggiungere altro lievito. Controlla temperatura interna e vitalità del lievito usato.'],
   torn:['Si strappa in stesura','Copri e lascia rilassare 15–20 minuti. Stendi con meno forza; se resta tenace, la massa è ancora fredda o poco rilassata.'],
 } as const;
-export function DoughRescue(){const [issue,setIssue]=useState<keyof typeof fixes>('sticky');const fix=fixes[issue];return <section className="panel rescue"><div className="panel-title"><span className="section-icon"><FirstAid/></span><div><h2>Pronto soccorso impasto</h2><p>Dimmi cosa vedi, non cosa dice l’orologio.</p></div></div><label className="field">Cosa sta succedendo?<select value={issue} onChange={e=>setIssue(e.target.value as keyof typeof fixes)}>{Object.entries(fixes).map(([id,[title]])=><option key={id} value={id}>{title}</option>)}</select></label><div className="rescue-answer"><Warning/><div><strong>{fix[0]}</strong><p>{fix[1]}</p></div></div></section>}
+export function DoughRescue(){const [issue,setIssue]=useState<keyof typeof fixes>('sticky');const fix=fixes[issue];return <section className="panel rescue"><div className="panel-title"><span className="section-icon"><FirstAid/></span><div><h2>Pronto soccorso impasto</h2><p>Dimmi cosa vedi, non cosa dice l’orologio.</p></div></div><SelectSheet label="Cosa sta succedendo?" value={issue} options={(Object.keys(fixes) as (keyof typeof fixes)[]).map(id=>({value:id,label:fixes[id][0]}))} onChange={setIssue}/><div className="rescue-answer"><Warning/><div><strong>{fix[0]}</strong><p>{fix[1]}</p></div></div></section>}

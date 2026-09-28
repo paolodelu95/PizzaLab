@@ -22,6 +22,7 @@ import {
 } from "../domain/sourdough";
 import type { SourdoughProfile, StarterFeeding } from "../domain/types";
 import { NumberField } from "./Fields";
+import { HelpTip } from "./HelpTip";
 
 const phaseCopy = {
   creating: ["Avvio della coltura", "La regolarità conta più della velocità."],
@@ -177,7 +178,7 @@ export function SourdoughCare({
       <div className="starter-dashboard">
         <div className="starter-main-column">
           <section className="panel feed-card">
-            <div className="panel-title"><span className="section-icon"><Leaf /></span><div><h2>Il prossimo rinfresco</h2><p>Rapporto e pesi calcolati per la gestione attuale.</p></div></div>
+            <div className="panel-title"><span className="section-icon"><Leaf /></span><div><h2>Il prossimo rinfresco <HelpTip topic="rinfresco" /></h2><p>Rapporto e pesi calcolati per la gestione attuale.</p></div></div>
             <div className="feed-ratio-options">
               {([1, 2, 4] as const).map((ratio) => <button key={ratio} className={profile.feedRatio === ratio ? "selected" : ""} onClick={() => onChange({ ...profile, feedRatio: ratio })}><strong>1:{ratio}:{profile.kind === "licoli" ? ratio : ratio / 2}</strong><small>{ratio === 1 ? "rapido" : ratio === 2 ? "equilibrato" : "più lento"}</small></button>)}
             </div>
@@ -198,7 +199,7 @@ export function SourdoughCare({
           <section className="panel starter-log-card">
             <div className="panel-title"><span className="section-icon"><Plus /></span><div><h2>Registra il rinfresco</h2><p>I dati reali fanno avanzare il percorso.</p></div></div>
             <div className="field-grid starter-observations">
-              <NumberField label="Crescita massima" value={rise} onChange={setRise} min={1} max={5} step={0.1} unit="×" hint="2× significa raddoppio" />
+              <NumberField help="crescita" label="Crescita massima" value={rise} onChange={setRise} min={1} max={5} step={0.1} unit="×" hint="2× significa raddoppio" />
               <NumberField label="Ore per il picco" value={peakHours} onChange={setPeakHours} min={1} max={48} step={0.5} unit="h" />
               <NumberField label="Temperatura osservata" value={feedTemp} onChange={setFeedTemp} min={10} max={35} step={0.5} unit="°C" />
               <label className="field">Odore e consistenza<input value={notes} maxLength={120} onChange={(event) => setNotes(event.target.value)} placeholder="Es. lattico, bolle fini, elastico" /></label>

@@ -4,8 +4,8 @@ Companion Android in italiano per la pizza fatta in casa. Interfaccia React/Type
 
 ## Cosa fa
 
-- Dodici stili: napoletana, contemporanea, romana tonda, teglia, pala, padellino, focaccia, New York, Detroit, pinsa, sfincione e tonda da forno domestico.
-- Dosi per numero/peso dei panetti o superficie delle teglie; idratazione, sale, olio, lievito fresco o secco istantaneo.
+- Tredici stili: napoletana, contemporanea, romana tonda, teglia, pala, padellino, focaccia, focaccia barese, New York, Detroit, pinsa, sfincione e tonda da forno domestico.
+- Dosi per numero/peso dei panetti o superficie delle teglie, rettangolari o tonde; idratazione, sale, olio, lievito fresco o secco istantaneo.
 - Puntata, permanenza in frigo e appretto indipendenti; temperatura ambiente, frigo e forno modificabili.
 - Miscela fino a quattro farine con quote regolabili, grammi separati, forza media indicativa, farine dedicate al prefermento e miscele riutilizzabili.
 - Grafici reattivi per confrontare l’idratazione con la zona dello stile e la dose di lievito con le ore combinate, tenendo conto delle temperature impostate.

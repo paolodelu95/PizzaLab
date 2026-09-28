@@ -76,7 +76,7 @@ const phone = await appPage({ width: 390, height: 780 }, 3);
   await shot("04-summary");
 
   await page.getByLabel("Nome del piano").fill("La pizza del sabato");
-  await page.getByRole("button", { name: "Inizia ora" }).click();
+  await page.getByRole("button", { name: "Programma" }).click();
   await page.getByText("IMPASTO IN CORSO", { exact: true }).waitFor();
   await scrollTo(page, ".journal-card", 70);
   await shot("05-diary");
@@ -117,11 +117,11 @@ const tablet = await appPage({ width: 1280, height: 720 }, 2);
 
 // ---------- Composizioni con didascalia ----------
 const captions = [
-  ["01-home", "Dosi perfette per ogni stile", "Napoletana, teglia, New York e altri 9 stili"],
+  ["01-home", "Dosi perfette per ogni stile", "Napoletana, teglia, focaccia barese e altri 10 stili"],
   ["02-fermentation", "Tempi e lievito calcolati per te", "Dimmi quando vuoi mangiare, al resto pensa PizzaLab"],
   ["03-baking", "Prevedi la cottura", "Crosta, mollica e fondo in tempo reale"],
   ["04-summary", "Parti subito o salva per dopo", "Tutta la tabella di marcia in un riepilogo"],
-  ["05-diary", "Un promemoria a ogni fase", "Bilancia e guida passo passo mentre impasti"],
+  ["05-diary", "Programmala e parte da sola", "Una notifica a ogni fase, bilancia e guida passo passo"],
   ["06-starter", "Il tuo lievito madre", "Rinfreschi, crescita e promemoria"],
   ["07-flours", "175 farine a portata di mano", "Forza W e proteine dalle schede dei produttori"],
   ["08-toppings", "Condimenti nelle giuste dosi", "Ricette classiche calcolate sulla tua pizza"],
