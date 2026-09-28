@@ -80,6 +80,9 @@ import {
   nextStarterFeedAt,
 } from "./domain/sourdough";
 import { useCloseOnBack } from "./services/backNavigation";
+import { markTutorialSeen, tutorialSeen } from "./services/tutorial";
+import { Onboarding } from "./components/Onboarding";
+import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
 type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida";
@@ -136,6 +139,7 @@ export default function App() {
   const [recipeName, setRecipeName] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
   const [diaryView, setDiaryView] = useState<DiaryView>("active");
   useEffect(() => {
     if (!message) return;
@@ -160,6 +164,15 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useCloseOnBack(Boolean(deleteId), () => setDeleteId(null));
+  useEffect(() => {
+    void tutorialSeen().then((seen) => {
+      if (!seen) setTutorialOpen(true);
+    });
+  }, []);
+  function closeTutorial() {
+    setTutorialOpen(false);
+    void markTutorialSeen();
+  }
   useEffect(() => {
     let alive = true;
     readState()
@@ -406,7 +419,7 @@ export default function App() {
           {
             exportedAt: new Date().toISOString(),
             app: "PizzaLab",
-            version: "0.14.1",
+            version: "0.15.0",
             recipes: state.recipes,
             customFlours: state.customFlours,
             savedBlends: state.savedBlends,
@@ -921,7 +934,7 @@ export default function App() {
                     Progetta. Impasta. <span>Perfeziona.</span>
                   </h1>
                   <p>
-                    Scegli lo stile e segui i tre passaggi: dosi, tempi e
+                    Scegli lo stile e segui i quattro passaggi: dosi, tempi e
                     promemoria li calcola PizzaLab per te.
                   </p>
                 </div>
@@ -2089,8 +2102,9 @@ export default function App() {
           )}
           {tab === "guida" && (
             <>
-              <Guide />
+              <Guide onShowTutorial={() => setTutorialOpen(true)} />
               <DoughRescue />
+              <SupportCard />
             </>
           )}
           {tab === "diario" && (
@@ -2154,6 +2168,7 @@ export default function App() {
           </div>
         </div>
       )}
+      {tutorialOpen && ready && <Onboarding onClose={closeTutorial} />}
     </div>
   );
 }

@@ -1,4 +1,25 @@
 import { test, expect } from "@playwright/test";
+test.beforeEach(async ({ page }, testInfo) => {
+  if (testInfo.title.includes("tutorial")) return;
+  await page.addInitScript(() =>
+    localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"),
+  );
+});
+test("first launch shows a short tutorial that can be skipped and replayed", async ({ page }) => {
+  await page.goto("/");
+  const dialog = page.getByRole("dialog", { name: "Il tuo laboratorio della pizza" });
+  await expect(dialog).toBeVisible();
+  await page.getByRole("button", { name: "Avanti" }).click();
+  await expect(page.getByRole("heading", { name: "Scegli lo stile, poi 4 passaggi" })).toBeVisible();
+  await page.getByRole("button", { name: "Salta" }).click();
+  await expect(page.locator(".onboarding")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /Progetta\. Impasta/ })).toBeVisible();
+  await expect(page.locator(".onboarding")).toHaveCount(0);
+  await page.getByRole("button", { name: "Impara", exact: true }).click();
+  await page.getByRole("button", { name: "Rivedi il tutorial" }).click();
+  await expect(page.getByText("1 di 4")).toBeVisible();
+});
 test("calculate, save, annotate, persist and delete a recipe", async ({
   page,
 }) => {

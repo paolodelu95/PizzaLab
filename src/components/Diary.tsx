@@ -27,6 +27,7 @@ import { GuidedMode } from "./GuidedMode";
 import { InsightsDashboard } from "./InsightsDashboard";
 import { OvenCalibration } from "./OvenCalibration";
 import { ScaleMode } from "./ScaleMode";
+import { SupportCard } from "./SupportCard";
 
 export type DiaryView = RecipeStatus;
 
@@ -173,6 +174,7 @@ export function Diary(props: Props) {
       </section>
 
       {view === "past" && grouped.past.length > 0 && <InsightsDashboard recipes={grouped.past} flours={flours} />}
+      {view === "past" && grouped.past.length > 0 && <SupportCard />}
 
       {tool?.kind === "guide" && (
         <GuidedMode title={tool.recipe.name} stages={buildTimeline(tool.recipe.config, flours)} onClose={() => setTool(null)} />
