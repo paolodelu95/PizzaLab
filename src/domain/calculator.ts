@@ -4,6 +4,9 @@ import { ovenById } from "../data/ovens";
 import { durationLabel } from "./duration";
 import type { Advice, DoughConfig, Flour, Stage } from "./types";
 export const MODEL_VERSION = "direct-v1";
+/** Un panetto impiega 2–3 ore a raffreddarsi e altrettante a tornare a temperatura:
+ * sotto le 8 ore il freddo vero dura troppo poco per rallentare o dare sapore. */
+export const MIN_COLD_HOURS = 8;
 
 export const bakeSurfaceLabels: Record<DoughConfig["bakeSurface"], string> = {
   biscotto: "Biscotto refrattario",
@@ -72,7 +75,10 @@ export function deriveAutomaticSchedule(c: DoughConfig): AutomaticSchedule {
   let bulkHours: number;
   let proofHours: number;
   let coldHours: number;
-  const prefersCold = style.cold > 0 && fermentationHours >= 10;
+  // Il frigo entra nel piano solo se, lasciando almeno 1 ora di puntata e 2 di appretto
+  // per far riprendere i panetti, restano le ore minime perché serva davvero.
+  const minColdBulk = Math.max(1, minBulk);
+  const prefersCold = style.cold > 0 && fermentationHours - minColdBulk - 2 >= MIN_COLD_HOURS;
   if (!prefersCold) {
     const warmRatio = style.bulk / Math.max(0.5, style.bulk + style.proof);
     bulkHours = Math.max(minBulk, fermentationHours * warmRatio);
@@ -83,15 +89,17 @@ export function deriveAutomaticSchedule(c: DoughConfig): AutomaticSchedule {
     }
     coldHours = 0;
   } else {
-    bulkHours = Math.max(minBulk, Math.min(24, style.bulk));
-    proofHours = Math.max(1, Math.min(24, style.proof));
+    bulkHours = Math.max(minColdBulk, Math.min(24, style.bulk));
+    proofHours = Math.max(2, Math.min(24, style.proof));
     coldHours = fermentationHours - bulkHours - proofHours;
-    if (coldHours < 2) {
-      const missing = 2 - coldHours;
-      const reducibleProof = Math.max(0, proofHours - 0.5);
-      const fromProof = Math.min(missing, reducibleProof);
+    if (coldHours < MIN_COLD_HOURS) {
+      // Finestra stretta: si accorciano appretto e puntata fino ai minimi per salvare il frigo.
+      let missing = MIN_COLD_HOURS - coldHours;
+      const fromProof = Math.min(missing, proofHours - 2);
       proofHours -= fromProof;
-      coldHours += fromProof;
+      missing -= fromProof;
+      bulkHours -= Math.min(missing, bulkHours - minColdBulk);
+      coldHours = fermentationHours - bulkHours - proofHours;
     }
     if (coldHours > 96) {
       let overflow = coldHours - 96;
@@ -108,8 +116,12 @@ export function deriveAutomaticSchedule(c: DoughConfig): AutomaticSchedule {
 
   const round = (value: number) => Math.round(value * 100) / 100;
   bulkHours = round(bulkHours);
-  proofHours = round(proofHours);
-  coldHours = round(fermentationHours - bulkHours - proofHours);
+  // Il resto dell’arrotondamento va a una fase che esiste già: senza frigo finiva
+  // in un «frigo» di pochi secondi.
+  if (coldHours > 0) {
+    proofHours = round(proofHours);
+    coldHours = round(fermentationHours - bulkHours - proofHours);
+  } else proofHours = round(fermentationHours - bulkHours);
   return {
     ok: true,
     totalHours: round(totalHours),
@@ -582,7 +594,8 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
     let adjustedBulk = Math.min(24, roundHalf(targetWarm * bulkShare));
     let adjustedProof = Math.min(24, roundHalf(targetWarm - adjustedBulk));
     if (adjustedBulk + adjustedProof < 1) adjustedProof = 1 - adjustedBulk;
-    const adjustedCold = roundHalf(targetCold);
+    // Una compensazione non deve lasciare un frigo troppo breve per servire a qualcosa.
+    const adjustedCold = targetCold < MIN_COLD_HOURS ? 0 : roundHalf(targetCold);
     const currentTotal = currentWarm + c.coldHours;
     const adjustedTotal = adjustedBulk + adjustedProof + adjustedCold;
     const startShiftHours = roundHalf(currentTotal - adjustedTotal);
@@ -765,9 +778,8 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       "Il frigo rallenta meno del previsto",
       "Verifica con un termometro la temperatura effettiva vicino all’impasto. Il modello diventa meno affidabile sopra 5 °C: controlla la crescita e riduci i tempi.",
     );
-  // Un panetto impiega 1–2 ore solo per raffreddarsi e poi deve riscaldarsi:
-  // sotto le 8 ore il frigo rallenta poco e non aggiunge sapore.
-  if (c.coldHours > 0 && c.coldHours < 8)
+  // Piani salvati prima della soglia minima possono avere ancora un frigo troppo breve.
+  if (c.coldHours > 0 && c.coldHours < MIN_COLD_HOURS)
     add(
       "short-cold",
       "warning",

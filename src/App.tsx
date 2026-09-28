@@ -31,6 +31,7 @@ import {
 import { catalog } from "./data/catalog";
 import {
   bakeSurfaceLabels,
+  MIN_COLD_HOURS,
   buildTimeline,
   calculate,
   deriveAutomaticSchedule,
@@ -99,7 +100,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.21.1";
+const APP_VERSION = "0.21.2";
 type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
 const nav = [
@@ -1577,7 +1578,7 @@ export default function App() {
                           onClick={() =>
                             update(
                               "coldHours",
-                              styles.find((s) => s.id === c.styleId)!.cold,
+                              Math.max(MIN_COLD_HOURS, styles.find((s) => s.id === c.styleId)!.cold),
                             )
                           }
                         >
@@ -1616,18 +1617,20 @@ export default function App() {
                               : "Primo riposo dell’impasto intero, prima di dividerlo in panetti"
                           }
                         />
-                        <SliderField
-                          label="Riposo in frigo"
-                          help="frigo"
-                          value={c.coldHours}
-                          onChange={(v) => update("coldHours", v)}
-                          min={0}
-                          max={96}
-                          sliderMax={Math.max(72, c.coldHours)}
-                          step={0.5}
-                          unit="ore"
-                          hint="Impasto coperto in frigorifero: rallenta la lievitazione e sviluppa sapore"
-                        />
+                        {c.coldHours > 0 && (
+                          <SliderField
+                            label="Riposo in frigo"
+                            help="frigo"
+                            value={c.coldHours}
+                            onChange={(v) => update("coldHours", v)}
+                            min={MIN_COLD_HOURS}
+                            max={96}
+                            sliderMax={Math.max(72, c.coldHours)}
+                            step={0.5}
+                            unit="ore"
+                            hint={`Almeno ${MIN_COLD_HOURS} ore: con meno l’impasto fa appena in tempo a raffreddarsi. Se hai poco tempo scegli «Tutto fuori frigo».`}
+                          />
+                        )}
                         <SliderField
                           label="Appretto fuori frigo"
                           help="appretto"

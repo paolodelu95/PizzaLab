@@ -3,6 +3,7 @@ import {
   buildTimeline,
   calculate,
   deriveAutomaticSchedule,
+  MIN_COLD_HOURS,
   estimateBakeOutcome,
   panArea,
   recommendedBakeMinutes,
@@ -557,5 +558,37 @@ describe("baking prediction", () => {
     expect(prediction.recommendedMax).toBeGreaterThanOrEqual(
       prediction.recommendedMin,
     );
+  });
+});
+
+describe("minimum fridge time", () => {
+  const plan = (hours: number, styleId = "napoletana") =>
+    deriveAutomaticSchedule({
+      ...defaultConfig(),
+      styleId,
+      foldCount: 0,
+      autolyse: false,
+      preferment: "none",
+      planMode: "automatic",
+      startAt: "2026-10-03T08:00",
+      bakeAt: new Date(new Date("2026-10-03T08:00").getTime() + hours * 3600000).toISOString(),
+    });
+
+  it("never plans a fridge phase shorter than the useful minimum", () => {
+    for (let hours = 3; hours <= 40; hours += 0.25) {
+      const p = plan(hours);
+      if (!p.ok) continue;
+      expect(p.coldHours === 0 || p.coldHours >= MIN_COLD_HOURS).toBe(true);
+    }
+  });
+
+  it("keeps a short window entirely at room temperature", () => {
+    const p = plan(10);
+    expect(p.ok && p.coldHours).toBe(0);
+  });
+
+  it("uses the fridge once there is room for it", () => {
+    const p = plan(24);
+    expect(p.ok && p.coldHours).toBeGreaterThanOrEqual(MIN_COLD_HOURS);
   });
 });

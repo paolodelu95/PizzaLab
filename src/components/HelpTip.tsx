@@ -31,7 +31,7 @@ export const helpTopics = {
   },
   frigo: {
     title: "Maturazione in frigo",
-    text: "Tenere l’impasto in frigo rallenta molto il lievito: la pizza lievita piano, diventa più saporita e più digeribile, e tu puoi organizzarti meglio con gli orari. Ha senso da circa 12 ore in su; con poche ore l’impasto fa appena in tempo a raffreddarsi.",
+    text: "Tenere l’impasto in frigo rallenta molto il lievito: la pizza lievita piano, diventa più saporita e più digeribile, e tu puoi organizzarti meglio con gli orari. Per questo l’app lo propone solo da 8 ore in su, e dà il meglio da 12: con meno l’impasto fa appena in tempo a raffreddarsi.",
   },
   appretto: {
     title: "Appretto",

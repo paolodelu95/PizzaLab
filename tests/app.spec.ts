@@ -166,9 +166,7 @@ test("invalid fields block saving and hot/weak dough produces warnings", async (
   await page.getByLabel("Peso del panetto", { exact: true }).fill("260");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await page.getByRole("button", { name: "Tutto fuori frigo" }).click();
-  await expect(page.getByLabel("Riposo in frigo", { exact: true })).toHaveValue(
-    "0",
-  );
+  await expect(page.getByLabel("Riposo in frigo", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Impara", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Mani in pasta, idee chiare." }),
