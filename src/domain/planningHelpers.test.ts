@@ -81,11 +81,28 @@ describe("when to start", () => {
     expect(new Date(s.startAt).getHours()).toBe(22);
   });
 
-  it("starts now, and says so, when the ideal time has passed", () => {
-    const s = suggestStart(config({ bakeAt: "2026-11-14T20:00" }), at("2026-11-14T15:00"))!;
+  it("starts now, and says so, when the ideal time has passed but a decent fermentation still fits", () => {
+    const s = suggestStart(config({ bakeAt: "2026-11-14T20:00" }), at("2026-11-14T09:00"))!;
     expect(s.shortened).toBe(true);
+    expect(s.movedMeal).toBe(false);
+    expect(s.bakeAt).toBe("2026-11-14T20:00");
+    expect(new Date(s.startAt).getTime()).toBeGreaterThanOrEqual(at("2026-11-14T09:00"));
+    expect(s.hours).toBeGreaterThanOrEqual(8);
+  });
+
+  it("moves the meal later instead of proposing a fermentation that is too short", () => {
+    const s = suggestStart(config({ bakeAt: "2026-11-14T20:00" }), at("2026-11-14T15:00"))!;
+    expect(s.movedMeal).toBe(true);
+    expect(s.shortened).toBe(false);
+    expect(new Date(s.bakeAt).getHours()).toBe(20);
+    expect(new Date(s.bakeAt).getTime()).toBeGreaterThan(at("2026-11-14T20:00"));
     expect(new Date(s.startAt).getTime()).toBeGreaterThanOrEqual(at("2026-11-14T15:00"));
-    expect(s.hours).toBeLessThan(6);
+    expect(s.hours).toBeGreaterThanOrEqual(8);
+  });
+
+  it("keeps a quick style quick: a short window is enough for a style that is short by nature", () => {
+    const s = suggestStart(config({ styleId: "focaccia-barese", bakeAt: "2026-11-14T20:00" }), at("2026-11-14T15:00"))!;
+    expect(s.movedMeal).toBe(false);
   });
 });
 

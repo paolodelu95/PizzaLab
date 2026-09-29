@@ -304,11 +304,13 @@ export default function App() {
   function suggestStartTime() {
     const suggestion = suggestStart(c, Date.now());
     if (!suggestion) return;
-    updateMany({ startAt: suggestion.startAt });
+    updateMany({ startAt: suggestion.startAt, bakeAt: suggestion.bakeAt });
     setMessage(
-      suggestion.shortened
-        ? t("L’orario ideale è già passato: si parte adesso, con una lievitazione più breve.")
-        : t("Si parte {when}: circa {hours} di lievitazione.", { when: dateLabel(suggestion.startAt), hours: durationLabel(suggestion.hours) }),
+      suggestion.movedMeal
+        ? t("Con quell’orario non c’è tempo per una buona lievitazione: ho spostato il pasto a {bake} e si parte {start} (circa {hours} di lievitazione). Se vuoi mangiare prima, rimetti l’orario e accetta una lievitazione breve.", { bake: dateLabel(suggestion.bakeAt), start: dateLabel(suggestion.startAt), hours: durationLabel(suggestion.hours) })
+        : suggestion.shortened
+          ? t("L’orario ideale è già passato: si parte adesso, con una lievitazione più breve (circa {hours}).", { hours: durationLabel(suggestion.hours) })
+          : t("Si parte {when}: circa {hours} di lievitazione.", { when: dateLabel(suggestion.startAt), hours: durationLabel(suggestion.hours) }),
     );
   }
   function saveTemplate() {

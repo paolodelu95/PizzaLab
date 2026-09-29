@@ -659,3 +659,35 @@ describe("estimated W", () => {
     expect(blend.wHigh!).toBeGreaterThan(blend.w!);
   });
 });
+
+describe("automatic plan uses the fridge for long windows in every style", () => {
+  const plan = (styleId: string, hours: number) =>
+    deriveAutomaticSchedule({
+      ...defaultConfig(),
+      styleId,
+      foldCount: 0,
+      autolyse: false,
+      preferment: "none",
+      planMode: "automatic",
+      startAt: "2026-10-01T08:00",
+      bakeAt: new Date(new Date("2026-10-01T08:00").getTime() + hours * 3600000).toISOString(),
+    });
+
+  it("never leaves more than about 12 hours at room temperature when the fridge fits", () => {
+    for (const style of styles) {
+      for (const hours of [14, 18, 24, 30, 36, 48, 72]) {
+        const p = plan(style.id, hours);
+        expect(p.ok, `${style.id} ${hours}h`).toBe(true);
+        if (p.ok) {
+          expect(p.bulkHours + p.proofHours, `${style.id} ${hours}h`).toBeLessThanOrEqual(12);
+          expect(p.coldHours === 0 || p.coldHours >= MIN_COLD_HOURS, `${style.id} ${hours}h`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("puts a 30 hour focaccia barese in the fridge instead of 14.5 + 14.5 hours on the counter", () => {
+    const p = plan("focaccia-barese", 30);
+    expect(p.ok && p.coldHours).toBeGreaterThanOrEqual(20);
+  });
+});

@@ -132,29 +132,59 @@ export const countForPeople = (people: number, isPan: boolean) => (isPan ? Math.
 
 const HOUR = 3600000;
 
+export interface StartSuggestion {
+  startAt: string;
+  /** Ora del pasto: uguale a quella scelta, salvo quando è stato spostato in avanti. */
+  bakeAt: string;
+  /** L’orario ideale era già passato: si parte adesso con meno ore del tipico. */
+  shortened: boolean;
+  /** Non restava tempo per una buona lievitazione: il pasto è stato spostato in avanti. */
+  movedMeal: boolean;
+  /** Ore di lievitazione del piano proposto. */
+  hours: number;
+}
+
+/** Ore minime perché la lievitazione sia decente: 8 (sotto, l’impasto non matura), o meno se lo stile è veloce. */
+const MIN_GOOD_HOURS = 8;
+
 /**
  * Orario di inizio consigliato per mangiare a `bakeAt`: la lievitazione tipica dello stile, più la preparazione,
- * spostata indietro se cadrebbe di notte (prima delle 7 o dopo le 22). Se è già passato si parte adesso
- * con una lievitazione più breve (`shortened`).
+ * spostata indietro se cadrebbe di notte (prima delle 7 o dopo le 22).
+ * Se l’orario ideale è già passato: si parte adesso quando restano almeno 8 ore di lievitazione;
+ * altrimenti si sposta il pasto al primo momento in cui l’orario ideale è ancora davanti (`movedMeal`).
  */
-export function suggestStart(config: DoughConfig, now: number): { startAt: string; shortened: boolean; hours: number } | null {
+export function suggestStart(config: DoughConfig, now: number): StartSuggestion | null {
   const bake = new Date(config.bakeAt).getTime();
   const style = styles.find((item) => item.id === config.styleId);
   if (!Number.isFinite(bake) || !style) return null;
   const prep = 20 / 60 + (config.autolyse ? config.autolyseMinutes / 60 : 0) + (config.preferment === "none" ? 0 : config.prefermentHours);
   const ideal = style.bulk + style.cold + style.proof;
-  let start = new Date(bake - (ideal + prep) * HOUR);
-  const hour = start.getHours() + start.getMinutes() / 60;
-  if (hour < 7) {
-    start.setDate(start.getDate() - 1);
-    start.setHours(22, 0, 0, 0);
-  } else if (hour >= 22) start.setHours(22, 0, 0, 0);
-  let shortened = false;
-  if (start.getTime() < now) {
-    start = new Date(Math.ceil(now / (5 * 60000)) * 5 * 60000);
-    shortened = true;
+  const idealStart = (bakeMs: number) => {
+    const start = new Date(bakeMs - (ideal + prep) * HOUR);
+    const hour = start.getHours() + start.getMinutes() / 60;
+    if (hour < 7) {
+      start.setDate(start.getDate() - 1);
+      start.setHours(22, 0, 0, 0);
+    } else if (hour >= 22) start.setHours(22, 0, 0, 0);
+    return start;
+  };
+  const window = (startMs: number, bakeMs: number) => Math.round(((bakeMs - startMs) / HOUR - prep) * 10) / 10;
+  const start = idealStart(bake);
+  if (start.getTime() >= now) return { startAt: localDateTime(start), bakeAt: config.bakeAt, shortened: false, movedMeal: false, hours: window(start.getTime(), bake) };
+
+  const nowStart = Math.ceil(now / (5 * 60000)) * 5 * 60000;
+  if (window(nowStart, bake) >= Math.min(ideal, MIN_GOOD_HOURS))
+    return { startAt: localDateTime(new Date(nowStart)), bakeAt: config.bakeAt, shortened: true, movedMeal: false, hours: window(nowStart, bake) };
+
+  // Troppo tardi per una buona lievitazione: stesso orario del pasto, nel primo giorno in cui c’è il tempo.
+  let later = bake;
+  for (let day = 0; day < 14 && idealStart(later).getTime() < now; day++) {
+    const next = new Date(later);
+    next.setDate(next.getDate() + 1);
+    later = next.getTime();
   }
-  return { startAt: localDateTime(start), shortened, hours: Math.round(((bake - start.getTime()) / HOUR - prep) * 10) / 10 };
+  const laterStart = idealStart(later);
+  return { startAt: localDateTime(laterStart), bakeAt: localDateTime(new Date(later)), shortened: false, movedMeal: true, hours: window(laterStart.getTime(), later) };
 }
 
 /** Le tue pizze già valutate con la stessa farina (e con lo stesso forno): quante e con che voto medio. */

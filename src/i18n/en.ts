@@ -1635,7 +1635,6 @@ export const en: Record<string, string> = {
   "Valore teorico, può essere impreciso: il produttore non dichiara il W.": "Theoretical value, may be inaccurate: the manufacturer doesn’t declare W.",
   "Ooni Koda 16": "Ooni Koda 16",
   "A gas, fino a circa 500 °C: pronto in circa 20 minuti secondo il produttore. Pietra in cordierite da 15 mm, per pizze fino a 16 pollici (circa 40 cm).": "Gas-fired, up to about 500 °C: ready in about 20 minutes according to the manufacturer. 15 mm cordierite stone, for pizzas up to 16 inches (about 40 cm).",
-  "L’orario ideale è già passato: si parte adesso, con una lievitazione più breve.": "The ideal time has already passed: starting now, with a shorter fermentation.",
   "Si parte {when}: circa {hours} di lievitazione.": "Start {when}: about {hours} of fermentation.",
   "Modello «{name}» salvato: lo trovi in cima, sotto «I tuoi modelli».": "Template “{name}” saved: you’ll find it at the top, under “Your templates”.",
   "Modello «{name}» caricato: scegli quando mangiare.": "Template “{name}” loaded: choose when to eat.",
@@ -1656,4 +1655,6 @@ export const en: Record<string, string> = {
   "valore teorico, può essere impreciso": "theoretical value, may be inaccurate",
   "Nessuna farina del catalogo copre questi tempi: accorcia la lievitazione, abbassa l’acqua o inserisci la tua farina.": "No flour in the catalogue covers these times: shorten the fermentation, lower the water or enter your own flour.",
   "Un suggerimento, non una regola: i W stimati hanno un intervallo largo, quelli dichiarati dal produttore vengono prima.": "A suggestion, not a rule: estimated W values have a wide range, and those declared by the manufacturer come first.",
+  "Con quell’orario non c’è tempo per una buona lievitazione: ho spostato il pasto a {bake} e si parte {start} (circa {hours} di lievitazione). Se vuoi mangiare prima, rimetti l’orario e accetta una lievitazione breve.": "With that time there isn’t room for a good fermentation: I moved the meal to {bake} and you start {start} (about {hours} of fermentation). If you want to eat earlier, put the time back and accept a shorter fermentation.",
+  "L’orario ideale è già passato: si parte adesso, con una lievitazione più breve (circa {hours}).": "The ideal time has already passed: starting now, with a shorter fermentation (about {hours}).",
 };

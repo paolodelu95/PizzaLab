@@ -83,7 +83,10 @@ export function deriveAutomaticSchedule(c: DoughConfig): AutomaticSchedule {
   // Il frigo entra nel piano solo se, lasciando almeno 1 ora di puntata e 2 di appretto
   // per far riprendere i panetti, restano le ore minime perché serva davvero.
   const minColdBulk = Math.max(1, minBulk);
-  const prefersCold = style.cold > 0 && fermentationHours - minColdBulk - 2 >= MIN_COLD_HOURS;
+  // Gli stili senza frigo tipico (focaccia barese) lo usano comunque quando la finestra è lunga:
+  // oltre circa 12 ore a temperatura ambiente la lievitazione diventa ingestibile.
+  const coldAllowed = style.cold > 0 || fermentationHours > 12;
+  const prefersCold = coldAllowed && fermentationHours - minColdBulk - 2 >= MIN_COLD_HOURS;
   if (!prefersCold) {
     const warmRatio = style.bulk / Math.max(0.5, style.bulk + style.proof);
     bulkHours = Math.max(minBulk, fermentationHours * warmRatio);
