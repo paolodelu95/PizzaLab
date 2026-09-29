@@ -4,6 +4,7 @@ import type { calculate } from "../domain/calculator";
 import type { DoughConfig } from "../domain/types";
 import { styles } from "../domain/styles";
 import { NumberField, Stepper } from "./Fields";
+import { formatWeight } from "../services/units";
 
 type GoodResult = Extract<ReturnType<typeof calculate>, { ok: true }>;
 type Ingredient = { name: string; grams: number; stage?: "prima" | "fine" | "fuori" };
@@ -101,15 +102,15 @@ export function ToppingPlanner({ config, result, onUpdate }: { config: DoughConf
       {filtered.length === 0 && <p className="small-muted">Nessuna pizza trovata con questi filtri.</p>}
       <div className="selected-topping-plan">
         <div className="selected-topping-heading"><div><span className="eyebrow">PIANO CONDIMENTO</span><h3>{selected.name}</h3><p>{selected.description}</p></div><span>{rectangular ? `${width}×${length} cm · ${pieces} ${pieces === 1 ? "teglia" : "teglie"}` : `Ø ${diameter} cm · ${pieces} ${trays ? (pieces === 1 ? "teglia" : "teglie") : pieces === 1 ? "pizza" : "pizze"}`}</span></div>
-        <div className="topping-ingredients">{selected.ingredients.map((ingredient) => { const totalGrams = Math.max(1, Math.round(ingredient.grams * scale)); const eachGrams = Math.max(1, Math.round(totalGrams / pieces)); return <div key={ingredient.name}><span>{ingredient.name}{ingredient.stage === "fine" ? <small>fine cottura</small> : ingredient.stage === "fuori" ? <small>in uscita</small> : null}</span><span className="topping-grams"><strong>{totalGrams} g</strong>{pieces > 1 && <small>{eachGrams} g cad.</small>}</span></div>; })}</div>
+        <div className="topping-ingredients">{selected.ingredients.map((ingredient) => { const totalGrams = Math.max(1, Math.round(ingredient.grams * scale)); const eachGrams = Math.max(1, Math.round(totalGrams / pieces)); return <div key={ingredient.name}><span>{ingredient.name}{ingredient.stage === "fine" ? <small>fine cottura</small> : ingredient.stage === "fuori" ? <small>in uscita</small> : null}</span><span className="topping-grams"><strong>{formatWeight(totalGrams)}</strong>{pieces > 1 && <small>{formatWeight(eachGrams)} cad.</small>}</span></div>; })}</div>
         <div className="topping-order"><Sparkle /><div><strong>Ordine consigliato</strong><p>{selected.order}</p></div></div>
       </div>
       <details className="shopping-list">
         <summary>Lista della spesa completa</summary>
         <div className="shopping-list-head"><div><strong>Impasto + {selected.name}</strong><small>{pieces} {trays ? (pieces === 1 ? "teglia" : "teglie") : (pieces === 1 ? "pizza" : "pizze")}</small></div><button className="button secondary" onClick={() => void navigator.clipboard?.writeText([
-          ...result.flourBreakdown.map((item) => `${item.name}: ${Math.round(item.grams)} g`),
-          `Acqua: ${Math.round(result.water)} g`, `Sale: ${result.salt.toFixed(1)} g`, `${leaveningName}: ${leaveningGrams.toFixed(1)} g`,
-          ...selected.ingredients.map((ingredient) => `${ingredient.name}: ${Math.max(1, Math.round(ingredient.grams * scale))} g`),
+          ...result.flourBreakdown.map((item) => `${item.name}: ${formatWeight(item.grams)}`),
+          `Acqua: ${formatWeight(result.water)}`, `Sale: ${formatWeight(result.salt, 1)}`, `${leaveningName}: ${formatWeight(leaveningGrams, 1)}`,
+          ...selected.ingredients.map((ingredient) => `${ingredient.name}: ${formatWeight(Math.max(1, Math.round(ingredient.grams * scale)))}`),
         ].join("\n"))}>Copia lista</button></div>
         <div className="shopping-items">{[
           ...result.flourBreakdown.map((item) => ({ name: item.name, grams: Math.round(item.grams), group: "Impasto" })),
@@ -117,7 +118,7 @@ export function ToppingPlanner({ config, result, onUpdate }: { config: DoughConf
           { name: "Sale", grams: Math.round(result.salt * 10) / 10, group: "Impasto" },
           { name: leaveningName, grams: Math.round(leaveningGrams * 10) / 10, group: "Impasto" },
           ...selected.ingredients.map((ingredient) => ({ name: ingredient.name, grams: Math.max(1, Math.round(ingredient.grams * scale)), group: "Condimento" })),
-        ].map((item) => { const id = `${item.group}-${item.name}`; return <label key={id} className={checked.has(id) ? "checked" : ""}><input type="checkbox" checked={checked.has(id)} onChange={() => setChecked((old) => { const next = new Set(old); if (next.has(id)) next.delete(id); else next.add(id); return next; })} /><span><small>{item.group}</small><strong>{item.name}</strong></span><b>{item.grams.toLocaleString("it-IT")} g</b></label>; })}</div>
+        ].map((item) => { const id = `${item.group}-${item.name}`; return <label key={id} className={checked.has(id) ? "checked" : ""}><input type="checkbox" checked={checked.has(id)} onChange={() => setChecked((old) => { const next = new Set(old); if (next.has(id)) next.delete(id); else next.add(id); return next; })} /><span><small>{item.group}</small><strong>{item.name}</strong></span><b>{formatWeight(item.grams, 1)}</b></label>; })}</div>
       </details>
       <p className="small-muted">Le grammature mostrate sono totali per la superficie selezionata; “cad.” indica la dose per singola pizza o teglia. Correggile in base a umidità reale, gusto e potenza del forno.</p>
     </section>

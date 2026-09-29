@@ -106,6 +106,27 @@ describe("storage migrations", () => {
     expect(migrated.activeSourdoughId).toBe("starter-uno");
   });
 
+  it("gives existing archives grams and Celsius and keeps a saved choice", async () => {
+    preferences.get.mockResolvedValue({ value: JSON.stringify(emptyLegacyState()) });
+    expect((await readState()).units).toEqual({ weight: "g", temp: "C" });
+
+    preferences.get.mockResolvedValue({ value: JSON.stringify({ ...emptyLegacyState(), units: { weight: "oz", temp: "F" } }) });
+    expect((await readState()).units).toEqual({ weight: "oz", temp: "F" });
+
+    preferences.get.mockResolvedValue({ value: JSON.stringify({ ...emptyLegacyState(), units: { weight: "lb", temp: 5 } }) });
+    expect((await readState()).units).toEqual({ weight: "g", temp: "C" });
+  });
+
+  it("keeps recipes in grams and Celsius when the units change", async () => {
+    const config = { ...defaultConfig(), ovenTemp: 300, ballWeight: 255.15 };
+    preferences.get.mockResolvedValue({
+      value: JSON.stringify({ ...emptyLegacyState(), config, units: { weight: "oz", temp: "F" } }),
+    });
+    const state = await readState();
+    expect(state.config.ovenTemp).toBe(300);
+    expect(state.config.ballWeight).toBe(255.15);
+  });
+
   it("turns the pans of old equipment profiles into saved pans", async () => {
     const equipment = (id: string, panWidth: number, panLength: number) => ({
       id, name: id, mixer: "hand", mixerProfileId: "generic-planetary", ovenType: "home-static",

@@ -24,6 +24,7 @@ import {
 import type { SourdoughProfile, StarterFeeding } from "../domain/types";
 import { NumberField } from "./Fields";
 import { usesCalendarReminders } from "../services/platform";
+import { formatTemp, formatWeight } from "../services/units";
 import { HelpTip } from "./HelpTip";
 
 const phaseCopy = {
@@ -187,10 +188,10 @@ export function SourdoughCare({
               {([1, 2, 4] as const).map((ratio) => <button key={ratio} className={profile.feedRatio === ratio ? "selected" : ""} onClick={() => onChange({ ...profile, feedRatio: ratio })}><strong>1:{ratio}:{profile.kind === "licoli" ? ratio : ratio / 2}</strong><small>{ratio === 1 ? "rapido" : ratio === 2 ? "equilibrato" : "più lento"}</small></button>)}
             </div>
             <div className="feed-weights">
-              <div><span>Lievito da tenere</span><strong>{amounts.starter} g</strong></div>
-              <div><span>Farina nuova</span><strong>{amounts.flour} g</strong></div>
-              <div><span>Acqua</span><strong>{amounts.water} g</strong></div>
-              <div className="feed-total"><span>Totale dopo il rinfresco</span><strong>{amounts.total} g</strong></div>
+              <div><span>Lievito da tenere</span><strong>{formatWeight(amounts.starter)}</strong></div>
+              <div><span>Farina nuova</span><strong>{formatWeight(amounts.flour)}</strong></div>
+              <div><span>Acqua</span><strong>{formatWeight(amounts.water)}</strong></div>
+              <div className="feed-total"><span>Totale dopo il rinfresco</span><strong>{formatWeight(amounts.total)}</strong></div>
             </div>
             <ol className="feed-steps">
               <li><span>1</span><p><strong>Tieni la quantità indicata</strong>Elimina o usa l’esubero solo in ricette che verranno cotte.</p></li>
@@ -205,13 +206,13 @@ export function SourdoughCare({
             <div className="field-grid starter-observations">
               <NumberField help="crescita" label="Crescita massima" value={rise} onChange={setRise} min={1} max={5} step={0.1} unit="×" hint="2× significa raddoppio" />
               <NumberField label="Ore per il picco" value={peakHours} onChange={setPeakHours} min={1} max={48} step={0.5} unit="h" />
-              <NumberField label="Temperatura osservata" value={feedTemp} onChange={setFeedTemp} min={10} max={35} step={0.5} unit="°C" />
+              <NumberField label="Temperatura osservata" value={feedTemp} onChange={setFeedTemp} min={10} max={35} step={0.5} quantity="temp" />
               <label className="field">Odore e consistenza<input value={notes} maxLength={120} onChange={(event) => setNotes(event.target.value)} placeholder="Es. lattico, bolle fini, elastico" /></label>
             </div>
             <button className="button primary full record-feeding" onClick={recordFeeding}><CheckCircle /> Rinfresco fatto: registra e calcola il prossimo</button>
           </section>
 
-          {profile.feedings.length > 0 && <section className="panel starter-history"><div className="panel-title"><span className="section-icon"><Clock /></span><div><h2>Diario attività</h2><p>Gli ultimi rinfreschi e la risposta della coltura.</p></div></div><div>{profile.feedings.slice(0, 8).map((feeding) => <article key={feeding.id} className={feeding.rise >= 2 && feeding.peakHours <= 8 ? "ready" : ""}><span>{new Date(feeding.at).toLocaleDateString("it-IT", { day: "numeric", month: "short" })}</span><div><strong>{feeding.rise.toLocaleString("it-IT")}× in {feeding.peakHours.toLocaleString("it-IT")} h</strong><small>{feeding.starterGrams} g madre + {feeding.flourGrams} g farina + {feeding.waterGrams} g acqua · {feeding.temperature} °C</small>{feeding.notes && <p>{feeding.notes}</p>}</div>{feeding.rise >= 2 && feeding.peakHours <= 8 && <CheckCircle weight="fill" />}</article>)}</div></section>}
+          {profile.feedings.length > 0 && <section className="panel starter-history"><div className="panel-title"><span className="section-icon"><Clock /></span><div><h2>Diario attività</h2><p>Gli ultimi rinfreschi e la risposta della coltura.</p></div></div><div>{profile.feedings.slice(0, 8).map((feeding) => <article key={feeding.id} className={feeding.rise >= 2 && feeding.peakHours <= 8 ? "ready" : ""}><span>{new Date(feeding.at).toLocaleDateString("it-IT", { day: "numeric", month: "short" })}</span><div><strong>{feeding.rise.toLocaleString("it-IT")}× in {feeding.peakHours.toLocaleString("it-IT")} h</strong><small>{formatWeight(feeding.starterGrams)} madre + {formatWeight(feeding.flourGrams)} farina + {formatWeight(feeding.waterGrams)} acqua · {formatTemp(feeding.temperature, 1)}</small>{feeding.notes && <p>{feeding.notes}</p>}</div>{feeding.rise >= 2 && feeding.peakHours <= 8 && <CheckCircle weight="fill" />}</article>)}</div></section>}
         </div>
 
         <aside className="starter-side-column">
@@ -219,8 +220,8 @@ export function SourdoughCare({
             <div className="panel-title"><span className="section-icon"><BellRinging /></span><div><h2>Routine e notifiche</h2><p>Scegli l’orario che si adatta alla tua giornata.</p></div></div>
             <label className="field">Nome del lievito<input value={profile.name} maxLength={40} onChange={(event) => onChange({ ...profile, name: event.target.value })} /></label>
             <label className="field">Ora preferita<input type="time" value={profile.preferredTime} onChange={(event) => onChange({ ...profile, preferredTime: event.target.value })} /></label>
-            <NumberField label="Lievito da mantenere" value={profile.starterGrams} onChange={(starterGrams) => onChange({ ...profile, starterGrams })} min={10} max={300} step={5} unit="g" />
-            <NumberField label="Temperatura obiettivo" value={profile.temperature} onChange={(temperature) => onChange({ ...profile, temperature })} min={10} max={35} step={0.5} unit="°C" />
+            <NumberField label="Lievito da mantenere" value={profile.starterGrams} onChange={(starterGrams) => onChange({ ...profile, starterGrams })} min={10} max={300} step={5} quantity="weight" />
+            <NumberField label="Temperatura obiettivo" value={profile.temperature} onChange={(temperature) => onChange({ ...profile, temperature })} min={10} max={35} step={0.5} quantity="temp" />
             <label className="field">Farina abituale<input value={profile.flourName} maxLength={60} onChange={(event) => onChange({ ...profile, flourName: event.target.value })} /></label>
             {profile.phase === "mature" && <div className="storage-choice"><span>Dove lo conservi?</span><button className={profile.storage === "room" ? "selected" : ""} onClick={() => onChange({ ...profile, storage: "room" })}><Thermometer /> Ambiente</button><button className={profile.storage === "fridge" ? "selected" : ""} onClick={() => onChange({ ...profile, storage: "fridge" })}><Snowflake /> Frigo</button></div>}
             <div className="routine-summary"><Clock /><div><strong>Ogni {interval === 168 ? "7 giorni" : `${interval} ore`}</strong><span>{profile.phase === "mature" && profile.storage === "fridge" ? "Mantenimento settimanale" : "Rinfresco a temperatura ambiente"}</span></div></div>

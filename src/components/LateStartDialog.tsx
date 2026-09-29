@@ -4,10 +4,10 @@ import { durationLabel } from "../domain/duration";
 import { keepMealTimeFromNow, shiftPlanToNow, yeastLabel } from "../domain/recipes";
 import type { DoughConfig, Flour } from "../domain/types";
 import { useCloseOnBack } from "../services/backNavigation";
+import { formatWeight } from "../services/units";
 
 const time = (value: string) =>
   new Date(value).toLocaleString("it-IT", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-const fmt = (n: number, d = 1) => n.toLocaleString("it-IT", { maximumFractionDigits: d });
 
 /**
  * L’orario di inizio è passato da poco: si può partire adesso spostando la cena
@@ -57,7 +57,7 @@ export function LateStartDialog({
               <strong>Mangio comunque {time(config.bakeAt)}</strong>
               <small>
                 Lievitazione da {durationLabel(hours(config))} a {durationLabel(hours(kept.config))};{" "}
-                {yeastLabel(config.yeast).toLowerCase()} da {fmt(before.yeast, natural ? 0 : 2)} a {fmt(after.yeast, natural ? 0 : 2)} g.
+                {yeastLabel(config.yeast).toLowerCase()} da {formatWeight(before.yeast, natural ? 0 : 2)} a {formatWeight(after.yeast, natural ? 0 : 2)}.
               </small>
             </span>
             <ArrowRight />

@@ -2,6 +2,7 @@ import { styles } from "./styles";
 import { mixerProfiles } from "../data/mixers";
 import { ovenById } from "../data/ovens";
 import { durationLabel } from "./duration";
+import { formatTemp, formatTempRange, formatWeight } from "../services/units";
 import type { Advice, DoughConfig, Flour, Stage } from "./types";
 export const MODEL_VERSION = "direct-v1";
 /** Un panetto impiega 2–3 ore a raffreddarsi e altrettante a tornare a temperatura:
@@ -705,7 +706,7 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       "fast-dough",
       "warning",
       "Lievitazione di corsa",
-      `Con ${durationLabel(hours)} la pizza viene, ma resta una lievitazione breve: meno profumo e sapore, mollica più chiusa, crosta più pallida e digeribilità inferiore rispetto a un impasto lungo. Usa una farina delicata, tieni l’impasto a 24–26 °C e non aspettarti l’alveolatura dei tempi lunghi.`,
+      `Con ${durationLabel(hours)} la pizza viene, ma resta una lievitazione breve: meno profumo e sapore, mollica più chiusa, crosta più pallida e digeribilità inferiore rispetto a un impasto lungo. Usa una farina delicata, tieni l’impasto a ${formatTempRange(24, 26)} e non aspettarti l’alveolatura dei tempi lunghi.`,
     );
   if (w !== null && w >= 280 && hours < 8)
     add(
@@ -776,7 +777,7 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       "fridge",
       "warning",
       "Il frigo rallenta meno del previsto",
-      "Verifica con un termometro la temperatura effettiva vicino all’impasto. Il modello diventa meno affidabile sopra 5 °C: controlla la crescita e riduci i tempi.",
+      `Verifica con un termometro la temperatura effettiva vicino all’impasto. Il modello diventa meno affidabile sopra ${formatTemp(5)}: controlla la crescita e riduci i tempi.`,
     );
   // Piani salvati prima della soglia minima possono avere ancora un frigo troppo breve.
   if (c.coldHours > 0 && c.coldHours < MIN_COLD_HOURS)
@@ -844,7 +845,7 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       "weighable-yeast",
       "info",
       "Dose realmente pesabile",
-      `Hai scelto ${yeast.toLocaleString("it-IT")} g invece dei ${autoYeast.toLocaleString("it-IT", { maximumFractionDigits: 2 })} g stimati. Applica la compensazione proposta e controlla comunque la crescita reale.`,
+      `Hai scelto ${formatWeight(yeast, 3)} invece dei ${formatWeight(autoYeast, 2)} stimati. Applica la compensazione proposta e controlla comunque la crescita reale.`,
     );
   if (naturalStarter)
     add(
@@ -1061,8 +1062,8 @@ export function buildTimeline(c: DoughConfig, flours?: Flour[]): Stage[] {
   if (c.preferment !== "none") {
     cursor -= c.prefermentHours * hour;
     const prefermentDetail = r
-      ? `Mescola ${Math.round(r.preferment.flour)} g di ${r.preferment.flourName ?? r.flourBreakdown[0]?.name ?? "farina"}, ${Math.round(r.preferment.water)} g d’acqua e ${r.preferment.yeast.toLocaleString("it-IT", { maximumFractionDigits: 2 })} g di lievito. Copri e lascia maturare ${c.prefermentHours} ore a ${c.prefermentTemp} °C; usalo quando è gonfio e aromatico, prima che ceda.`
-      : `Mescola la quota di farina e acqua del ${c.preferment}, aggiungi il lievito previsto e lascia maturare a ${c.prefermentTemp} °C.`;
+      ? `Mescola ${formatWeight(r.preferment.flour)} di ${r.preferment.flourName ?? r.flourBreakdown[0]?.name ?? "farina"}, ${formatWeight(r.preferment.water)} d’acqua e ${formatWeight(r.preferment.yeast, 2)} di lievito. Copri e lascia maturare ${c.prefermentHours} ore a ${formatTemp(c.prefermentTemp, 1)}; usalo quando è gonfio e aromatico, prima che ceda.`
+      : `Mescola la quota di farina e acqua del ${c.preferment}, aggiungi il lievito previsto e lascia maturare a ${formatTemp(c.prefermentTemp, 1)}.`;
     add(
       "preferment",
       `Prepara il ${c.preferment}`,
@@ -1073,10 +1074,10 @@ export function buildTimeline(c: DoughConfig, flours?: Flour[]): Stage[] {
   if (c.autolyse) {
     const division =
       r && r.mainFlourBreakdown.length > 1
-        ? ` Prepara prima la miscela per l’impasto finale: ${r.mainFlourBreakdown.map((item) => `${Math.round(item.grams)} g ${item.name}`).join(" + ")}.`
+        ? ` Prepara prima la miscela per l’impasto finale: ${r.mainFlourBreakdown.map((item) => `${formatWeight(item.grams)} ${item.name}`).join(" + ")}.`
         : "";
     const grams = r
-      ? ` Mescola ${Math.round(r.autolyse.flour)} g di farina con ${Math.round(r.autolyse.water)} g d’acqua (${c.autolyseWaterPercent}% dell’acqua disponibile nell’impasto finale).`
+      ? ` Mescola ${formatWeight(r.autolyse.flour)} di farina con ${formatWeight(r.autolyse.water)} d’acqua (${c.autolyseWaterPercent}% dell’acqua disponibile nell’impasto finale).`
       : "";
     add(
       "autolyse",
@@ -1087,13 +1088,13 @@ export function buildTimeline(c: DoughConfig, flours?: Flour[]): Stage[] {
   }
   const flourDetail = r
     ? r.mainFlourBreakdown
-        .map((item) => `${Math.round(item.grams)} g ${item.name}`)
+        .map((item) => `${formatWeight(item.grams)} ${item.name}`)
         .join(" + ")
     : "le farine previste";
   const mixingDetail = r
     ? c.autolyse
-      ? `Sciogli ${r.preferment.mainYeast.toLocaleString("it-IT", { maximumFractionDigits: 2 })} g di lievito nei ${Math.round(r.autolyse.reservedWater)} g d’acqua tenuti da parte. Avvia la lavorazione dell’autolisi e incorpora la soluzione poco alla volta. Aggiungi ${r.salt.toLocaleString("it-IT", { maximumFractionDigits: 1 })} g di sale quando l’impasto prende struttura${r.oil > 0 ? `, poi ${r.oil.toLocaleString("it-IT", { maximumFractionDigits: 1 })} g di olio a filo` : ""}. Controlla che l’impasto finale sia vicino a ${c.desiredDoughTemp} °C.`
-      : `Pesa ${flourDetail}, ${Math.round(r.preferment.mainWater)} g d’acqua e ${r.preferment.mainYeast.toLocaleString("it-IT", { maximumFractionDigits: 2 })} g di lievito. Mescola prima acqua, lievito e farine${c.preferment !== "none" ? " e incorpora il prefermento maturo" : ""}; aggiungi ${r.salt.toLocaleString("it-IT", { maximumFractionDigits: 1 })} g di sale quando non resta farina asciutta${r.oil > 0 ? `, poi ${r.oil.toLocaleString("it-IT", { maximumFractionDigits: 1 })} g di olio` : ""}. Lavora fino a una massa liscia ed elastica, senza superare ${c.desiredDoughTemp} °C.`
+      ? `Sciogli ${formatWeight(r.preferment.mainYeast, 2)} di lievito nei ${formatWeight(r.autolyse.reservedWater)} d’acqua tenuti da parte. Avvia la lavorazione dell’autolisi e incorpora la soluzione poco alla volta. Aggiungi ${formatWeight(r.salt, 1)} di sale quando l’impasto prende struttura${r.oil > 0 ? `, poi ${formatWeight(r.oil, 1)} di olio a filo` : ""}. Controlla che l’impasto finale sia vicino a ${formatTemp(c.desiredDoughTemp, 1)}.`
+      : `Pesa ${flourDetail}, ${formatWeight(r.preferment.mainWater)} d’acqua e ${formatWeight(r.preferment.mainYeast, 2)} di lievito. Mescola prima acqua, lievito e farine${c.preferment !== "none" ? " e incorpora il prefermento maturo" : ""}; aggiungi ${formatWeight(r.salt, 1)} di sale quando non resta farina asciutta${r.oil > 0 ? `, poi ${formatWeight(r.oil, 1)} di olio` : ""}. Lavora fino a una massa liscia ed elastica, senza superare ${formatTemp(c.desiredDoughTemp, 1)}.`
     : "Pesa separatamente tutte le farine e gli altri ingredienti. Unisci acqua, lievito e farine; incorpora l’eventuale prefermento, poi sale e grassi. Lavora fino a ottenere una struttura omogenea.";
   const machineDetail =
     c.mixer === "stand"
@@ -1121,8 +1122,8 @@ export function buildTimeline(c: DoughConfig, flours?: Flour[]): Stage[] {
       "Riposo in massa",
       c.bulkHours * hour,
       c.foldCount > 0
-        ? `Copri l’impasto a ${c.roomTemp} °C. Durante la puntata esegui ${c.foldCount} ${c.foldCount === 1 ? "piega" : "pieghe"}, una ogni ${c.foldIntervalMinutes} minuti, poi lascia rilassare la massa.`
-        : `Copri l’impasto a ${c.roomTemp} °C e osserva la crescita.`,
+        ? `Copri l’impasto a ${formatTemp(c.roomTemp, 1)}. Durante la puntata esegui ${c.foldCount} ${c.foldCount === 1 ? "piega" : "pieghe"}, una ogni ${c.foldIntervalMinutes} minuti, poi lascia rilassare la massa.`
+        : `Copri l’impasto a ${formatTemp(c.roomTemp, 1)} e osserva la crescita.`,
     );
     for (let index = 1; index <= c.foldCount; index++) {
       const foldAt = bulkStart + index * c.foldIntervalMinutes * 60000;
@@ -1143,7 +1144,7 @@ export function buildTimeline(c: DoughConfig, flours?: Flour[]): Stage[] {
       "cold",
       "Metti in frigorifero",
       c.coldHours * hour,
-      `Riponi in un contenitore coperto a ${c.fridgeTemp} °C, con spazio per crescere. L’impasto non si raffredda istantaneamente.`,
+      `Riponi in un contenitore coperto a ${formatTemp(c.fridgeTemp, 1)}, con spazio per crescere. L’impasto non si raffredda istantaneamente.`,
     );
   const pan =
     styles.find((s) => s.id === c.styleId)?.pan || c.styleId === "padellino";
@@ -1154,7 +1155,7 @@ export function buildTimeline(c: DoughConfig, flours?: Flour[]): Stage[] {
       c.proofHours * hour,
       pan
         ? `Dividi in ${c.count} porzioni. Lascia rilassare, poi stendi nella teglia unta e termina l’appretto. Copri per evitare la pelle.`
-        : `Forma ${c.count} panetti, copri e lascia rilassare a ${c.roomTemp} °C. Dovranno essere estensibili e ariosi, senza collassare.`,
+        : `Forma ${c.count} panetti, copri e lascia rilassare a ${formatTemp(c.roomTemp, 1)}. Dovranno essere estensibili e ariosi, senza collassare.`,
     );
   const rackLabels: Record<DoughConfig["ovenRack"], string> = {
     bottom: "più basso",
@@ -1173,14 +1174,14 @@ export function buildTimeline(c: DoughConfig, flours?: Flour[]): Stage[] {
     title: "Preriscalda il forno",
     at: new Date(bake - preheatMinutes * 60000).toISOString(),
     until: new Date(bake).toISOString(),
-    detail: `Imposta ${c.ovenTemp} °C${where} e preriscalda bene ${bakeSurfaceLabels[c.bakeSurface].toLowerCase()}. Circa ${preheatMinutes} minuti sono un promemoria: segui le indicazioni del tuo forno e del supporto.`,
+    detail: `Imposta ${formatTemp(c.ovenTemp, 1)}${where} e preriscalda bene ${bakeSurfaceLabels[c.bakeSurface].toLowerCase()}. Circa ${preheatMinutes} minuti sono un promemoria: segui le indicazioni del tuo forno e del supporto.`,
   });
   stages.push({
     id: "bake",
     title: "Si inforna!",
     at: new Date(bake).toISOString(),
     until: new Date(bake + c.bakeMinutes * 60000).toISOString(),
-    detail: `Cuoci circa ${c.bakeMinutes} min a ${c.ovenTemp} °C${oven.fixedRack ? "" : ` sul ripiano ${rackLabels[c.ovenRack]}`}. Previsione: crosta ${bakeOutcome.crustLabel.toLowerCase()}, mollica ${bakeOutcome.crumbLabel.toLowerCase()} e fondo ${bakeOutcome.baseLabel.toLowerCase()}. ${styles.find((s) => s.id === c.styleId)!.tip}`,
+    detail: `Cuoci circa ${c.bakeMinutes} min a ${formatTemp(c.ovenTemp, 1)}${oven.fixedRack ? "" : ` sul ripiano ${rackLabels[c.ovenRack]}`}. Previsione: crosta ${bakeOutcome.crustLabel.toLowerCase()}, mollica ${bakeOutcome.crumbLabel.toLowerCase()} e fondo ${bakeOutcome.baseLabel.toLowerCase()}. ${styles.find((s) => s.id === c.styleId)!.tip}`,
   });
   return stages.sort(
     (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),

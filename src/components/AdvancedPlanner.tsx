@@ -19,6 +19,7 @@ import { FlourPicker } from "./FlourPicker";
 import { SelectSheet } from "./SelectSheet";
 import { HelpTip } from "./HelpTip";
 import { mixerOptions, ovenOptions, planetaryOptions } from "../data/options";
+import { formatTemp, formatWeight, localizeTemperatures } from "../services/units";
 
 type GoodResult = Extract<ReturnType<typeof calculate>, { ok: true }>;
 type Props = {
@@ -148,7 +149,7 @@ export function AdvancedPlanner({
                     onChange={(v) => onUpdate({ prefermentTemp: v })}
                     min={8}
                     max={32}
-                    unit="°C"
+                    quantity="temp"
                   />
                   <FlourPicker
                     label="Farina del prefermento"
@@ -182,17 +183,17 @@ export function AdvancedPlanner({
                   <div>
                     <span>{c.preferment}</span>
                     <strong>
-                      {fmt(result.preferment.flour, 0)} g farina ·{" "}
-                      {fmt(result.preferment.water, 0)} g acqua ·{" "}
-                      {fmt(result.preferment.yeast, 2)} g lievito
+                      {formatWeight(result.preferment.flour, 0)} farina ·{" "}
+                      {formatWeight(result.preferment.water, 0)} acqua ·{" "}
+                      {formatWeight(result.preferment.yeast, 2)} lievito
                     </strong>
                   </div>
                   <div>
                     <span>Impasto finale</span>
                     <strong>
-                      {fmt(result.preferment.mainFlour, 0)} g farina ·{" "}
-                      {fmt(result.preferment.mainWater, 0)} g acqua ·{" "}
-                      {fmt(result.preferment.mainYeast, 2)} g lievito
+                      {formatWeight(result.preferment.mainFlour, 0)} farina ·{" "}
+                      {formatWeight(result.preferment.mainWater, 0)} acqua ·{" "}
+                      {formatWeight(result.preferment.mainYeast, 2)} lievito
                     </strong>
                   </div>
                 </div>
@@ -250,14 +251,14 @@ export function AdvancedPlanner({
                   <div>
                     <span>AUTOLISI</span>
                     <strong>
-                      {fmt(result.autolyse.flour, 0)} g farina +{" "}
-                      {fmt(result.autolyse.water, 0)} g acqua
+                      {formatWeight(result.autolyse.flour, 0)} farina +{" "}
+                      {formatWeight(result.autolyse.water, 0)} acqua
                     </strong>
                   </div>
                   <div>
                     <span>ACQUA DI RISERVA</span>
                     <strong>
-                      {fmt(result.autolyse.reservedWater, 0)} g con il lievito,
+                      {formatWeight(result.autolyse.reservedWater, 0)} con il lievito,
                       poi poco alla volta
                     </strong>
                   </div>
@@ -379,7 +380,7 @@ export function AdvancedPlanner({
                 onChange={(v) => onUpdate({ flourTemp: v })}
                 min={5}
                 max={35}
-                unit="°C"
+                quantity="temp"
               />
               <NumberField
                 label="Temperatura impasto desiderata"
@@ -387,12 +388,12 @@ export function AdvancedPlanner({
                 onChange={(v) => onUpdate({ desiredDoughTemp: v })}
                 min={18}
                 max={30}
-                unit="°C"
+                quantity="temp"
               />
               <div className="water-temp">
                 <Drop />
                 <span>Acqua consigliata</span>
-                <strong>{fmt(result.waterTemp)} °C</strong>
+                <strong>{formatTemp(result.waterTemp)}</strong>
               </div>
             </div>
             {c.mixer === "stand" && (
@@ -455,7 +456,7 @@ export function AdvancedPlanner({
             <div className="automatic-yeast-lock">
               <MagicWand />
               <div><strong>Dose sincronizzata con gli orari</strong><p>{naturalStarter ? "PizzaLab stima la quantità dai tempi e dalle temperature. Verifica sempre la vitalità reale della coltura dalla sua crescita." : "In modalità automatica PizzaLab calcola il lievito dai tempi e dalle temperature. Passa a Manuale per bloccare grammi o percentuale."}</p></div>
-              <span>{fmt(result.yeast, 2)} g</span>
+              <span>{formatWeight(result.yeast, 2)}</span>
             </div>
           ) : naturalStarter ? (
             <div className="field-grid">
@@ -611,7 +612,7 @@ export function AdvancedPlanner({
               min={180}
               max={500}
               step={5}
-              unit="°C"
+              quantity="temp"
             />
           </div>
           <div className="oven-hint">
@@ -620,7 +621,7 @@ export function AdvancedPlanner({
               <strong>
                 {oven.family} · preriscaldamento indicativo {oven.preheat} min
               </strong>
-              {oven.note}
+              {localizeTemperatures(oven.note)}
               {oven.source && (
                 <>
                   {" "}

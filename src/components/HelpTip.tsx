@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react";
 import { useCloseOnBack } from "../services/backNavigation";
+import { localizeTemperatures } from "../services/units";
 
 /** Spiegazioni brevi delle parti più tecniche, scritte per chi inizia. */
 export const helpTopics = {
@@ -137,7 +138,7 @@ export function HelpTip({ topic }: { topic: HelpTopic }) {
                 <X />
               </button>
             </header>
-            <p className="help-text">{help.text}</p>
+            <p className="help-text">{localizeTemperatures(help.text)}</p>
             <div className="help-actions">
               <button className="button primary full" onClick={() => setOpen(false)}>Ho capito</button>
             </div>

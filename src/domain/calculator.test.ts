@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   buildTimeline,
   calculate,
@@ -10,6 +10,7 @@ import {
   validateConfig,
 } from "./calculator";
 import { defaultConfig, styles } from "./styles";
+import { defaultUnits, setUnits } from "../services/units";
 import type { DoughConfig, Flour } from "./types";
 const flour: Flour = {
   id: "caputo-pizzeria",
@@ -590,5 +591,32 @@ describe("minimum fridge time", () => {
   it("uses the fridge once there is room for it", () => {
     const p = plan(24);
     expect(p.ok && p.coldHours).toBeGreaterThanOrEqual(MIN_COLD_HOURS);
+  });
+});
+
+describe("display units in generated texts", () => {
+  afterEach(() => setUnits(defaultUnits));
+  const details = () => {
+    const c = config({ preferment: "none", autolyse: false, ovenTemp: 250, roomTemp: 22 });
+    return buildTimeline(c, flours).map((stage) => stage.detail).join("\n");
+  };
+
+  it("keeps grams and Celsius by default", () => {
+    setUnits(defaultUnits);
+    const text = details();
+    expect(text).toContain("250 °C");
+    expect(text).toMatch(/\d+ g /);
+    expect(text).not.toMatch(/°F|\boz\b/);
+  });
+
+  it("writes ounces and Fahrenheit without touching the calculation", () => {
+    const grams = calculate(config(), flours);
+    setUnits({ weight: "oz", temp: "F" });
+    const text = details();
+    expect(text).toContain("482 °F");
+    expect(text).toMatch(/\d+,\d+ oz/);
+    expect(text).not.toContain("250 °C");
+    const converted = calculate(config(), flours);
+    expect(converted.ok && grams.ok && converted.flour).toBe(grams.ok && grams.flour);
   });
 });

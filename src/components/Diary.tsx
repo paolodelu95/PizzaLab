@@ -28,6 +28,7 @@ import { GuidedMode } from "./GuidedMode";
 import { OvenCalibration } from "./OvenCalibration";
 import { ScaleMode } from "./ScaleMode";
 import { usesCalendarReminders } from "../services/platform";
+import { formatWeight } from "../services/units";
 import { SupportCard } from "./SupportCard";
 
 export type DiaryView = RecipeStatus;
@@ -197,12 +198,12 @@ function Ingredients({ recipe, flours }: { recipe: Recipe; flours: Flour[] }) {
   const natural = ["sourdough", "licoli"].includes(recipe.config.yeast);
   return (
     <div className="journal-ingredients">
-      <strong>Farina totale {fmt(r.flour)} g</strong>
+      <strong>Farina totale {formatWeight(r.flour)}</strong>
       <br />
-      <small>{r.flourBreakdown.map((item) => `${item.name}: ${fmt(item.grams)} g (${fmt(item.percent, 1)}%)`).join(" · ")}</small>
+      <small>{r.flourBreakdown.map((item) => `${item.name}: ${formatWeight(item.grams)} (${fmt(item.percent, 1)}%)`).join(" · ")}</small>
       <br />
-      Acqua {fmt(r.water)} g · Sale {fmt(r.salt, 1)} g · {yeastLabel(recipe.config.yeast)} {fmt(r.yeast, natural ? 0 : 2)} g
-      {r.oil > 0 ? ` · Olio ${fmt(r.oil, 1)} g` : ""}
+      Acqua {formatWeight(r.water)} · Sale {formatWeight(r.salt, 1)} · {yeastLabel(recipe.config.yeast)} {formatWeight(r.yeast, natural ? 0 : 2)}
+      {r.oil > 0 ? ` · Olio ${formatWeight(r.oil, 1)}` : ""}
     </div>
   );
 }

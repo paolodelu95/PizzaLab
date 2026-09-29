@@ -9,6 +9,7 @@ import {
   Oven,
   Play,
   Plus,
+  Ruler,
   ShieldCheck,
   Trash,
   UploadSimple,
@@ -22,6 +23,8 @@ import { UserPans } from "./UserPans";
 import { InstallPrompt } from "./InstallPrompt";
 import { usesCalendarReminders } from "../services/platform";
 import { SelectSheet } from "./SelectSheet";
+import { NumberField } from "./Fields";
+import { formatTemp, localizeTemperatures, normalizeUnits, type Units } from "../services/units";
 import { mixerOptions, ovenOptions, planetaryOptions, surfaceOptions } from "../data/options";
 import { InsightsDashboard } from "./InsightsDashboard";
 import { SupportCard } from "./SupportCard";
@@ -46,6 +49,7 @@ type Props = {
   onImport: (file: File) => void;
   onShowTutorial: () => void;
   onLeadChange: (minutes: number) => void;
+  onUnitsChange: (patch: Partial<Units>) => void;
 };
 
 const initials = (name: string) =>
@@ -133,6 +137,43 @@ export function ProfilePage(props: Props) {
             />
           )}
         </div>
+      </section>
+
+      <section className="panel units-panel" aria-labelledby="units-title">
+        <div className="panel-title">
+          <span className="section-icon"><Ruler /></span>
+          <div>
+            <h2 id="units-title">Unità di misura</h2>
+            <p>Scegli come vedere pesi e temperature. Le ricette restano salvate in grammi e °C: puoi cambiare quando vuoi, senza perdere nulla.</p>
+          </div>
+        </div>
+        {([
+          ["weight", "Peso", [["g", "Grammi (g)"], ["oz", "Once (oz)"]]],
+          ["temp", "Temperatura", [["C", "Celsius (°C)"], ["F", "Fahrenheit (°F)"]]],
+        ] as const).map(([key, title, options]) => {
+          const units = normalizeUnits(state.units);
+          return (
+            <div key={key} className="lead-options" role="radiogroup" aria-label={title}>
+              <span>{title}</span>
+              <div>
+                {options.map(([value, label]) => (
+                  <button
+                    key={value}
+                    role="radio"
+                    aria-checked={units[key] === value}
+                    className={units[key] === value ? "selected" : ""}
+                    onClick={() => props.onUnitsChange({ [key]: value } as Partial<Units>)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {normalizeUnits(state.units).weight === "oz" && (
+          <small>Le quantità sotto i 5 g (lievito, malto) restano in grammi: in once sarebbero illeggibili. Teglie e superfici restano in centimetri.</small>
+        )}
       </section>
 
       <section className="panel notifications-panel" aria-labelledby="notifications-title">
@@ -277,7 +318,7 @@ function UserOvens({
                 <span className="oven-icon" aria-hidden="true"><Fire weight="duotone" /></span>
                 <div>
                   <strong>{oven.name}</strong>
-                  <span>{info.name} · fino a {oven.temp} °C · {bakeSurfaceLabels[oven.bakeSurface].toLowerCase()}</span>
+                  <span>{info.name} · fino a {formatTemp(oven.temp)} · {bakeSurfaceLabels[oven.bakeSurface].toLowerCase()}</span>
                 </div>
                 <button className={`button ${inUse ? "selected" : "secondary"}`} onClick={() => onUse(oven)}>
                   {inUse ? <><CheckCircle /> In uso</> : "Usa"}
@@ -319,14 +360,16 @@ function UserOvens({
               Nome
               <input value={name} maxLength={40} placeholder={modelInfo.name} onChange={(event) => setName(event.target.value)} />
             </label>
-            <label className="field">
-              Temperatura massima reale
-              <div className="number-input">
-                <input type="number" inputMode="numeric" min={150} max={550} step={5} value={temp} onChange={(event) => setTemp(Number(event.target.value))} />
-                <span>°C</span>
-              </div>
-              <small>Dichiarata dal produttore: {modelInfo.maxTemp} °C. Se hai un termometro, metti quella misurata.</small>
-            </label>
+            <NumberField
+              label="Temperatura massima reale"
+              value={temp}
+              onChange={setTemp}
+              min={150}
+              max={550}
+              step={5}
+              quantity="temp"
+              hint={`Dichiarata dal produttore: ${formatTemp(modelInfo.maxTemp)}. Se hai un termometro, metti quella misurata.`}
+            />
             <SelectSheet
               label="Supporto di cottura"
               help="supporto"
@@ -335,7 +378,7 @@ function UserOvens({
               onChange={setSurface}
             />
           </div>
-          <p className="oven-form-note">{modelInfo.note}</p>
+          <p className="oven-form-note">{localizeTemperatures(modelInfo.note)}</p>
           <div className="oven-form-actions">
             {ovens.length > 0 && <button type="button" className="button secondary" onClick={() => setAdding(false)}>Annulla</button>}
             <button type="submit" className="button primary"><Plus /> Salva il forno</button>

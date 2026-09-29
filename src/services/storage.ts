@@ -2,6 +2,7 @@ import { Preferences } from "@capacitor/preferences";
 import { defaultConfig } from "../domain/styles";
 import { validateConfig } from "../domain/calculator";
 import type { StoredState } from "../domain/types";
+import { defaultUnits, normalizeUnits } from "./units";
 const KEY = "pizzalab-state-v1";
 export const emptyState = (): StoredState => ({
   version: 1,
@@ -17,6 +18,7 @@ export const emptyState = (): StoredState => ({
   profileName: "",
   userOvens: [],
   userPans: [],
+  units: { ...defaultUnits },
 });
 export async function readState(): Promise<StoredState> {
   const { value } = await Preferences.get({ key: KEY });
@@ -55,6 +57,7 @@ export async function readState(): Promise<StoredState> {
           surface: profile.bakeSurface && ["light-pan", "dark-pan", "perforated-pan", "cast-iron"].includes(profile.bakeSurface) ? profile.bakeSurface : "dark-pan",
           createdAt: profile.createdAt,
         }));
+  parsed.units = normalizeUnits(parsed.units);
   parsed.reminderLeadMinutes = [0, 5, 10, 15, 30].includes(parsed.reminderLeadMinutes ?? 0) ? parsed.reminderLeadMinutes ?? 0 : 0;
   const legacyStarter = (parsed as StoredState & { sourdoughProfile?: StoredState["sourdoughProfiles"][number] }).sourdoughProfile;
   parsed.sourdoughProfiles = Array.isArray(parsed.sourdoughProfiles)

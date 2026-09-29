@@ -241,4 +241,6 @@ export interface StoredState {
   userPans?: UserPan[];
   /** Minuti di anticipo delle notifiche rispetto a ogni fase (0 = all’orario esatto). */
   reminderLeadMinutes?: number;
+  /** Unità mostrate all’utente: i dati restano sempre salvati in grammi e °C. */
+  units?: { weight: "g" | "oz"; temp: "C" | "F" };
 }

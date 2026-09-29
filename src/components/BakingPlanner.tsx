@@ -6,6 +6,7 @@ import { SliderField } from "./Fields";
 import { ovenById } from "../data/ovens";
 import { isPanInUse, panSize } from "./UserPans";
 import { HelpTip } from "./HelpTip";
+import { formatTemp } from "../services/units";
 
 const rackOptions: [DoughConfig["ovenRack"], string, string][] = [
   ["bottom", "Basso", "Più energia al fondo"],
@@ -113,7 +114,7 @@ export function BakingPlanner({
         </div>
       </div>
       <div className="baking-basics slider-basics">
-        <SliderField label="Temperatura forno" value={c.ovenTemp} onChange={(v) => onUpdate({ ovenTemp: v })} min={180} max={500} step={5} unit="°C" />
+        <SliderField label="Temperatura forno" value={c.ovenTemp} onChange={(v) => onUpdate({ ovenTemp: v })} min={180} max={500} step={5} quantity="temp" />
       </div>
       <div className="bake-topping-impact"><span>Condimento collegato</span><strong>{Math.round(c.toppingMoisture)}% umidità · {c.toppingLoad.toLocaleString("it-IT", { maximumFractionDigits: 2 })} g/cm²</strong><small>Il simulatore usa questi valori per mollica e fondo.</small></div>
 
@@ -226,7 +227,7 @@ export function BakingPlanner({
 
       <div className="baking-summary">
         <Oven />
-        <div><span>{formatTime(minutes)} · {c.ovenTemp} °C · {oven.fixedRack ? "pietra fissa" : `ripiano ${rack[1].toLowerCase()}`}</span><strong>{bakeSurfaceLabels[c.bakeSurface]}{oven.fixedRack ? ` · ${oven.name}` : ` · ${rack[2]}`}</strong></div>
+        <div><span>{formatTime(minutes)} · {formatTemp(c.ovenTemp)} · {oven.fixedRack ? "pietra fissa" : `ripiano ${rack[1].toLowerCase()}`}</span><strong>{bakeSurfaceLabels[c.bakeSurface]}{oven.fixedRack ? ` · ${oven.name}` : ` · ${rack[2]}`}</strong></div>
       </div>
       {relevantCalibrations.length > 0 && (
         <section className="bake-calibration">

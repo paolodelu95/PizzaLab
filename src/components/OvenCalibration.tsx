@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { BakeCalibration, Recipe } from "../domain/types";
 import { NumberField } from "./Fields";
 import { HelpTip } from "./HelpTip";
+import { formatTemp } from "../services/units";
 
 /** Registra l’esito reale di una pizza già cotta per tarare le previsioni del forno. */
 export function OvenCalibration({
@@ -27,7 +28,7 @@ export function OvenCalibration({
       </summary>
       <div className="oven-calibration-body">
         <p className="calibration-intro">
-          <Target /> <span>Com’è andata davvero la cottura? PizzaLab usa queste risposte per correggere le previsioni di questo forno ({c.ovenTemp} °C, {c.bakeMinutes.toLocaleString("it-IT", { maximumFractionDigits: 2 })} min previsti).</span>
+          <Target /> <span>Com’è andata davvero la cottura? PizzaLab usa queste risposte per correggere le previsioni di questo forno ({formatTemp(c.ovenTemp)}, {c.bakeMinutes.toLocaleString("it-IT", { maximumFractionDigits: 2 })} min previsti).</span>
         </p>
         <div className="calibration-form">
           <NumberField label="Tempo realmente usato" value={actualMinutes} onChange={setActualMinutes} min={0.5} max={60} step={c.ovenTemp >= 350 ? 0.25 : 1} unit="min" />

@@ -1,6 +1,7 @@
 import { Minus, Plus } from "@phosphor-icons/react";
 import { useEffect, useId, useState, type CSSProperties } from "react";
 import { HelpTip, type HelpTopic } from "./HelpTip";
+import { getUnits, scaleField, type Quantity } from "../services/units";
 
 export function parseNumberDraft(draft: string, min: number, max: number) {
   if (draft.trim() === "") return null;
@@ -21,6 +22,7 @@ export function NumberField({
   hint,
   clampToRange = false,
   help,
+  quantity,
 }: {
   label: string;
   value: number;
@@ -32,12 +34,19 @@ export function NumberField({
   hint?: string;
   clampToRange?: boolean;
   help?: HelpTopic;
+  /** Peso o temperatura: value, min, max e step restano in g / °C, il campo li mostra nell’unità scelta. */
+  quantity?: Quantity;
 }) {
   const id = useId();
-  const [draft, setDraft] = useState(String(value));
+  const units = getUnits();
+  const scale = scaleField(quantity, { min, max, step }, units);
+  const shownUnit = quantity ? scale.unit : unit;
+  const [draft, setDraft] = useState(scale.format(value));
   useEffect(() => {
-    if (Number.isFinite(value)) setDraft(String(value));
-  }, [value]);
+    if (Number.isFinite(value)) setDraft((old) => (scale.matches(old, value) ? old : scale.format(value)));
+    // scale dipende solo dalle unità: si ricalcola con loro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, units.weight, units.temp]);
   return (
     <div className="field">
       <div className="field-head">
@@ -49,30 +58,30 @@ export function NumberField({
           id={id}
           type="number"
           inputMode="decimal"
-          min={min}
-          max={max}
-          step={step}
+          min={scale.min}
+          max={scale.max}
+          step={scale.step}
           value={draft}
           onChange={(e) => {
             const next = e.target.value;
             setDraft(next);
-            const parsed = parseNumberDraft(next, min, max);
-            if (parsed !== null) onChange(parsed);
+            const parsed = parseNumberDraft(next, scale.min, scale.max);
+            if (parsed !== null) onChange(scale.fromDisplay(parsed));
           }}
           onBlur={() => {
             const parsed = Number(draft);
             if (draft.trim() === "" || !Number.isFinite(parsed))
-              setDraft(String(value));
-            else if (parsed < min || parsed > max) {
+              setDraft(scale.format(value));
+            else if (parsed < scale.min || parsed > scale.max) {
               if (clampToRange) {
-                const clamped = Math.max(min, Math.min(max, parsed));
+                const clamped = Math.max(scale.min, Math.min(scale.max, parsed));
                 setDraft(String(clamped));
-                onChange(clamped);
-              } else onChange(parsed);
+                onChange(scale.fromDisplay(clamped));
+              } else onChange(scale.fromDisplay(parsed));
             }
           }}
         />
-        {unit && <span>{unit}</span>}
+        {shownUnit && <span>{shownUnit}</span>}
       </div>
       {hint && <small>{hint}</small>}
     </div>
@@ -91,6 +100,7 @@ export function SliderField({
   sliderMin = min,
   sliderMax = max,
   help,
+  quantity,
 }: {
   label: string;
   value: number;
@@ -103,15 +113,24 @@ export function SliderField({
   sliderMin?: number;
   sliderMax?: number;
   help?: HelpTopic;
+  /** Peso o temperatura: value, min, max e step restano in g / °C, il campo li mostra nell’unità scelta. */
+  quantity?: Quantity;
 }) {
-  const [draft, setDraft] = useState(String(value));
+  const units = getUnits();
+  const scale = scaleField(quantity, { min, max, step }, units);
+  const slider = scaleField(quantity, { min: sliderMin, max: sliderMax, step }, units);
+  const shownUnit = quantity ? scale.unit : unit;
+  const shownValue = scale.toDisplay(value);
+  const [draft, setDraft] = useState(scale.format(value));
   useEffect(() => {
-    if (Number.isFinite(value)) setDraft(String(value));
-  }, [value]);
+    if (Number.isFinite(value)) setDraft((old) => (scale.matches(old, value) ? old : scale.format(value)));
+    // scale dipende solo dalle unità: si ricalcola con loro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, units.weight, units.temp]);
   const publish = (next: number) => {
-    const clamped = Math.max(min, Math.min(max, next));
+    const clamped = Math.max(scale.min, Math.min(scale.max, next));
     setDraft(String(clamped));
-    onChange(clamped);
+    onChange(scale.fromDisplay(clamped));
   };
   return (
     <div className="field slider-field">
@@ -125,37 +144,37 @@ export function SliderField({
             aria-label={label}
             type="number"
             inputMode="decimal"
-            min={min}
-            max={max}
-            step={step}
+            min={scale.min}
+            max={scale.max}
+            step={scale.step}
             value={draft}
             onChange={(event) => {
               const next = event.target.value;
               setDraft(next);
-              const parsed = parseNumberDraft(next, min, max);
-              if (parsed !== null) onChange(parsed);
+              const parsed = parseNumberDraft(next, scale.min, scale.max);
+              if (parsed !== null) onChange(scale.fromDisplay(parsed));
             }}
             onBlur={() => {
               const parsed = Number(draft);
-              if (!draft.trim() || !Number.isFinite(parsed)) setDraft(String(value));
+              if (!draft.trim() || !Number.isFinite(parsed)) setDraft(scale.format(value));
               else publish(parsed);
             }}
           />
-          {unit && <span>{unit}</span>}
+          {shownUnit && <span>{shownUnit}</span>}
         </div>
       </div>
       <input
         className="touch-slider"
         aria-label={`${label}: cursore`}
         type="range"
-        min={sliderMin}
-        max={sliderMax}
-        step={step}
-        value={Math.max(sliderMin, Math.min(sliderMax, value))}
-        style={{ "--fill": `${sliderMax > sliderMin ? ((Math.max(sliderMin, Math.min(sliderMax, value)) - sliderMin) / (sliderMax - sliderMin)) * 100 : 0}%` } as CSSProperties}
+        min={slider.min}
+        max={slider.max}
+        step={slider.step}
+        value={Math.max(slider.min, Math.min(slider.max, shownValue))}
+        style={{ "--fill": `${slider.max > slider.min ? ((Math.max(slider.min, Math.min(slider.max, shownValue)) - slider.min) / (slider.max - slider.min)) * 100 : 0}%` } as CSSProperties}
         onChange={(event) => publish(Number(event.target.value))}
       />
-      <div className="slider-bounds"><span>{sliderMin.toLocaleString("it-IT")} {unit}</span><span>{sliderMax.toLocaleString("it-IT")} {unit}</span></div>
+      <div className="slider-bounds"><span>{slider.min.toLocaleString("it-IT")} {shownUnit}</span><span>{slider.max.toLocaleString("it-IT")} {shownUnit}</span></div>
       {hint && <small>{hint}</small>}
     </div>
   );

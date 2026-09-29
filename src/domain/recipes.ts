@@ -1,5 +1,6 @@
 import { buildTimeline, deriveAutomaticSchedule, type calculate } from "./calculator";
 import { localDateTime } from "./styles";
+import { formatWeight } from "../services/units";
 import type { DoughConfig, Recipe, Stage } from "./types";
 
 export type RecipeStatus = "active" | "saved" | "past";
@@ -9,8 +10,6 @@ export interface ScaleItem {
   grams: number;
   note?: string;
 }
-
-const fmt = (n: number) => n.toLocaleString("it-IT", { maximumFractionDigits: 0 });
 
 /**
  * Una pizza è "in corso" solo se è stata avviata ed è il piano attivo;
@@ -54,7 +53,7 @@ export function buildScaleItems(config: Recipe["config"], result: GoodResult): S
       label: "Acqua da aggiungere",
       grams: result.waterToWeigh,
       note: config.autolyse
-        ? `${fmt(result.autolyse.water)} g nell’autolisi e ${fmt(result.autolyse.reservedWater)} g di riserva.`
+        ? `${formatWeight(result.autolyse.water)} nell’autolisi e ${formatWeight(result.autolyse.reservedWater)} di riserva.`
         : undefined,
     },
     { label: yeastLabel(config.yeast), grams: result.yeast },

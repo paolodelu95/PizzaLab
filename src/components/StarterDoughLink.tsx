@@ -1,5 +1,6 @@
 import { Alarm, ArrowRight, Jar, Warning } from "@phosphor-icons/react";
 import type { DoughConfig, SourdoughProfile } from "../domain/types";
+import { formatWeight } from "../services/units";
 
 const dateLabel = (date: Date) => date.toLocaleString("it-IT", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -26,7 +27,7 @@ export function StarterDoughLink({ profiles, config, starterGrams, onUpdate, onM
     <div className="starter-link-options">{profiles.map((profile) => <button key={profile.id} className={selected?.id === profile.id ? "selected" : ""} onClick={() => onUpdate({ sourdoughProfileId: profile.id, yeast: profile.kind === "licoli" ? "licoli" : "sourdough", starterHydration: profile.kind === "licoli" ? 100 : 50, preferment: "none" })}><Jar weight={selected?.id === profile.id ? "fill" : "duotone"} /><span><strong>{profile.name}</strong><small>{profile.kind === "licoli" ? "Li.Co.Li." : "Pasta madre"} · {profile.phase === "mature" ? "maturo" : "in consolidamento"}</small></span></button>)}</div>
     {selected && <div className="starter-build">
       {selected.phase !== "mature" && <div className="starter-build-warning"><Warning /><span>Questa coltura non ha ancora completato tre crescite efficaci consecutive: controlla attentamente il volume.</span></div>}
-      <div className="starter-build-grid"><div><span>Da usare nell’impasto</span><strong>{Math.round(starterGrams)} g</strong></div><div><span>Rinfresco preparatorio</span><strong>{Math.round(seed)} + {Math.round(flour)} + {Math.round(water)} g</strong><small>madre + farina + acqua</small></div></div>
+      <div className="starter-build-grid"><div><span>Da usare nell’impasto</span><strong>{formatWeight(starterGrams)}</strong></div><div><span>Rinfresco preparatorio</span><strong>{formatWeight(seed)} + {formatWeight(flour)} + {formatWeight(water)}</strong><small>madre + farina + acqua</small></div></div>
       <div className="starter-build-time"><Alarm /><div><span>Rinfresca indicativamente</span><strong>{dateLabel(refreshAt)}</strong><small>Picco stimato vicino all’impasto delle {dateLabel(mixAt)}. Conferma sempre con volume e profumo reali.</small></div></div>
     </div>}
   </section>;

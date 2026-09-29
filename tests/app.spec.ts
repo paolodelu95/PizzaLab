@@ -696,3 +696,51 @@ test("on iPhone the web app explains how to add it to the home screen", async ({
   await expect(page.getByRole("region", { name: "Installa PizzaLab sul telefono" })).toBeVisible();
   await context.close();
 });
+
+test("units can be switched to ounces and Fahrenheit without changing the saved recipe", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  const ball = page.getByLabel("Peso del panetto", { exact: true });
+  await ball.fill("300");
+  await expect(page.getByLabel("Peso del panetto", { exact: true })).toHaveValue("300");
+
+  await page.getByRole("button", { name: "Profilo", exact: true }).click();
+  await page.getByRole("radio", { name: "Once (oz)" }).click();
+  await page.getByRole("radio", { name: "Fahrenheit (°F)" }).click();
+  await expect(page.getByRole("radio", { name: "Once (oz)" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("radio", { name: "Fahrenheit (°F)" })).toHaveAttribute("aria-checked", "true");
+
+  // Il campo mostra 300 g come once e accetta once: 9 oz = 255,15 g.
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await expect(ball).toHaveValue("10.58");
+  await ball.fill("9");
+  await expect(ball).toHaveValue("9");
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await expect(page.getByText(/da 9 oz/).first()).toBeVisible();
+  // Acqua e sale in once; il lievito, sotto i 5 g, resta in grammi perché in once sarebbe illeggibile.
+  await expect(page.locator(".ingredients").first()).toContainText(/Acqua totale[\d,]+ oz/);
+  await expect(page.locator(".ingredients").first()).toContainText(/Lievito fresco[\d,]+ g/);
+
+  // Temperatura: 77 °F sono esattamente 25 °C, e il piano lo scrive in °F.
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  const room = page.getByLabel("Temperatura ambiente", { exact: true });
+  await room.fill("77");
+  await expect(room).toHaveValue("77");
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await expect(page.getByText(/a 77 °F/).first()).toBeVisible();
+  await expect(page.getByText(/°C/)).toHaveCount(0);
+
+  // Le unità restano dopo aver riaperto l’app, e i dati salvati sono ancora in g e °C.
+  await page.reload();
+  await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await expect(page.getByLabel("Peso del panetto", { exact: true })).toHaveValue("9");
+  await page.getByRole("button", { name: "Profilo", exact: true }).click();
+  await page.getByRole("radio", { name: "Grammi (g)" }).click();
+  await page.getByRole("radio", { name: "Celsius (°C)" }).click();
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await expect(page.getByLabel("Peso del panetto", { exact: true })).toHaveValue("255.15");
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await expect(page.getByLabel("Temperatura ambiente", { exact: true })).toHaveValue("25");
+});

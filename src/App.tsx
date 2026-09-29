@@ -91,6 +91,8 @@ import {
 import { useCloseOnBack } from "./services/backNavigation";
 import { buildCalendar, downloadCalendar, stagesToEvents } from "./services/calendar";
 import { usesCalendarReminders } from "./services/platform";
+import { formatTemp, formatWeight, normalizeUnits, setUnits, type Units } from "./services/units";
+import { WeightValue } from "./components/WeightValue";
 import { markTutorialSeen, tutorialSeen } from "./services/tutorial";
 import { Onboarding } from "./components/Onboarding";
 import { InstallPrompt } from "./components/InstallPrompt";
@@ -231,13 +233,20 @@ export default function App() {
     [state.customFlours],
   );
   const c = state.config;
+  // Le unità sono uno stato di modulo (vedi services/units): si impostano prima che i figli si disegnino,
+  // e le chiavi entrano nelle dipendenze dei memo perché i testi del dominio contengono già g/oz e °C/°F.
+  const units = normalizeUnits(state.units);
+  setUnits(units);
+  const unitsKey = `${units.weight}${units.temp}`;
   const activeSourdough = state.sourdoughProfiles.find(
     (profile) => profile.id === state.activeSourdoughId,
   ) ?? null;
   const selectedFlour = flours.find((f) => f.id === c.flourId);
-  const result = useMemo(() => calculate(c, flours), [c, flours]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const result = useMemo(() => calculate(c, flours), [c, flours, unitsKey]);
   const automaticPlan = useMemo(() => deriveAutomaticSchedule(c), [c]);
-  const timeline = useMemo(() => buildTimeline(c, flours), [c, flours]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const timeline = useMemo(() => buildTimeline(c, flours), [c, flours, unitsKey]);
   const currentStyle = styles.find((s) => s.id === c.styleId)!;
   const active = state.recipes.find((r) => r.id === state.activeId);
   const activeNext = active
@@ -435,6 +444,7 @@ export default function App() {
             userOvens: state.userOvens,
             userPans: state.userPans,
             profileName: state.profileName,
+            units,
           },
           null,
           2,
@@ -537,6 +547,7 @@ export default function App() {
           ...(s.userPans ?? []).filter((old) => !userPans.some((item) => item.id === old.id)),
         ],
         profileName: s.profileName || (typeof data.profileName === "string" ? data.profileName : ""),
+        units: data.units ? normalizeUnits(data.units) : s.units,
       }));
       setMessage(
         `Importazione completata: ${recipes.length} ricette recuperate.`,
@@ -553,10 +564,10 @@ export default function App() {
     const flourLines = r.flourBreakdown
       .map(
         (item) =>
-          `• ${item.name}: ${fmt(item.grams)} g (${fmt(item.percent, 1)}%)`,
+          `• ${item.name}: ${formatWeight(item.grams)} (${fmt(item.percent, 1)}%)`,
       )
       .join("\n");
-    const text = `${recipe.name}\n${r.style.name}\nFarina totale: ${fmt(r.flour)} g\n${flourLines}\nAcqua: ${fmt(r.water)} g · Sale: ${fmt(r.salt, 1)} g · Lievito: ${fmt(r.yeast, 2)} g.\nCottura: ${dateLabel(recipe.config.bakeAt)}.`;
+    const text = `${recipe.name}\n${r.style.name}\nFarina totale: ${formatWeight(r.flour)}\n${flourLines}\nAcqua: ${formatWeight(r.water)} · Sale: ${formatWeight(r.salt, 1)} · Lievito: ${formatWeight(r.yeast, 2)}.\nCottura: ${dateLabel(recipe.config.bakeAt)}.`;
     try {
       if (navigator.share) await navigator.share({ title: recipe.name, text });
       else {
@@ -1056,25 +1067,25 @@ export default function App() {
                   <div>
                     <small>Farina</small>
                     <strong>
-                      {fmt(result.flour)} <span>g</span>
+                      <WeightValue grams={result.flour} />
                     </strong>
                   </div>
                   <div>
                     <small>Acqua</small>
                     <strong>
-                      {fmt(result.water)} <span>g</span>
+                      <WeightValue grams={result.water} />
                     </strong>
                   </div>
                   <div>
                     <small>{["sourdough", "licoli"].includes(c.yeast) ? "Madre" : "Lievito"}</small>
                     <strong>
-                      {fmt(result.yeast, ["sourdough", "licoli"].includes(c.yeast) ? 0 : 2)} <span>g</span>
+                      <WeightValue grams={result.yeast} digits={["sourdough", "licoli"].includes(c.yeast) ? 0 : 2} />
                     </strong>
                   </div>
                   <div className="dose-salt">
                     <small>Sale</small>
                     <strong>
-                      {fmt(result.salt, 1)} <span>g</span>
+                      <WeightValue grams={result.salt} digits={1} />
                     </strong>
                   </div>
                   <button
@@ -1298,7 +1309,7 @@ export default function App() {
                             min={100}
                             max={2000}
                             step={10}
-                            unit="g"
+                            quantity="weight"
                             hint="Il peso di ogni pallina di impasto."
                           />
                         )}
@@ -1492,7 +1503,7 @@ export default function App() {
                               <div>
                                 <strong>Il malto è facoltativo</strong>
                                 <p>
-                                  La ricetta {currentStyle.name} ne prevede {fmt(recommended.malt, 1)}% ({fmt((result.flour * recommended.malt) / 100, 1)} g): aiuta colore e
+                                  La ricetta {currentStyle.name} ne prevede {fmt(recommended.malt, 1)}% ({formatWeight((result.flour * recommended.malt) / 100, 1)}): aiuta colore e
                                   morbidezza, ma è difficile da trovare e si può omettere senza problemi.
                                 </p>
                                 <button className="text-button" onClick={() => update("malt", recommended.malt)}>
@@ -1557,7 +1568,7 @@ export default function App() {
                                 <div><span>PUNTATA</span><strong>{durationLabel(c.bulkHours)}</strong><small>fuori frigo</small></div>
                                 <div className="cold"><span>FRIGO</span><strong>{c.coldHours > 0 ? durationLabel(c.coldHours) : "—"}</strong><small>{c.coldHours > 0 ? "massa coperta" : "non necessario"}</small></div>
                                 <div><span>APPRETTO</span><strong>{durationLabel(c.proofHours)}</strong><small>prima del forno</small></div>
-                                <div className="yeast"><span>LIEVITO CALCOLATO</span><strong>{result.ok ? `${fmt(result.yeast, 2)} g` : "—"}</strong><small>{c.yeast === "fresh" ? "fresco" : c.yeast === "instant" ? "secco" : "coltura naturale"}</small></div>
+                                <div className="yeast"><span>LIEVITO CALCOLATO</span><strong>{result.ok ? formatWeight(result.yeast, 2) : "—"}</strong><small>{c.yeast === "fresh" ? "fresco" : c.yeast === "instant" ? "secco" : "coltura naturale"}</small></div>
                               </div>
                               <p className="automatic-plan-note"><Sparkle /> {(["sourdough", "licoli"] as DoughConfig["yeast"][]).includes(c.yeast) ? "Orari e dose della coltura si aggiornano insieme; la vitalità reale del lievito madre va sempre verificata dalla crescita." : "Orari e lievito si aggiornano insieme in base a stile, temperature, pieghe e lavorazioni."}</p>
                             </>
@@ -1676,7 +1687,7 @@ export default function App() {
                           onChange={(v) => update("roomTemp", v)}
                           min={10}
                           max={35}
-                          unit="°C"
+                          quantity="temp"
                           hint="Dove lievita l’impasto"
                         />
                         {c.coldHours > 0 && (
@@ -1686,7 +1697,7 @@ export default function App() {
                             onChange={(v) => update("fridgeTemp", v)}
                             min={1}
                             max={12}
-                            unit="°C"
+                            quantity="temp"
                           />
                         )}
                         <SelectSheet
@@ -1938,7 +1949,7 @@ export default function App() {
                     </div>
                     <p>
                       {result.ok
-                        ? `${c.count} ${isPan ? "teglie" : "panetti"} da ${fmt(result.unitWeight)} g`
+                        ? `${c.count} ${isPan ? "teglie" : "panetti"} da ${formatWeight(result.unitWeight)}`
                         : "Completa i valori del piano"}
                     </p>
                     {result.ok ? (
@@ -1954,21 +1965,20 @@ export default function App() {
                           </span>
                           <span>
                             <Fire />
-                            {c.ovenTemp} °C
+                            {formatTemp(c.ovenTemp)}
                           </span>
                         </div>
                         <div className="flour-total">
                           <span>FARINA TOTALE</span>
                           <strong>
-                            {fmt(result.flour)}
-                            <small> g</small>
+                            <WeightValue grams={result.flour} tag="small" />
                           </strong>
                           <div className="flour-breakdown">
                             {result.flourBreakdown.map((item) => (
                               <div key={item.id}>
                                 <span>{item.name}</span>
                                 <strong>
-                                  {fmt(item.grams)} g{" "}
+                                  {formatWeight(item.grams)}{" "}
                                   <small>· {fmt(item.percent, 1)}%</small>
                                 </strong>
                               </div>
@@ -2007,8 +2017,7 @@ export default function App() {
                             <div key={label}>
                               <span>{label}</span>
                               <strong>
-                                {fmt(Number(value), Number(digits))}
-                                <small> g</small>
+                                <WeightValue grams={Number(value)} digits={Number(digits)} tag="small" />
                               </strong>
                             </div>
                           ))}
@@ -2017,11 +2026,11 @@ export default function App() {
                           <div className="phase-note">
                             <strong>
                               {c.yeast === "licoli" ? "Licoli" : "Pasta madre"}{" "}
-                              · {fmt(result.starter.grams)} g
+                              · {formatWeight(result.starter.grams)}
                             </strong>
                             <span>
-                              Contiene {fmt(result.starter.flour)} g farina +{" "}
-                              {fmt(result.starter.water)} g acqua
+                              Contiene {formatWeight(result.starter.flour)} farina +{" "}
+                              {formatWeight(result.starter.water)} acqua
                             </span>
                             <small>
                               Le quantità di farina e acqua da pesare sono già
@@ -2033,11 +2042,11 @@ export default function App() {
                           <div className="phase-note">
                             <strong>Autolisi · {c.autolyseMinutes} min</strong>
                             <span>
-                              {fmt(result.autolyse.flour)} g farina +{" "}
-                              {fmt(result.autolyse.water)} g acqua
+                              {formatWeight(result.autolyse.flour)} farina +{" "}
+                              {formatWeight(result.autolyse.water)} acqua
                             </span>
                             <small>
-                              {fmt(result.autolyse.reservedWater)} g d’acqua
+                              {formatWeight(result.autolyse.reservedWater)} d’acqua
                               restano per lievito e inserimento graduale.
                             </small>
                           </div>
@@ -2048,18 +2057,18 @@ export default function App() {
                               {c.preferment} · {result.preferment.maturity}
                             </strong>
                             <span>
-                              {fmt(result.preferment.flour)} g farina +{" "}
-                              {fmt(result.preferment.water)} g acqua
+                              {formatWeight(result.preferment.flour)} farina +{" "}
+                              {formatWeight(result.preferment.water)} acqua
                             </span>
                             <small>
-                              {fmt(result.preferment.yeast, 2)} g lievito nel
+                              {formatWeight(result.preferment.yeast, 2)} lievito nel
                               prefermento.
                             </small>
                           </div>
                         )}
                         <div className="phase-note baking-note">
                           <strong>
-                            Cottura · {c.bakeMinutes} min a {c.ovenTemp} °C
+                            Cottura · {c.bakeMinutes} min a {formatTemp(c.ovenTemp)}
                           </strong>
                           <span>
                             Crosta {result.bakeOutcome.crustLabel.toLowerCase()} · mollica {result.bakeOutcome.crumbLabel.toLowerCase()} · fondo {result.bakeOutcome.baseLabel.toLowerCase()}
@@ -2083,7 +2092,7 @@ export default function App() {
                         </div>
                         <div className="total-weight">
                           <span>Impasto totale</span>
-                          <strong>{fmt(result.total)} g</strong>
+                          <strong>{formatWeight(result.total)}</strong>
                         </div>
                         <div className="yeast-note">
                           <Info />
@@ -2254,6 +2263,7 @@ export default function App() {
               onImport={(file) => void importArchive(file)}
               onShowTutorial={() => setTutorialOpen(true)}
               onLeadChange={(minutes) => void changeLeadMinutes(minutes)}
+              onUnitsChange={(patch: Partial<Units>) => setState((s) => ({ ...s, units: { ...normalizeUnits(s.units), ...patch } }))}
             />
           )}
           {tab === "guida" && (
