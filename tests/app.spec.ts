@@ -783,3 +783,51 @@ test("a flour without a declared W shows an estimated range and the advice says 
   await expect(page.getByText("W stimato, non dichiarato")).toBeVisible();
   await expect(page.getByText(/valore teorico, può essere impreciso/i).first()).toBeVisible();
 });
+
+test("the planner suggests flours, a start time, people, a hydration fix and keeps templates", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /^1 Impasto/ }).click();
+
+  // Per quante persone: 6 persone sono 6 pizze; scegliendone 4 tornano 4.
+  await page.getByRole("button", { name: "6", exact: true }).click();
+  await expect(page.locator(".stepper").first()).toContainText("6");
+  await page.getByRole("button", { name: "4", exact: true }).click();
+  await expect(page.locator(".stepper").first()).toContainText("4");
+
+  // Farine consigliate: si apre il riquadro e una farina si sceglie con un tocco.
+  const suggestions = page.locator(".flour-suggestions");
+  await suggestions.locator("summary").click();
+  await expect(suggestions.getByText(/Un suggerimento, non una regola/)).toBeVisible();
+  const first = suggestions.locator("article").first();
+  const suggested = (await first.locator("strong").innerText()).split(" · ")[1];
+  await first.getByRole("button", { name: "Usa" }).click();
+  await expect(page.locator(".flour-picker-trigger").first()).toContainText(suggested);
+
+  // Correzione dell’idratazione con un tocco.
+  await page.getByLabel("Idratazione", { exact: true }).first().fill("80");
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await page.getByRole("button", { name: /^Imposta \d+%$/ }).first().click();
+  await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  const hydration = Number(await page.getByLabel("Idratazione", { exact: true }).first().inputValue());
+  expect(hydration).toBeLessThan(80);
+
+  // Orario di inizio consigliato.
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.getByRole("button", { name: "Automatica", exact: true }).click();
+  const before = await page.getByLabel("Voglio iniziare").inputValue();
+  await page.getByLabel("Voglio mangiare").fill("2031-05-10T20:00");
+  await page.getByRole("button", { name: "Suggerisci quando iniziare" }).click();
+  const start = await page.getByLabel("Voglio iniziare").inputValue();
+  expect(start).not.toBe(before);
+  expect(new Date(start).getTime()).toBeLessThan(new Date("2031-05-10T20:00").getTime());
+
+  // Modello: si salva dal riepilogo e ricompare in cima, anche dopo aver riaperto l’app.
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await page.getByLabel("Nome del piano").fill("Il mio sabato");
+  await page.getByRole("button", { name: "Salva come modello" }).click();
+  await page.reload();
+  const templates = page.locator("#templates-title");
+  await expect(templates).toBeVisible();
+  await page.locator(".user-ovens", { has: templates }).getByRole("button", { name: "Usa" }).click();
+  await expect(page.getByRole("heading", { name: "Il tuo impasto" }).or(page.getByText("Modello «Il mio sabato» caricato"))).toBeVisible();
+});

@@ -1,4 +1,4 @@
-import { detectLanguage, locale, setLocaleState, t, type Language, msg } from "./i18n";
+import { detectLanguage, locale, setLocaleState, t, tn, type Language, msg } from "./i18n";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   ArrowLeft,
@@ -19,6 +19,7 @@ import {
   CalendarCheck,
   ListChecks,
   Notebook,
+  Trash,
   PencilSimple,
   Pizza,
   Snowflake,
@@ -75,7 +76,7 @@ import { StarterDoughLink } from "./components/StarterDoughLink";
 import { Diary, type DiaryView } from "./components/Diary";
 import { durationLabel } from "./domain/duration";
 import { strengthLine } from "./domain/flourStrength";
-import { applyAutomaticPlan, recipeStatus, startTiming, yeastLabel } from "./domain/recipes";
+import { applyAutomaticPlan, configFromTemplate, countForPeople, ratedHistory, recipeStatus, startTiming, suggestStart, yeastLabel } from "./domain/recipes";
 import { emptyState, readState, writeState } from "./services/storage";
 import {
   cancelReminders,
@@ -95,6 +96,7 @@ import { buildCalendar, downloadCalendar, stagesToEvents } from "./services/cale
 import { usesCalendarReminders } from "./services/platform";
 import { formatTemp, formatWeight, normalizeUnits, setUnits, type Units } from "./services/units";
 import { WeightValue } from "./components/WeightValue";
+import { FlourSuggestions } from "./components/FlourSuggestions";
 import { normalizeLanguage } from "./i18n";
 import { markTutorialSeen, tutorialSeen } from "./services/tutorial";
 import { Onboarding } from "./components/Onboarding";
@@ -105,7 +107,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.22.0";
+const APP_VERSION = "0.23.0";
 type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
 const nav = [
@@ -256,6 +258,7 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const timeline = useMemo(() => buildTimeline(c, flours), [c, flours, unitsKey]);
   const currentStyle = styles.find((s) => s.id === c.styleId)!;
+  const history = ratedHistory(state.recipes, c);
   const active = state.recipes.find((r) => r.id === state.activeId);
   const activeNext = active
     ? buildTimeline(active.config).find((s) => new Date(s.at).getTime() > now)
@@ -296,6 +299,35 @@ export default function App() {
       ...s,
       config: normalizePlanning({ ...s.config, ...patch }),
     }));
+  }
+  /** «Voglio mangiare alle…» al contrario: propone l’orario di inizio con la lievitazione tipica dello stile. */
+  function suggestStartTime() {
+    const suggestion = suggestStart(c, Date.now());
+    if (!suggestion) return;
+    updateMany({ startAt: suggestion.startAt });
+    setMessage(
+      suggestion.shortened
+        ? t("L’orario ideale è già passato: si parte adesso, con una lievitazione più breve.")
+        : t("Si parte {when}: circa {hours} di lievitazione.", { when: dateLabel(suggestion.startAt), hours: durationLabel(suggestion.hours) }),
+    );
+  }
+  function saveTemplate() {
+    if (!result.ok) return;
+    const name = recipeName.trim() || t(currentStyle.name);
+    setState((s) => ({
+      ...s,
+      templates: [{ id: crypto.randomUUID(), name, createdAt: new Date().toISOString(), config: { ...s.config } }, ...(s.templates ?? [])],
+    }));
+    setMessage(t("Modello «{name}» salvato: lo trovi in cima, sotto «I tuoi modelli».", { name }));
+  }
+  function useTemplate(id: string) {
+    const template = (state.templates ?? []).find((item) => item.id === id);
+    if (!template) return;
+    setState((s) => ({ ...s, config: normalizePlanning(configFromTemplate(template, defaultConfig())) }));
+    setEditingId(null);
+    setRecipeName(template.name);
+    setPlannerStage("fermentation");
+    setMessage(t("Modello «{name}» caricato: scegli quando mangiare.", { name: template.name }));
   }
   function goToPlannerStage(stage: PlannerStage) {
     setPlannerStage(stage);
@@ -454,6 +486,7 @@ export default function App() {
             bakeCalibrations: state.bakeCalibrations,
             userOvens: state.userOvens,
             userPans: state.userPans,
+            templates: state.templates,
             profileName: state.profileName,
             units,
             language: state.language,
@@ -503,6 +536,7 @@ export default function App() {
       const bakeCalibrations = Array.isArray(data.bakeCalibrations) ? data.bakeCalibrations : [];
       const userOvens = Array.isArray(data.userOvens) ? data.userOvens : [];
       const userPans = Array.isArray(data.userPans) ? data.userPans : [];
+      const templates = Array.isArray(data.templates) ? data.templates : [];
       if (
         !recipes.length &&
         !customFlours.length &&
@@ -511,7 +545,8 @@ export default function App() {
         !sourdoughProfiles.length &&
         !bakeCalibrations.length &&
         !userOvens.length &&
-        !userPans.length
+        !userPans.length &&
+        !templates.length
       )
         throw new Error();
       setState((s) => ({
@@ -557,6 +592,10 @@ export default function App() {
         userPans: [
           ...userPans,
           ...(s.userPans ?? []).filter((old) => !userPans.some((item) => item.id === old.id)),
+        ],
+        templates: [
+          ...templates,
+          ...(s.templates ?? []).filter((old) => !templates.some((item) => item.id === old.id)),
         ],
         profileName: s.profileName || (typeof data.profileName === "string" ? data.profileName : ""),
         units: data.units ? normalizeUnits(data.units) : s.units,
@@ -862,7 +901,7 @@ export default function App() {
     }));
     setMessage(t("Taratura salvata: le prossime previsioni di cottura con questo forno terranno conto del risultato reale."));
   }
-  const isPan = styles.find((s) => s.id === c.styleId)?.pan;
+  const isPan = Boolean(styles.find((s) => s.id === c.styleId)?.pan);
   const startPast =
     timeline.length > 0 && new Date(timeline[0].at).getTime() < now;
   const timing = startTiming(timeline, c.bakeAt, now);
@@ -1039,6 +1078,36 @@ export default function App() {
                   <ArrowRight />
                 </button>
               )}
+              {(state.templates ?? []).length > 0 && (
+                <section className="panel user-ovens" aria-labelledby="templates-title">
+                  <div className="panel-title">
+                    <span className="section-icon"><BookmarkSimple /></span>
+                    <div>
+                      <h2 id="templates-title">{t("I tuoi modelli")}</h2>
+                      <p>{t("Le tue ricette da rifare: un tocco e ripartono, tu scegli solo quando mangiare.")}</p>
+                    </div>
+                  </div>
+                  <div className="oven-list">
+                    {(state.templates ?? []).map((template) => (
+                      <article key={template.id}>
+                        <span className="oven-icon" aria-hidden="true"><Pizza weight="duotone" /></span>
+                        <div>
+                          <strong>{template.name}</strong>
+                          <span>{t(styles.find((s) => s.id === template.config.styleId)?.name ?? "")} · {template.config.hydration}%</span>
+                        </div>
+                        <button className="button secondary" onClick={() => useTemplate(template.id)}>{t("Usa")}</button>
+                        <button
+                          className="icon-button"
+                          aria-label={t("Elimina modello {name}", { name: template.name })}
+                          onClick={() => setState((s) => ({ ...s, templates: (s.templates ?? []).filter((item) => item.id !== template.id) }))}
+                        >
+                          <Trash />
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
               <section className="style-section">
                 <div className="section-title">
                   <h2>{t("Che pizza ti va?")}</h2>
@@ -1172,6 +1241,15 @@ export default function App() {
                           {t("Esplora le farine")} <ArrowRight />
                         </button>
                       </div>
+                      {history.flour.count > 0 && (
+                        <p className="flour-history">
+                          <Notebook /> {t("Le tue pizze con questa farina: {pizzas}, voto medio {average}/5.", { pizzas: tn(history.flour.count, "{count} pizza", "{count} pizze"), average: fmt(history.flour.average, 1) })}
+                          {history.flourAndOven.count > 0 && history.flourAndOven.count !== history.flour.count
+                            ? ` ${t("Con questo forno: {pizzas}, voto medio {average}/5.", { pizzas: tn(history.flourAndOven.count, "{count} pizza", "{count} pizze"), average: fmt(history.flourAndOven.average, 1) })}`
+                            : ""}
+                        </p>
+                      )}
+                      <FlourSuggestions config={c} flours={flours} onUse={(id) => update("flourId", id)} />
                       <details className="blend-details">
                         <summary>
                           <span>
@@ -1309,6 +1387,22 @@ export default function App() {
                           min={1}
                           max={30}
                         />
+                        <div className="lead-options" role="group" aria-label={t("Per quante persone?")}>
+                          <span>{t("Per quante persone?")}</span>
+                          <div>
+                            {[2, 4, 6, 8, 10].map((people) => (
+                              <button
+                                key={people}
+                                className={c.count === countForPeople(people, isPan) ? "selected" : ""}
+                                aria-pressed={c.count === countForPeople(people, isPan)}
+                                onClick={() => update("count", countForPeople(people, isPan))}
+                              >
+                                {people}
+                              </button>
+                            ))}
+                          </div>
+                          <small>{isPan ? t("Circa 4 porzioni per teglia.") : t("Una pizza a testa.")}</small>
+                        </div>
                         {!isPan && (
                           <NumberField
                             label={t("Peso del panetto")}
@@ -1571,6 +1665,9 @@ export default function App() {
                               <input type="datetime-local" value={c.bakeAt} onChange={(e) => update("bakeAt", e.target.value)} />
                             </label>
                           </div>
+                          <button className="text-button" onClick={suggestStartTime}>
+                            <Clock /> {t("Suggerisci quando iniziare")}
+                          </button>
                           {automaticPlan.ok ? (
                             <>
                               <div className="automatic-phase-grid">
@@ -1903,6 +2000,11 @@ export default function App() {
                             <div>
                               <strong>{a.title}</strong>
                               <p>{a.text}</p>
+                              {a.fix && (
+                                <button className="text-button" onClick={() => update("hydration", a.fix!.hydration)}>
+                                  {t("Imposta {value}%", { value: a.fix.hydration })}
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))
@@ -2155,6 +2257,9 @@ export default function App() {
                         </button>
                         <p>{t("Nessun promemoria per ora: la ritrovi nel diario, tra le «Salvate», e la avvii quando vuoi.")}</p>
                       </div>
+                      <button className="text-button" disabled={!result.ok} onClick={saveTemplate}>
+                        <BookmarkSimple /> {t("Salva come modello")}
+                      </button>
                       <button className="text-button step-back-link" onClick={() => goToPlannerStage("baking")}>
                         <ArrowLeft /> {t("Torna alla cottura")}
                       </button>

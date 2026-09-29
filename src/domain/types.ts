@@ -125,6 +125,8 @@ export interface Advice {
   level: "info" | "warning" | "error";
   title: string;
   text: string;
+  /** Correzione proposta con un tocco (per ora solo l’idratazione). */
+  fix?: { hydration: number };
 }
 export interface Stage {
   id: string;
@@ -178,6 +180,13 @@ export interface UserOven {
   temp: number;
   bakeSurface: DoughConfig["bakeSurface"];
   createdAt: string;
+}
+/** Una ricetta da rifare: tutte le scelte tranne le date. */
+export interface RecipeTemplate {
+  id: string;
+  name: string;
+  createdAt: string;
+  config: DoughConfig;
 }
 export interface Recipe {
   id: string;
@@ -251,6 +260,7 @@ export interface StoredState {
   profileName?: string;
   userOvens?: UserOven[];
   userPans?: UserPan[];
+  templates?: RecipeTemplate[];
   /** Minuti di anticipo delle notifiche rispetto a ogni fase (0 = all’orario esatto). */
   reminderLeadMinutes?: number;
   /** Unità mostrate all’utente: i dati restano sempre salvati in grammi e °C. */

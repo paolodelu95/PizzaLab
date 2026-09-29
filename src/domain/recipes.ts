@@ -1,8 +1,8 @@
 import { t } from "../i18n";
 import { buildTimeline, deriveAutomaticSchedule, type calculate } from "./calculator";
-import { localDateTime } from "./styles";
+import { localDateTime, styles } from "./styles";
 import { formatWeight } from "../services/units";
-import type { DoughConfig, Recipe, Stage } from "./types";
+import type { DoughConfig, Recipe, RecipeTemplate, Stage } from "./types";
 
 export type RecipeStatus = "active" | "saved" | "past";
 type GoodResult = Extract<ReturnType<typeof calculate>, { ok: true }>;
@@ -124,4 +124,51 @@ export function keepMealTimeFromNow(config: DoughConfig, now: number): { ok: tru
   const automatic = deriveAutomaticSchedule(candidate);
   if (!automatic.ok) return { ok: false, error: automatic.error };
   return { ok: true, config: applyAutomaticPlan(candidate) };
+}
+
+/** Persone servite da una teglia (una pizza a testa per gli stili in panetti). */
+export const PORTIONS_PER_PAN = 4;
+export const countForPeople = (people: number, isPan: boolean) => (isPan ? Math.max(1, Math.ceil(people / PORTIONS_PER_PAN)) : Math.max(1, people));
+
+const HOUR = 3600000;
+
+/**
+ * Orario di inizio consigliato per mangiare a `bakeAt`: la lievitazione tipica dello stile, più la preparazione,
+ * spostata indietro se cadrebbe di notte (prima delle 7 o dopo le 22). Se è già passato si parte adesso
+ * con una lievitazione più breve (`shortened`).
+ */
+export function suggestStart(config: DoughConfig, now: number): { startAt: string; shortened: boolean; hours: number } | null {
+  const bake = new Date(config.bakeAt).getTime();
+  const style = styles.find((item) => item.id === config.styleId);
+  if (!Number.isFinite(bake) || !style) return null;
+  const prep = 20 / 60 + (config.autolyse ? config.autolyseMinutes / 60 : 0) + (config.preferment === "none" ? 0 : config.prefermentHours);
+  const ideal = style.bulk + style.cold + style.proof;
+  let start = new Date(bake - (ideal + prep) * HOUR);
+  const hour = start.getHours() + start.getMinutes() / 60;
+  if (hour < 7) {
+    start.setDate(start.getDate() - 1);
+    start.setHours(22, 0, 0, 0);
+  } else if (hour >= 22) start.setHours(22, 0, 0, 0);
+  let shortened = false;
+  if (start.getTime() < now) {
+    start = new Date(Math.ceil(now / (5 * 60000)) * 5 * 60000);
+    shortened = true;
+  }
+  return { startAt: localDateTime(start), shortened, hours: Math.round(((bake - start.getTime()) / HOUR - prep) * 10) / 10 };
+}
+
+/** Le tue pizze già valutate con la stessa farina (e con lo stesso forno): quante e con che voto medio. */
+export function ratedHistory(recipes: Recipe[], config: DoughConfig) {
+  const rated = recipes.filter((recipe) => recipe.rating > 0);
+  const summary = (list: Recipe[]) => ({ count: list.length, average: list.length ? list.reduce((sum, r) => sum + r.rating, 0) / list.length : 0 });
+  const sameFlour = rated.filter((recipe) => recipe.config.flourId === config.flourId);
+  return {
+    flour: summary(sameFlour),
+    flourAndOven: summary(sameFlour.filter((recipe) => recipe.config.ovenType === config.ovenType)),
+  };
+}
+
+/** Una ricetta da modello riparte da oggi: si tengono tutte le scelte, si rimettono le date di partenza. */
+export function configFromTemplate(template: RecipeTemplate, fresh: DoughConfig): DoughConfig {
+  return { ...fresh, ...template.config, startAt: fresh.startAt, bakeAt: fresh.bakeAt };
 }

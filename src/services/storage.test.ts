@@ -127,6 +127,15 @@ describe("storage migrations", () => {
     expect(state.config.ballWeight).toBe(255.15);
   });
 
+  it("keeps saved templates and drops broken ones", async () => {
+    const good = { id: "t1", name: "La mia", createdAt: "2026-09-01T10:00:00.000Z", config: { ...defaultConfig(), hydration: 70 } };
+    preferences.get.mockResolvedValue({ value: JSON.stringify({ ...emptyLegacyState(), templates: [good, { id: 2 }, null, { id: "t3", name: "Rotto", config: { ...defaultConfig(), hydration: 500 } }] }) });
+    const state = await readState();
+    expect(state.templates?.map((item) => item.id)).toEqual(["t1"]);
+    preferences.get.mockResolvedValue({ value: JSON.stringify(emptyLegacyState()) });
+    expect((await readState()).templates).toEqual([]);
+  });
+
   it("turns the pans of old equipment profiles into saved pans", async () => {
     const equipment = (id: string, panWidth: number, panLength: number) => ({
       id, name: id, mixer: "hand", mixerProfileId: "generic-planetary", ovenType: "home-static",

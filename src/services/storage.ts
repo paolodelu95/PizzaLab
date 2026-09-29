@@ -19,6 +19,7 @@ export const emptyState = (): StoredState => ({
   profileName: "",
   userOvens: [],
   userPans: [],
+  templates: [],
   units: { ...defaultUnits },
 });
 export async function readState(): Promise<StoredState> {
@@ -58,6 +59,12 @@ export async function readState(): Promise<StoredState> {
           surface: profile.bakeSurface && ["light-pan", "dark-pan", "perforated-pan", "cast-iron"].includes(profile.bakeSurface) ? profile.bakeSurface : "dark-pan",
           createdAt: profile.createdAt,
         }));
+  parsed.templates = Array.isArray(parsed.templates)
+    ? parsed.templates
+        .filter((item) => item && typeof item.id === "string" && typeof item.name === "string" && item.config)
+        .map((item) => ({ ...item, config: { ...defaultConfig(), ...item.config } }))
+        .filter((item) => !validateConfig(item.config).length)
+    : [];
   parsed.units = normalizeUnits(parsed.units);
   parsed.language = normalizeLanguage(parsed.language);
   parsed.reminderLeadMinutes = [0, 5, 10, 15, 30].includes(parsed.reminderLeadMinutes ?? 0) ? parsed.reminderLeadMinutes ?? 0 : 0;

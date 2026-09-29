@@ -3301,3 +3301,28 @@ details > summary > svg:first-child + span {
     display: none;
   }
 }
+
+/* Farine consigliate, storico delle pizze e scelta per persone */
+.flour-history {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.flour-history svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--brand);
+}
+.flour-suggestions .oven-list {
+  margin: 8px 0;
+}
+.flour-suggestions > small {
+  display: block;
+}
+.lead-options > small {
+  color: var(--ink-3);
+}

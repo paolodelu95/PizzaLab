@@ -1,3 +1,4 @@
+import { hydrationCeiling } from "../domain/flourAdvice";
 import { locale, t } from "../i18n";
 import type { DoughConfig, PizzaStyle } from '../domain/types';
 
@@ -8,7 +9,7 @@ export function HydrationChart({value,style,w,wLow,estimated=false}:{value:numbe
   const pos=(n:number)=>Math.max(0,Math.min(100,(n-min)/(max-min)*100));
   // This is a conservative working ceiling, not a laboratory absorption value.
   const wBase=wLow??w;
-  const wCeiling=wBase===null?null:Math.max(55,Math.min(85,58+(wBase-180)*.12));
+  const wCeiling=wBase===null?null:hydrationCeiling(wBase);
   const practicalHigh=wCeiling===null?style.hydrationRange[1]:Math.min(style.hydrationRange[1],wCeiling);
   const hasOverlap=practicalHigh>=style.hydrationRange[0];
   const inside=hasOverlap&&value>=style.hydrationRange[0]&&value<=practicalHigh;

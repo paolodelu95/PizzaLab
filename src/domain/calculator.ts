@@ -5,6 +5,7 @@ import { ovenById } from "../data/ovens";
 import { durationLabel } from "./duration";
 import { formatTemp, formatTempRange, formatWeight } from "../services/units";
 import { blendStrength, flourStrength } from "./flourStrength";
+import { hydrationCeiling } from "./flourAdvice";
 import type { Advice, DoughConfig, Flour, Stage } from "./types";
 export const MODEL_VERSION = "direct-v1";
 /** Un panetto impiega 2–3 ore a raffreddarsi e altrettante a tornare a temperatura:
@@ -692,7 +693,8 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
     level: Advice["level"],
     title: string,
     text: string,
-  ) => advice.push({ id, level, title, text });
+    fix?: Advice["fix"],
+  ) => advice.push({ id, level, title, text, ...(fix ? { fix } : {}) });
   // Lievitare e maturare sono due cose diverse: il lievito gonfia l’impasto in poche ore,
   // gli enzimi che scompongono amidi e glutine hanno bisogno di molte di più. Sotto le 4 ore
   // manca la maturazione, fra le 4 e le 8 c’è ma appena accennata.
@@ -759,6 +761,7 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       "warning",
       t("Idratazione fuori dall’intervallo di partenza"),
       t("Per {toLowerCase} il riferimento pratico è {v}–{v2}%. Puoi sperimentare, adeguando la lavorazione.", { toLowerCase: style.name.toLowerCase(), v: style.hydrationRange[0], v2: style.hydrationRange[1] }),
+      { hydration: c.hydration < style.hydrationRange[0] ? style.hydrationRange[0] : style.hydrationRange[1] },
     );
   if (c.hydration >= 75)
     add(
@@ -773,6 +776,12 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       "warning",
       t("Acqua elevata per una farina poco forte"),
       t("Parti con meno acqua. Se l’impasto perde struttura, aggiungerne ancora rende la gestione più difficile."),
+      {
+        hydration: Math.max(
+          style.hydrationRange[0],
+          Math.min(70, Math.floor(hydrationCeiling(wLow))),
+        ),
+      },
     );
   if (c.roomTemp >= 27)
     add(
