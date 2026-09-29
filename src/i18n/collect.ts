@@ -8,6 +8,8 @@ import { mixerProfiles } from "../data/mixers";
 import { catalog } from "../data/catalog";
 import { mixerOptions, planetaryOptions, surfaceOptions, ovenOptions } from "../data/options";
 import raw from "../data/flours.json";
+import international from "../data/internationalFlours.json";
+import estimates from "../data/wEstimates.json";
 
 const walk = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => {
@@ -53,7 +55,8 @@ export function collectDataStrings() {
   for (const o of ovenProfiles) [o.name, o.family, o.note].forEach(add);
   for (const m of mixerProfiles) [m.name, m.family, m.tool, m.start, m.knead, m.finish, m.note].forEach(add);
   for (const f of catalog.filter((item) => item.brand === "Farina generica" || item.brand === "Senza glutine")) [f.brand, f.name, f.type, f.proteinBasis, f.note].forEach(add);
-  for (const f of raw as { note: string; proteinBasis: string; type: string }[]) [f.note, f.proteinBasis, f.type].forEach(add);
+  for (const f of [...(raw as { note: string; proteinBasis: string; type: string }[]), ...international]) [f.note, f.proteinBasis, f.type].forEach(add);
+  for (const e of Object.values(estimates as Record<string, { method: string }>)) add(e.method);
   for (const list of [mixerOptions, planetaryOptions, surfaceOptions]) for (const option of list) [option.label, option.description, option.group].forEach(add);
   // Le descrizioni dei forni sono composte con t() al momento dell’uso: qui servono solo etichetta e gruppo.
   for (const option of ovenOptions()) [option.label, option.group].forEach(add);

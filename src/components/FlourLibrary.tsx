@@ -1,4 +1,5 @@
 import { locale, t, msg } from "../i18n";
+import { strengthText } from "../domain/flourStrength";
 import { useState } from 'react';
 import { ArrowUpRight, Check, MagnifyingGlass, Plus, Grains as Wheat } from '@phosphor-icons/react';
 import type { Flour } from '../domain/types';
@@ -30,10 +31,10 @@ export function FlourLibrary({flours,onSelect,onAdd,selectedId}: {flours:Flour[]
     <div className="results-count" role="status">{filtered.length} {t("risultati · “n.d.” significa dato non disponibile")}</div>
     <div className="flour-list">{filtered.map(f=><article className="flour-row" key={f.id}>
       <div className={`flour-avatar ${f.glutenFree?'gluten-free':''}`}><Wheat size={26}/></div><div className="flour-main"><span className="eyebrow">{t(f.brand)}</span><h3><button className="text-button" aria-expanded={expanded===f.id} onClick={()=>setExpanded(expanded===f.id?null:f.id)}>{t(f.name)}</button></h3><p>{t("Tipo")} {t(f.type)} {f.glutenFree&&t("· Senza glutine")} {!f.usable&&t("· Solo consultazione")}</p></div>
-      <div className="flour-stat"><small>{t("FORZA")}</small><strong>{f.w ? `${f.w[0]}${f.w[1]!==f.w[0]?`–${f.w[1]}`:''}`:'n.d.'}</strong><span>W</span></div>
+      <div className="flour-stat"><small>{f.wEstimate&&!f.w?t("W STIMATO"):t("FORZA")}</small><strong>{(()=>{const s=strengthText(f);return s?(s.estimated?`≈ ${s.text}`:s.text):'n.d.';})()}</strong><span>W</span></div>
       <div className="flour-stat protein"><small>{t("PROTEINE")}</small><strong>{f.protein!==null?`${f.protein.toLocaleString(locale())}%`:'n.d.'}</strong><span>{f.proteinBasis.includes('secca')?t("su s.s."):t("dichiarate")}</span></div>
       <button className={`button ${selectedId===f.id?'selected':'secondary'} use-flour`} disabled={!f.usable} onClick={()=>onSelect(f)}>{selectedId===f.id?<><Check/> {t("Scelta")}</>:t("Usa")}</button>
-      {expanded===f.id&&<div className="flour-detail"><p>{t(f.note) || t("Valori trascritti dalla scheda pubblica del produttore. Verifica sempre confezione e lotto acquistati.")}</p><p>{t("Proteine:")} {t(f.proteinBasis)}{t(". Elasticità P/L:")} {f.pl||t("non disponibile")}{t(". Consultazione:")} {f.checkedAt}.</p>{f.source?<a href={f.source} target="_blank" rel="noreferrer">{t("Apri la fonte ufficiale")} <ArrowUpRight/></a>:<span>{t("Dati personali, non verificati dal produttore.")}</span>}</div>}
+      {expanded===f.id&&<div className="flour-detail">{f.wEstimate&&!f.w&&<p className="w-estimate-note"><strong>{t("W stimato {range} (valore centrale {value}, confidenza {confidence}).",{range:`${f.wEstimate.min}–${f.wEstimate.max}`,value:f.wEstimate.value,confidence:f.wEstimate.confidence==="media"?t("media"):t("bassa")})}</strong> {t("Valore teorico, può essere impreciso: il produttore non dichiara il W.")} {t(f.wEstimate.method)}</p>}<p>{t(f.note) || t("Valori trascritti dalla scheda pubblica del produttore. Verifica sempre confezione e lotto acquistati.")}</p><p>{t("Proteine:")} {t(f.proteinBasis)}{t(". Elasticità P/L:")} {f.pl||t("non disponibile")}{t(". Consultazione:")} {f.checkedAt}.</p>{f.source?<a href={f.source} target="_blank" rel="noreferrer">{t("Apri la fonte ufficiale")} <ArrowUpRight/></a>:<span>{t("Dati personali, non verificati dal produttore.")}</span>}</div>}
     </article>)}</div>
     {!filtered.length&&<div className="empty-state"><MagnifyingGlass size={40}/><h2>{t("Nessuna farina trovata")}</h2><p>{t("Prova un altro nome o rimuovi i filtri.")}</p><button className="button secondary" onClick={()=>{setQuery('');setBrand('');setOnlyW(false);setOnlyGlutenFree(false);}}>{t("Azzera filtri")}</button></div>}
   </>;

@@ -1,9 +1,21 @@
+/** W stimato per le farine che non lo dichiarano: valore teorico, intervallo largo, metodo esplicito. */
+export interface WEstimate {
+  /** Valore centrale della stima. */
+  value: number;
+  min: number;
+  max: number;
+  method: string;
+  confidence: "media" | "bassa";
+  checkedAt: string;
+}
 export interface Flour {
   id: string;
   brand: string;
   name: string;
   type: string;
   w: [number, number] | null;
+  /** Presente solo se `w` manca: non è un dato del produttore. */
+  wEstimate?: WEstimate;
   protein: number | null;
   proteinBasis: string;
   pl: string | null;

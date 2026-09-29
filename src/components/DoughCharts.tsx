@@ -3,11 +3,12 @@ import type { DoughConfig, PizzaStyle } from '../domain/types';
 
 const fmt = (value:number,digits=1) => value.toLocaleString(locale(),{maximumFractionDigits:digits});
 
-export function HydrationChart({value,style,w}:{value:number;style:PizzaStyle;w:number|null}) {
+export function HydrationChart({value,style,w,wLow,estimated=false}:{value:number;style:PizzaStyle;w:number|null;wLow?:number|null;estimated?:boolean}) {
   const min=45; const max=90;
   const pos=(n:number)=>Math.max(0,Math.min(100,(n-min)/(max-min)*100));
   // This is a conservative working ceiling, not a laboratory absorption value.
-  const wCeiling=w===null?null:Math.max(55,Math.min(85,58+(w-180)*.12));
+  const wBase=wLow??w;
+  const wCeiling=wBase===null?null:Math.max(55,Math.min(85,58+(wBase-180)*.12));
   const practicalHigh=wCeiling===null?style.hydrationRange[1]:Math.min(style.hydrationRange[1],wCeiling);
   const hasOverlap=practicalHigh>=style.hydrationRange[0];
   const inside=hasOverlap&&value>=style.hydrationRange[0]&&value<=practicalHigh;
@@ -19,7 +20,7 @@ export function HydrationChart({value,style,w}:{value:number;style:PizzaStyle;w:
       <span className="hydration-marker" style={{left:`${pos(value)}%`}}><b>{fmt(value)}%</b></span>
     </div>
     <div className="chart-axis"><span>{t("45% · asciutto")}</span><span>{style.hydrationRange[0]}–{style.hydrationRange[1]}{t("% · riferimento")}</span><span>{t("90% · molto fluido")}</span></div>
-    <p>{w===null?t("W della miscela non disponibile: il grafico usa solo l’intervallo dello stile e la tenuta va provata."):t("W medio indicativo {fmt}; soglia prudenziale circa {fmt2}%. È una guida euristica: il W aiuta a valutare la tenuta, ma non misura da solo l’assorbimento reale.", { fmt: fmt(w,0), fmt2: fmt(wCeiling!,0) })}</p>
+    <p>{w===null?t("W della miscela non disponibile: il grafico usa solo l’intervallo dello stile e la tenuta va provata."):(estimated?t("W stimato circa {fmt}; soglia prudenziale circa {fmt2}%. È una stima teorica: il produttore non dichiara il W e il valore può essere impreciso, quindi la soglia lascia un margine.", { fmt: fmt(w,0), fmt2: fmt(wCeiling!,0) }):t("W medio indicativo {fmt}; soglia prudenziale circa {fmt2}%. È una guida euristica: il W aiuta a valutare la tenuta, ma non misura da solo l’assorbimento reale.", { fmt: fmt(w,0), fmt2: fmt(wCeiling!,0) }))}</p>
   </div>;
 }
 

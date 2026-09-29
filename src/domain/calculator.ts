@@ -4,6 +4,7 @@ import { mixerProfiles } from "../data/mixers";
 import { ovenById } from "../data/ovens";
 import { durationLabel } from "./duration";
 import { formatTemp, formatTempRange, formatWeight } from "../services/units";
+import { blendStrength, flourStrength } from "./flourStrength";
 import type { Advice, DoughConfig, Flour, Stage } from "./types";
 export const MODEL_VERSION = "direct-v1";
 /** Un panetto impiega 2–3 ore a raffreddarsi e altrettante a tornare a temperatura:
@@ -475,7 +476,6 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
   const thirdShare = c.thirdFlourPercent / 100;
   const fourthShare = c.fourthFlourPercent / 100;
   const firstShare = 1 - secondShare - thirdShare - fourthShare;
-  const strength = (f: Flour) => (f.w ? (f.w[0] + f.w[1]) / 2 : null);
   const activeFlours = [
     ...(firstShare > 0 ? [{ flour: flour!, share: firstShare }] : []),
     ...(secondShare > 0 && second
@@ -486,13 +486,9 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       ? [{ flour: fourth, share: fourthShare }]
       : []),
   ];
-  const strengths = activeFlours.map(({ flour, share }) => ({
-    value: strength(flour),
-    share,
-  }));
-  let w = strengths.every((item) => item.value !== null)
-    ? strengths.reduce((sum, item) => sum + item.value! * item.share, 0)
-    : null;
+  let blend = blendStrength(
+    activeFlours.map(({ flour, share }) => ({ strength: flourStrength(flour), share })),
+  );
   // Heuristic, not a validated fermentation model. Cold-rate floor accounts approximately
   // for slow cooling in a domestic fridge. Never derives W from protein or absorption.
   const roomRate = 2 ** ((c.roomTemp - 22) / 10);
@@ -665,13 +661,17 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
           ? t("al picco")
           : t("oltre il picco");
   if (c.preferment !== "none" && prefermentFlour) {
-    const prefermentW = strength(prefermentFlour);
     const prefermentShare = c.prefermentPercent / 100;
-    w =
-      w !== null && prefermentW !== null
-        ? w * (1 - prefermentShare) + prefermentW * prefermentShare
-        : null;
+    blend = blendStrength([
+      { strength: blend, share: 1 - prefermentShare },
+      { strength: flourStrength(prefermentFlour), share: prefermentShare },
+    ]);
   }
+  // `w` è il valore centrale; gli avvisi usano gli estremi (uguali a `w` se il W è dichiarato dal produttore).
+  const w = blend?.value ?? null;
+  const wLow = blend?.low ?? null;
+  const wHigh = blend?.high ?? null;
+  const wEstimated = blend?.estimated ?? false;
   const friction: Record<DoughConfig["mixer"], number> = {
     hand: 3,
     stand: 8,
@@ -710,12 +710,12 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       t("Lievitazione di corsa"),
       t("Con {durationLabel} la pizza viene, ma resta una lievitazione breve: meno profumo e sapore, mollica più chiusa, crosta più pallida e digeribilità inferiore rispetto a un impasto lungo. Usa una farina delicata, tieni l’impasto a {formatTempRange} e non aspettarti l’alveolatura dei tempi lunghi.", { durationLabel: durationLabel(hours), formatTempRange: formatTempRange(24, 26) }),
     );
-  if (w !== null && w >= 280 && hours < 8)
+  if (wHigh !== null && wHigh >= 280 && hours < 8)
     add(
       "strong-flour-fast",
       "warning",
       t("Farina troppo forte per questi tempi"),
-      t("Una farina da W {w} ha bisogno di tempo per cedere elasticità: in poche ore l’impasto resta gommoso e difficile da stendere. Per una pizza veloce scegli una farina intorno a W 180–240.", { w }),
+      t("Una farina da W {w} ha bisogno di tempo per cedere elasticità: in poche ore l’impasto resta gommoso e difficile da stendere. Per una pizza veloce scegli una farina intorno a W 180–240.", { w: Math.round(w ?? wHigh ?? 0) }),
     );
   if (w === null)
     add(
@@ -724,7 +724,14 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       t("La forza W non è disponibile"),
       t("Non posso valutare la tenuta della farina. Controlla la scheda tecnica: le proteine da sole non determinano il W."),
     );
-  if (w !== null && w < style.minW)
+  if (w !== null && wEstimated)
+    add(
+      "estimated-w",
+      "info",
+      t("W stimato, non dichiarato"),
+      t("Per questa farina il produttore non dichiara il W: PizzaLab lo stima intorno a {w} (valore teorico, può essere impreciso). Gli avvisi sulla tenuta lasciano un margine attorno a questo valore: verifica sempre la resistenza reale dell’impasto.", { w: Math.round(w) }),
+    );
+  if (wLow !== null && wLow < style.minW)
     add(
       "weak-style",
       "warning",
@@ -732,10 +739,10 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       t("Come punto di partenza, valuta una farina intorno a W {minW} o superiore. Riduci idratazione e durata e osserva la tenuta dell’impasto.", { minW: style.minW }),
     );
   if (
-    w !== null &&
-    ((w < 240 && hours > 24) ||
-      (w < 300 && hours > 48) ||
-      (w < 340 && hours > 72))
+    wLow !== null &&
+    ((wLow < 240 && hours > 24) ||
+      (wLow < 300 && hours > 48) ||
+      (wLow < 340 && hours > 72))
   )
     add(
       "long-weak",
@@ -760,7 +767,7 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
       t("Tieni da parte l’ultima acqua"),
       t("Un impasto molto idratato richiede buona struttura. Aggiungi l’acqua gradualmente e usa pause e pieghe; l’assorbimento di laboratorio non è l’idratazione della ricetta."),
     );
-  if (w !== null && w < 260 && c.hydration > 70)
+  if (wLow !== null && wLow < 260 && c.hydration > 70)
     add(
       "weak-wet",
       "warning",
@@ -930,7 +937,7 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
     coerenza: score(
       100 -
         Math.abs(c.hydration - style.hydration) * 3 -
-        (w !== null && w < style.minW ? 25 : 0),
+        (wLow !== null && wLow < style.minW ? 25 : 0),
     ),
   };
   const blendAllocation =
@@ -1005,6 +1012,9 @@ export function calculate(c: DoughConfig, flours: Flour[]) {
     equivalentHours,
     hours,
     w,
+    wLow,
+    wHigh,
+    wEstimated,
     advice,
     style,
     waterTemp,

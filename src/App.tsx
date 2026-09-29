@@ -74,6 +74,7 @@ import { SourdoughCare } from "./components/SourdoughCare";
 import { StarterDoughLink } from "./components/StarterDoughLink";
 import { Diary, type DiaryView } from "./components/Diary";
 import { durationLabel } from "./domain/duration";
+import { strengthLine } from "./domain/flourStrength";
 import { applyAutomaticPlan, recipeStatus, startTiming, yeastLabel } from "./domain/recipes";
 import { emptyState, readState, writeState } from "./services/storage";
 import {
@@ -1158,9 +1159,7 @@ export default function App() {
                       />
                       <div className="flour-selected-meta">
                         <span>
-                          {selectedFlour?.w
-                            ? `W ${selectedFlour.w.join("–")}`
-                            : t("W non disponibile")}
+                          {selectedFlour ? strengthLine(selectedFlour) : t("W non disponibile")}
                         </span>
                         <HelpTip topic="forza" />
                         <span>
@@ -1426,6 +1425,8 @@ export default function App() {
                           value={c.hydration}
                           style={currentStyle}
                           w={result.w}
+                          wLow={result.wLow}
+                          estimated={result.wEstimated}
                         />
                       )}
                       <details className="extras-details">
@@ -1992,6 +1993,7 @@ export default function App() {
                             <small className="w-average">
                               {t("W medio indicativo:")}{" "}
                               {result.w === null ? "n.d." : fmt(result.w)}
+                              {result.wEstimated ? ` (${t("stimato")})` : ""}
                             </small>
                           )}
                         </div>

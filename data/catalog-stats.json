@@ -1,10 +1,12 @@
 {
-  "checkedAt": "2026-09-25",
-  "total": 159,
-  "brands": 15,
-  "withW": 94,
-  "withProtein": 85,
-  "usable": 134,
+  "checkedAt": "2026-09-29",
+  "total": 171,
+  "international": 12,
+  "withEstimatedW": 17,
+  "brands": 19,
+  "withW": 99,
+  "withProtein": 97,
+  "usable": 146,
   "perBrand": {
     "Barilla": 1,
     "Caputo": 9,
@@ -20,6 +22,10 @@
     "Molino Vigevano": 18,
     "Mulino Padano": 13,
     "Petra": 2,
-    "Polselli": 3
+    "Polselli": 3,
+    "Shipton Mill": 6,
+    "King Arthur": 3,
+    "Bob’s Red Mill": 1,
+    "Marriage’s": 2
   }
 }

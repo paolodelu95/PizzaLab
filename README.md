@@ -69,6 +69,8 @@ Fonti: pagine e cataloghi ufficiali dei produttori. Ogni record include URL, dat
 - Esportazione apribile con Excel: [`data/farine.csv`](data/farine.csv).
 - Conteggi e copertura: [`data/catalog-stats.json`](data/catalog-stats.json).
 - Metodologia e limiti: [`docs/CATALOGO.md`](docs/CATALOGO.md).
+- Farine straniere (`src/data/internationalFlours.json`): King Arthur, Bob’s Red Mill, Marriage’s e Shipton Mill, con proteine e, dove esiste, W dichiarati dal produttore, ciascuna con URL e data.
+- **W stimato** (`src/data/wEstimates.json`, generato da `node scripts/estimate-w.mjs`): per le farine che non dichiarano il W si usa una regressione sui W dichiarati dai produttori (con intervallo largo) oppure, per le farine generiche, i W dichiarati per lo stesso tipo. È sempre mostrato come stima teorica e non sostituisce mai un W dichiarato; `npm run catalog:validate` controlla intervallo, metodo e data di ogni stima.
 
 Non è una classifica dei prodotti più venduti: non sono stati trovati dati pubblici sufficienti per stabilirla. Non è un censimento completo del mercato italiano. “Marchio italiano” non implica grano coltivato in Italia. L'app non scarica automaticamente gli aggiornamenti: usa lo snapshot distribuito con la versione installata.
 

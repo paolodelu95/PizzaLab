@@ -766,3 +766,20 @@ test("the language follows the device by default and can be changed from the pro
   await expect(page.getByRole("heading", { name: "Il tuo profilo." })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "it");
 });
+
+test("a flour without a declared W shows an estimated range and the advice says so", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Farine", exact: true }).first().click();
+  await page.getByRole("textbox", { name: "Cerca farina" }).fill("King Arthur");
+  const card = page.locator(".flour-card, article").filter({ hasText: "Bread Flour" }).first();
+  await expect(card).toContainText("W STIMATO");
+  await expect(card).toContainText("≈");
+  await card.getByRole("button", { name: "Usa" }).click();
+
+  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).first().click();
+  await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await expect(page.locator(".flour-selected-meta")).toContainText("W stimato");
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await expect(page.getByText("W stimato, non dichiarato")).toBeVisible();
+  await expect(page.getByText(/valore teorico, può essere impreciso/i).first()).toBeVisible();
+});

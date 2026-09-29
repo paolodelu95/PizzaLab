@@ -33,6 +33,8 @@ const flours = [
   { ...flour, id: "medium", w: [300, 300] as [number, number] },
   { ...flour, id: "lower", w: [200, 200] as [number, number] },
   { ...flour, id: "unknown", w: null },
+  { ...flour, id: "est-strong", w: null, wEstimate: { value: 330, min: 210, max: 470, method: "test", confidence: "media" as const, checkedAt: "2026-09-29" } },
+  { ...flour, id: "est-weak", w: null, wEstimate: { value: 200, min: 90, max: 280, method: "test", confidence: "media" as const, checkedAt: "2026-09-29" } },
   { ...flour, id: "mix", usable: false },
   { ...flour, id: "gluten-free", name: "Mix pizza", w: null, kind: "blend" as const, glutenFree: true },
 ];
@@ -618,5 +620,42 @@ describe("display units in generated texts", () => {
     expect(text).not.toContain("250 °C");
     const converted = calculate(config(), flours);
     expect(converted.ok && grams.ok && converted.flour).toBe(grams.ok && grams.flour);
+  });
+});
+
+describe("estimated W", () => {
+  const ids = (patch: Partial<DoughConfig>) => {
+    const r = calculate(config(patch), flours);
+    return r.ok ? r : null;
+  };
+
+  it("is used only when the manufacturer does not declare W, and is announced", () => {
+    const estimated = ids({ flourId: "est-strong" })!;
+    expect(estimated.wEstimated).toBe(true);
+    expect(estimated.w).toBe(330);
+    expect(estimated.advice.map((a) => a.id)).toContain("estimated-w");
+    expect(estimated.advice.map((a) => a.id)).not.toContain("unknown-w");
+
+    const declared = ids({ flourId: "medium" })!;
+    expect(declared.wEstimated).toBe(false);
+    expect(declared.wLow).toBe(declared.w);
+    expect(declared.advice.map((a) => a.id)).not.toContain("estimated-w");
+
+    const unknown = ids({ flourId: "unknown" })!;
+    expect(unknown.w).toBeNull();
+    expect(unknown.advice.map((a) => a.id)).toContain("unknown-w");
+  });
+
+  it("warns about a weak estimated flour but not about a comfortably strong one", () => {
+    expect(ids({ flourId: "est-weak" })!.advice.map((a) => a.id)).toContain("weak-style");
+    expect(ids({ flourId: "est-strong" })!.advice.map((a) => a.id)).not.toContain("weak-style");
+  });
+
+  it("checks the strength of a mixed blend with the estimate margins", () => {
+    const blend = ids({ flourId: "est-strong", secondFlourId: "medium", secondFlourPercent: 50 })!;
+    expect(blend.wEstimated).toBe(true);
+    expect(blend.w).toBeCloseTo(315, 5);
+    expect(blend.wLow!).toBeLessThan(blend.w!);
+    expect(blend.wHigh!).toBeGreaterThan(blend.w!);
   });
 });

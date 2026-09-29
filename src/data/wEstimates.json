@@ -1,0 +1,138 @@
+{
+  "bobs-red-mill-artisan-bread-flour": {
+    "value": 300,
+    "min": 185,
+    "max": 455,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "bassa",
+    "checkedAt": "2026-09-29"
+  },
+  "divella-00-pizza-1-e-5-kg": {
+    "value": 210,
+    "min": 95,
+    "max": 285,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "media",
+    "checkedAt": "2026-09-29"
+  },
+  "generic-integrale": {
+    "value": 290,
+    "min": 150,
+    "max": 370,
+    "method": "Minimo e massimo (allargati di 30) dei W dichiarati da 4 farine di tipo integrali nelle schede dei produttori del catalogo: dati pochi, stima da prendere con cautela.",
+    "confidence": "bassa",
+    "checkedAt": "2026-09-29"
+  },
+  "generic-manitoba": {
+    "value": 385,
+    "min": 280,
+    "max": 450,
+    "method": "Minimo e massimo (allargati di 30) dei W dichiarati da 4 farine di tipo Manitoba nelle schede dei produttori del catalogo: dati pochi, stima da prendere con cautela.",
+    "confidence": "bassa",
+    "checkedAt": "2026-09-29"
+  },
+  "generic-tipo-0": {
+    "value": 330,
+    "min": 270,
+    "max": 380,
+    "method": "Percentili 10–90 dei W dichiarati da 26 farine di tipo 0 nelle schede dei produttori del catalogo.",
+    "confidence": "media",
+    "checkedAt": "2026-09-29"
+  },
+  "generic-tipo-00": {
+    "value": 290,
+    "min": 210,
+    "max": 360,
+    "method": "Percentili 10–90 dei W dichiarati da 39 farine di tipo 00 nelle schede dei produttori del catalogo.",
+    "confidence": "media",
+    "checkedAt": "2026-09-29"
+  },
+  "generic-tipo-1": {
+    "value": 305,
+    "min": 250,
+    "max": 350,
+    "method": "Minimo e massimo (allargati di 30) dei W dichiarati da 4 farine di tipo 1 nelle schede dei produttori del catalogo: dati pochi, stima da prendere con cautela.",
+    "confidence": "bassa",
+    "checkedAt": "2026-09-29"
+  },
+  "king-arthur-all-purpose": {
+    "value": 250,
+    "min": 140,
+    "max": 330,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "media",
+    "checkedAt": "2026-09-29"
+  },
+  "king-arthur-bread-flour": {
+    "value": 290,
+    "min": 175,
+    "max": 365,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "media",
+    "checkedAt": "2026-09-29"
+  },
+  "king-arthur-high-gluten": {
+    "value": 345,
+    "min": 230,
+    "max": 500,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "bassa",
+    "checkedAt": "2026-09-29"
+  },
+  "le-5-stagioni-mia-x": {
+    "value": 320,
+    "min": 205,
+    "max": 475,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "bassa",
+    "checkedAt": "2026-09-29"
+  },
+  "le-5-stagioni-mora": {
+    "value": 375,
+    "min": 260,
+    "max": 500,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "bassa",
+    "checkedAt": "2026-09-29"
+  },
+  "marriages-finest-strong-white": {
+    "value": 310,
+    "min": 195,
+    "max": 465,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "bassa",
+    "checkedAt": "2026-09-29"
+  },
+  "marriages-organic-strong-white": {
+    "value": 315,
+    "min": 200,
+    "max": 470,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "bassa",
+    "checkedAt": "2026-09-29"
+  },
+  "molino-rossetto-2368-farina-00-grano-italiano-vpack": {
+    "value": 200,
+    "min": 85,
+    "max": 275,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "media",
+    "checkedAt": "2026-09-29"
+  },
+  "molino-rossetto-2478-farina-veneta-di-grano-tenero-1kg-": {
+    "value": 190,
+    "min": 75,
+    "max": 265,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "media",
+    "checkedAt": "2026-09-29"
+  },
+  "shipton-mill-canadian-strong-white": {
+    "value": 365,
+    "min": 250,
+    "max": 500,
+    "method": "Regressione W ≈ 37,1·proteine − 182 sui W dichiarati da 47 farine di produttori nel catalogo (r² 0,58, scarto tipico 38). Intervallo da −3 a +2 scarti (fino a +4 se le proteine sono almeno 13%).",
+    "confidence": "bassa",
+    "checkedAt": "2026-09-29"
+  }
+}

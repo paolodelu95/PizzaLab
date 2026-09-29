@@ -1,5 +1,7 @@
 import raw from './flours.json';
-import type { Flour } from '../domain/types';
+import internationalRaw from './internationalFlours.json';
+import estimatesRaw from './wEstimates.json';
+import type { Flour, WEstimate } from '../domain/types';
 import { genericFlours } from './genericFlours';
 import { glutenFreeFlours } from './glutenFreeFlours';
 
@@ -19,4 +21,12 @@ const checkedCatalog = (raw as Flour[]).map((flour) =>
       }
     : flour,
 );
-export const catalog = [...genericFlours, ...glutenFreeFlours, ...checkedCatalog];
+// Il W stimato (scripts/estimate-w.mjs) si aggiunge solo alle farine che non dichiarano il W.
+const estimates = estimatesRaw as Record<string, WEstimate>;
+const withEstimate = (flour: Flour): Flour => (!flour.w && estimates[flour.id] ? { ...flour, wEstimate: estimates[flour.id] } : flour);
+export const catalog = [
+  ...genericFlours,
+  ...glutenFreeFlours,
+  ...checkedCatalog,
+  ...(internationalRaw as Flour[]),
+].map(withEstimate);
