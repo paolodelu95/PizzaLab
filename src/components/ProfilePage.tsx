@@ -1,3 +1,4 @@
+import { t, msg } from "../i18n";
 import { useRef, useState } from "react";
 import {
   ArrowSquareOut,
@@ -10,6 +11,7 @@ import {
   Play,
   Plus,
   Ruler,
+  Translate,
   ShieldCheck,
   Trash,
   UploadSimple,
@@ -24,6 +26,7 @@ import { InstallPrompt } from "./InstallPrompt";
 import { usesCalendarReminders } from "../services/platform";
 import { SelectSheet } from "./SelectSheet";
 import { NumberField } from "./Fields";
+import type { Language } from "../i18n";
 import { formatTemp, localizeTemperatures, normalizeUnits, type Units } from "../services/units";
 import { mixerOptions, ovenOptions, planetaryOptions, surfaceOptions } from "../data/options";
 import { InsightsDashboard } from "./InsightsDashboard";
@@ -50,6 +53,8 @@ type Props = {
   onShowTutorial: () => void;
   onLeadChange: (minutes: number) => void;
   onUnitsChange: (patch: Partial<Units>) => void;
+  language: Language;
+  onLanguageChange: (language: Language) => void;
 };
 
 const initials = (name: string) =>
@@ -70,18 +75,18 @@ export function ProfilePage(props: Props) {
   for (const recipe of state.recipes) counts[recipeStatus(recipe, state.activeId, now)] += 1;
   const past: Recipe[] = state.recipes.filter((recipe) => recipeStatus(recipe, state.activeId, now) === "past");
   const stats = [
-    ["Lieviti madre", state.sourdoughProfiles.length],
-    ["Farine personali", state.customFlours.length],
-    ["Tarature del forno", state.bakeCalibrations.length],
+    [msg("Lieviti madre"), state.sourdoughProfiles.length],
+    [msg("Farine personali"), state.customFlours.length],
+    [msg("Tarature del forno"), state.bakeCalibrations.length],
   ] as const;
 
   return (
     <>
       <div className="page-heading profile-heading">
         <div>
-          <span className="eyebrow">Il tuo profilo</span>
-          <h1>{name.trim() ? `Ciao, ${name.trim().split(/\s+/)[0]}.` : "Il tuo profilo."}</h1>
-          <p>Salva qui una volta sola la tua cucina: forni, teglie e impastatrice li ritrovi già pronti a ogni impasto.</p>
+          <span className="eyebrow">{t("Il tuo profilo")}</span>
+          <h1>{name.trim() ? t("Ciao, {v}.", { v: name.trim().split(/\s+/)[0] }) : t("Il tuo profilo.")}</h1>
+          <p>{t("Salva qui una volta sola la tua cucina: forni, teglie e impastatrice li ritrovi già pronti a ogni impasto.")}</p>
         </div>
         <div className="heading-illustration profile-avatar-large" aria-hidden="true">
           {initials(name) || <Gear weight="duotone" />}
@@ -92,20 +97,20 @@ export function ProfilePage(props: Props) {
         <div className="profile-card-top">
           <div className="profile-avatar" aria-hidden="true">{initials(name) || "?"}</div>
           <label className="field">
-            Come ti chiami?
-            <input value={name} maxLength={40} placeholder="Il tuo nome" onChange={(event) => props.onNameChange(event.target.value)} />
+            {t("Come ti chiami?")}
+            <input value={name} maxLength={40} placeholder={t("Il tuo nome")} onChange={(event) => props.onNameChange(event.target.value)} />
           </label>
         </div>
-        <div className="profile-summary" aria-label="Le tue pizze">
-          <div><strong>{counts.past}</strong><span>sfornate</span></div>
-          <div><strong>{counts.active}</strong><span>in corso</span></div>
-          <div><strong>{counts.saved}</strong><span>salvate</span></div>
+        <div className="profile-summary" aria-label={t("Le tue pizze")}>
+          <div><strong>{counts.past}</strong><span>{t("sfornate")}</span></div>
+          <div><strong>{counts.active}</strong><span>{t("in corso")}</span></div>
+          <div><strong>{counts.saved}</strong><span>{t("salvate")}</span></div>
         </div>
       </section>
 
       <div className="profile-group-title">
-        <h2>La tua cucina</h2>
-        <span>Quello che salvi qui compare come scelta rapida nei passaggi dell’impasto.</span>
+        <h2>{t("La tua cucina")}</h2>
+        <span>{t("Quello che salvi qui compare come scelta rapida nei passaggi dell’impasto.")}</span>
       </div>
 
       <UserOvens ovens={ovens} config={config} onAdd={props.onAddOven} onDelete={props.onDeleteOven} onUse={props.onUseOven} />
@@ -116,13 +121,13 @@ export function ProfilePage(props: Props) {
         <div className="panel-title">
           <span className="section-icon"><Wrench /></span>
           <div>
-            <h2 id="kneading-title">Come impasti</h2>
-            <p>Serve a calcolare la temperatura dell’acqua e, per la planetaria, a suggerirti velocità e tempi.</p>
+            <h2 id="kneading-title">{t("Come impasti")}</h2>
+            <p>{t("Serve a calcolare la temperatura dell’acqua e, per la planetaria, a suggerirti velocità e tempi.")}</p>
           </div>
         </div>
         <div className="field-grid">
           <SelectSheet
-            label="Lavorazione"
+            label={t("Lavorazione")}
             help="lavorazione"
             value={config.mixer}
             options={mixerOptions}
@@ -130,7 +135,7 @@ export function ProfilePage(props: Props) {
           />
           {config.mixer === "stand" && (
             <SelectSheet
-              label="La tua planetaria"
+              label={t("La tua planetaria")}
               value={config.mixerProfileId || planetaryOptions[0].value}
               options={planetaryOptions}
               onChange={(mixerProfileId) => props.onMixerChange({ mixer: config.mixer, mixerProfileId })}
@@ -139,22 +144,46 @@ export function ProfilePage(props: Props) {
         </div>
       </section>
 
+      <section className="panel units-panel" aria-labelledby="language-title">
+        <div className="panel-title">
+          <span className="section-icon"><Translate /></span>
+          <div>
+            <h2 id="language-title">{t("Lingua · Language")}</h2>
+          </div>
+        </div>
+        <div className="lead-options" role="radiogroup" aria-label={t("Lingua · Language")}>
+          <div>
+            {([["it", msg("Italiano")], ["en", msg("English")]] as const).map(([value, label]) => (
+              <button
+                key={value}
+                role="radio"
+                aria-checked={props.language === value}
+                className={props.language === value ? "selected" : ""}
+                onClick={() => props.onLanguageChange(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="panel units-panel" aria-labelledby="units-title">
         <div className="panel-title">
           <span className="section-icon"><Ruler /></span>
           <div>
-            <h2 id="units-title">Unità di misura</h2>
-            <p>Scegli come vedere pesi e temperature. Le ricette restano salvate in grammi e °C: puoi cambiare quando vuoi, senza perdere nulla.</p>
+            <h2 id="units-title">{t("Unità di misura")}</h2>
+            <p>{t("Scegli come vedere pesi e temperature. Le ricette restano salvate in grammi e °C: puoi cambiare quando vuoi, senza perdere nulla.")}</p>
           </div>
         </div>
         {([
-          ["weight", "Peso", [["g", "Grammi (g)"], ["oz", "Once (oz)"]]],
-          ["temp", "Temperatura", [["C", "Celsius (°C)"], ["F", "Fahrenheit (°F)"]]],
+          ["weight", msg("Peso"), [["g", msg("Grammi (g)")], ["oz", msg("Once (oz)")]]],
+          ["temp", msg("Temperatura"), [["C", msg("Celsius (°C)")], ["F", msg("Fahrenheit (°F)")]]],
         ] as const).map(([key, title, options]) => {
           const units = normalizeUnits(state.units);
           return (
-            <div key={key} className="lead-options" role="radiogroup" aria-label={title}>
-              <span>{title}</span>
+            <div key={key} className="lead-options" role="radiogroup" aria-label={t(title)}>
+              <span>{t(title)}</span>
               <div>
                 {options.map(([value, label]) => (
                   <button
@@ -164,7 +193,7 @@ export function ProfilePage(props: Props) {
                     className={units[key] === value ? "selected" : ""}
                     onClick={() => props.onUnitsChange({ [key]: value } as Partial<Units>)}
                   >
-                    {label}
+                    {t(label)}
                   </button>
                 ))}
               </div>
@@ -172,7 +201,7 @@ export function ProfilePage(props: Props) {
           );
         })}
         {normalizeUnits(state.units).weight === "oz" && (
-          <small>Le quantità sotto i 5 g (lievito, malto) restano in grammi: in once sarebbero illeggibili. Teglie e superfici restano in centimetri.</small>
+          <small>{t("Le quantità sotto i 5 g (lievito, malto) restano in grammi: in once sarebbero illeggibili. Teglie e superfici restano in centimetri.")}</small>
         )}
       </section>
 
@@ -180,16 +209,16 @@ export function ProfilePage(props: Props) {
         <div className="panel-title">
           <span className="section-icon"><BellRinging /></span>
           <div>
-            <h2 id="notifications-title">Notifiche</h2>
+            <h2 id="notifications-title">{t("Notifiche")}</h2>
             <p>
               {usesCalendarReminders()
-                ? "Su iPhone e nel browser gli avvisi arrivano dal Calendario del telefono: dalla pizza in corso premi «Aggiungi al calendario». L’anticipo che scegli qui vale per quegli eventi."
-                : "Sono normali notifiche del telefono: non creano promemoria né eventi nel calendario."}
+                ? t("Su iPhone e nel browser gli avvisi arrivano dal Calendario del telefono: dalla pizza in corso premi «Aggiungi al calendario». L’anticipo che scegli qui vale per quegli eventi.")
+                : t("Sono normali notifiche del telefono: non creano promemoria né eventi nel calendario.")}
             </p>
           </div>
         </div>
-        <div className="lead-options" role="radiogroup" aria-label="Quando avvisarti">
-          <span>Avvisami</span>
+        <div className="lead-options" role="radiogroup" aria-label={t("Quando avvisarti")}>
+          <span>{t("Avvisami")}</span>
           <div>
             {[0, 5, 10, 15, 30].map((minutes) => (
               <button
@@ -199,24 +228,24 @@ export function ProfilePage(props: Props) {
                 className={(state.reminderLeadMinutes ?? 0) === minutes ? "selected" : ""}
                 onClick={() => props.onLeadChange(minutes)}
               >
-                {minutes === 0 ? "All’orario esatto" : `${minutes} min prima`}
+                {minutes === 0 ? t("All’orario esatto") : t("{minutes} min prima", { minutes })}
               </button>
             ))}
           </div>
         </div>
-        <small>Vale per le fasi dell’impasto e per i rinfreschi del lievito madre. Le notifiche già programmate si aggiornano da sole.</small>
+        <small>{t("Vale per le fasi dell’impasto e per i rinfreschi del lievito madre. Le notifiche già programmate si aggiornano da sole.")}</small>
       </section>
 
       <section className="profile-stats" aria-labelledby="stats-title">
         <div className="section-title">
-          <h2 id="stats-title">Le tue statistiche</h2>
-          <span>{state.recipes.length} {state.recipes.length === 1 ? "pizza nel diario" : "pizze nel diario"}</span>
+          <h2 id="stats-title">{t("Le tue statistiche")}</h2>
+          <span>{state.recipes.length} {state.recipes.length === 1 ? t("pizza nel diario") : t("pizze nel diario")}</span>
         </div>
         <div className="stat-grid">
           {stats.map(([label, value]) => (
             <div key={label}>
               <strong>{value}</strong>
-              <span>{label}</span>
+              <span>{t(label)}</span>
             </div>
           ))}
         </div>
@@ -224,7 +253,7 @@ export function ProfilePage(props: Props) {
       {past.length > 0 ? (
         <InsightsDashboard recipes={past} flours={flours} />
       ) : (
-        <p className="small-muted profile-empty-stats">Quando concludi le prime pizze qui compaiono idratazione media, tempi e lo stile che prepari di più.</p>
+        <p className="small-muted profile-empty-stats">{t("Quando concludi le prime pizze qui compaiono idratazione media, tempi e lo stile che prepari di più.")}</p>
       )}
 
       <InstallPrompt always />
@@ -233,11 +262,11 @@ export function ProfilePage(props: Props) {
         <div className="panel-title">
           <span className="section-icon"><Gear /></span>
           <div>
-            <h2>Backup e impostazioni</h2>
+            <h2>{t("Backup e impostazioni")}</h2>
             <p>
               {usesCalendarReminders()
-                ? "Nel browser i dati restano su questo telefono: esporta ogni tanto una copia del diario, così non la perdi se svuoti i dati di Safari."
-                : "Salva una copia del diario o spostalo su un altro telefono."}
+                ? t("Nel browser i dati restano su questo telefono: esporta ogni tanto una copia del diario, così non la perdi se svuoti i dati di Safari.")
+                : t("Salva una copia del diario o spostalo su un altro telefono.")}
             </p>
           </div>
         </div>
@@ -254,19 +283,19 @@ export function ProfilePage(props: Props) {
         />
         <div className="settings-actions">
           <button className="button secondary" disabled={!state.recipes.length} onClick={props.onExport}>
-            <Export /> Esporta il diario
+            <Export /> {t("Esporta il diario")}
           </button>
           <button className="button secondary" onClick={() => importRef.current?.click()}>
-            <UploadSimple /> Importa un backup
+            <UploadSimple /> {t("Importa un backup")}
           </button>
           <button className="button secondary" onClick={props.onShowTutorial}>
-            <Play /> Rivedi il tutorial
+            <Play /> {t("Rivedi il tutorial")}
           </button>
           <a className="button secondary" href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
-            <ShieldCheck /> Informativa sulla privacy <ArrowSquareOut />
+            <ShieldCheck /> {t("Informativa sulla privacy")} <ArrowSquareOut />
           </a>
         </div>
-        <small className="app-version">PizzaLab {props.version} · nessun account, dati solo sul dispositivo</small>
+        <small className="app-version">PizzaLab {props.version} {t("· nessun account, dati solo sul dispositivo")}</small>
       </section>
 
       <SupportCard />
@@ -304,8 +333,8 @@ function UserOvens({
       <div className="panel-title">
         <span className="section-icon"><Oven /></span>
         <div>
-          <h2 id="ovens-title">I tuoi forni</h2>
-          <p>Salva il forno o i forni che usi, con la temperatura che raggiungono davvero. Li ritrovi nel passaggio Cottura.</p>
+          <h2 id="ovens-title">{t("I tuoi forni")}</h2>
+          <p>{t("Salva il forno o i forni che usi, con la temperatura che raggiungono davvero. Li ritrovi nel passaggio Cottura.")}</p>
         </div>
       </div>
       {ovens.length > 0 && (
@@ -318,12 +347,12 @@ function UserOvens({
                 <span className="oven-icon" aria-hidden="true"><Fire weight="duotone" /></span>
                 <div>
                   <strong>{oven.name}</strong>
-                  <span>{info.name} · fino a {formatTemp(oven.temp)} · {bakeSurfaceLabels[oven.bakeSurface].toLowerCase()}</span>
+                  <span>{t(info.name)} {t("· fino a")} {formatTemp(oven.temp)} · {bakeSurfaceLabels[oven.bakeSurface].toLowerCase()}</span>
                 </div>
                 <button className={`button ${inUse ? "selected" : "secondary"}`} onClick={() => onUse(oven)}>
-                  {inUse ? <><CheckCircle /> In uso</> : "Usa"}
+                  {inUse ? <><CheckCircle /> {t("In uso")}</> : t("Usa")}
                 </button>
-                <button className="icon-button" aria-label={`Elimina forno ${oven.name}`} onClick={() => onDelete(oven.id)}>
+                <button className="icon-button" aria-label={t("Elimina forno {name}", { name: oven.name })} onClick={() => onDelete(oven.id)}>
                   <Trash />
                 </button>
               </article>
@@ -350,43 +379,43 @@ function UserOvens({
         >
           <div className="field-grid">
             <SelectSheet
-              label="Modello o tipo di forno"
+              label={t("Modello o tipo di forno")}
               value={model}
               options={ovenOptions()}
-              searchPlaceholder="Cerca Ariete, Ooni, legna…"
+              searchPlaceholder={t("Cerca Ariete, Ooni, legna…")}
               onChange={chooseModel}
             />
             <label className="field">
-              Nome
-              <input value={name} maxLength={40} placeholder={modelInfo.name} onChange={(event) => setName(event.target.value)} />
+              {t("Nome")}
+              <input value={name} maxLength={40} placeholder={t(modelInfo.name)} onChange={(event) => setName(event.target.value)} />
             </label>
             <NumberField
-              label="Temperatura massima reale"
+              label={t("Temperatura massima reale")}
               value={temp}
               onChange={setTemp}
               min={150}
               max={550}
               step={5}
               quantity="temp"
-              hint={`Dichiarata dal produttore: ${formatTemp(modelInfo.maxTemp)}. Se hai un termometro, metti quella misurata.`}
+              hint={t("Dichiarata dal produttore: {formatTemp}. Se hai un termometro, metti quella misurata.", { formatTemp: formatTemp(modelInfo.maxTemp) })}
             />
             <SelectSheet
-              label="Supporto di cottura"
+              label={t("Supporto di cottura")}
               help="supporto"
               value={surface}
               options={surfaceOptions}
               onChange={setSurface}
             />
           </div>
-          <p className="oven-form-note">{localizeTemperatures(modelInfo.note)}</p>
+          <p className="oven-form-note">{localizeTemperatures(t(modelInfo.note))}</p>
           <div className="oven-form-actions">
-            {ovens.length > 0 && <button type="button" className="button secondary" onClick={() => setAdding(false)}>Annulla</button>}
-            <button type="submit" className="button primary"><Plus /> Salva il forno</button>
+            {ovens.length > 0 && <button type="button" className="button secondary" onClick={() => setAdding(false)}>{t("Annulla")}</button>}
+            <button type="submit" className="button primary"><Plus /> {t("Salva il forno")}</button>
           </div>
         </form>
       ) : (
         <button className="button secondary" onClick={() => setAdding(true)}>
-          <Plus /> Aggiungi un forno
+          <Plus /> {t("Aggiungi un forno")}
         </button>
       )}
     </section>

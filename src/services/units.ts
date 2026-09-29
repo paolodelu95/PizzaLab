@@ -1,3 +1,4 @@
+import { locale } from "../i18n";
 /**
  * Unità di misura scelte dall’utente (peso e temperatura).
  *
@@ -42,7 +43,7 @@ export const celsiusToFahrenheit = (celsius: number) => (celsius * 9) / 5 + 32;
 export const fahrenheitToCelsius = (fahrenheit: number) => ((fahrenheit - 32) * 5) / 9;
 
 const number = (value: number, digits: number) =>
-  value.toLocaleString("it-IT", { maximumFractionDigits: digits });
+  value.toLocaleString(locale(), { maximumFractionDigits: digits });
 
 export const weightLabel = (units: Units = current) => units.weight;
 export const tempLabel = (units: Units = current) => (units.temp === "F" ? "°F" : "°C");

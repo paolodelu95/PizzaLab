@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { buildTimeline, deriveAutomaticSchedule, type calculate } from "./calculator";
 import { localDateTime } from "./styles";
 import { formatWeight } from "../services/units";
@@ -33,10 +34,12 @@ export function canStartPlan(stages: Stage[], now: number, graceMinutes = 15) {
 
 export function yeastLabel(yeast: Recipe["config"]["yeast"]) {
   return yeast === "sourdough"
-    ? "Pasta madre"
+    ? t("Pasta madre")
     : yeast === "licoli"
-      ? "Licoli"
-      : `Lievito ${yeast === "fresh" ? "fresco" : "secco"}`;
+      ? t("Licoli")
+      : yeast === "fresh"
+        ? t("Lievito fresco")
+        : t("Lievito secco");
 }
 
 export function buildScaleItems(config: Recipe["config"], result: GoodResult): ScaleItem[] {
@@ -44,23 +47,23 @@ export function buildScaleItems(config: Recipe["config"], result: GoodResult): S
     ...result.mainFlourBreakdown.map((item) => ({
       label: item.name,
       grams: item.grams,
-      note: "Farina da aggiungere direttamente all’impasto.",
+      note: t("Farina da aggiungere direttamente all’impasto."),
     })),
     ...(config.preferment !== "none"
-      ? [{ label: `Farina per ${config.preferment}`, grams: result.preferment.flour }]
+      ? [{ label: t("Farina per {preferment}", { preferment: config.preferment }), grams: result.preferment.flour }]
       : []),
     {
-      label: "Acqua da aggiungere",
+      label: t("Acqua da aggiungere"),
       grams: result.waterToWeigh,
       note: config.autolyse
-        ? `${formatWeight(result.autolyse.water)} nell’autolisi e ${formatWeight(result.autolyse.reservedWater)} di riserva.`
+        ? t("{water} nell’autolisi e {reserve} di riserva.", { water: formatWeight(result.autolyse.water), reserve: formatWeight(result.autolyse.reservedWater) })
         : undefined,
     },
     { label: yeastLabel(config.yeast), grams: result.yeast },
-    { label: "Sale", grams: result.salt },
-    ...(result.oil > 0 ? [{ label: "Olio", grams: result.oil }] : []),
-    ...(result.sugar > 0 ? [{ label: "Zucchero", grams: result.sugar }] : []),
-    ...(result.malt > 0 ? [{ label: "Malto", grams: result.malt }] : []),
+    { label: t("Sale"), grams: result.salt },
+    ...(result.oil > 0 ? [{ label: t("Olio"), grams: result.oil }] : []),
+    ...(result.sugar > 0 ? [{ label: t("Zucchero"), grams: result.sugar }] : []),
+    ...(result.malt > 0 ? [{ label: t("Malto"), grams: result.malt }] : []),
   ];
 }
 

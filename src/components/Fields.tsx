@@ -1,3 +1,4 @@
+import { locale, t } from "../i18n";
 import { Minus, Plus } from "@phosphor-icons/react";
 import { useEffect, useId, useState, type CSSProperties } from "react";
 import { HelpTip, type HelpTopic } from "./HelpTip";
@@ -40,7 +41,7 @@ export function NumberField({
   const id = useId();
   const units = getUnits();
   const scale = scaleField(quantity, { min, max, step }, units);
-  const shownUnit = quantity ? scale.unit : unit;
+  const shownUnit = quantity ? scale.unit : unit ? t(unit) : unit;
   const [draft, setDraft] = useState(scale.format(value));
   useEffect(() => {
     if (Number.isFinite(value)) setDraft((old) => (scale.matches(old, value) ? old : scale.format(value)));
@@ -119,7 +120,7 @@ export function SliderField({
   const units = getUnits();
   const scale = scaleField(quantity, { min, max, step }, units);
   const slider = scaleField(quantity, { min: sliderMin, max: sliderMax, step }, units);
-  const shownUnit = quantity ? scale.unit : unit;
+  const shownUnit = quantity ? scale.unit : unit ? t(unit) : unit;
   const shownValue = scale.toDisplay(value);
   const [draft, setDraft] = useState(scale.format(value));
   useEffect(() => {
@@ -165,7 +166,7 @@ export function SliderField({
       </div>
       <input
         className="touch-slider"
-        aria-label={`${label}: cursore`}
+        aria-label={t("{label}: cursore", { label })}
         type="range"
         min={slider.min}
         max={slider.max}
@@ -174,7 +175,7 @@ export function SliderField({
         style={{ "--fill": `${slider.max > slider.min ? ((Math.max(slider.min, Math.min(slider.max, shownValue)) - slider.min) / (slider.max - slider.min)) * 100 : 0}%` } as CSSProperties}
         onChange={(event) => publish(Number(event.target.value))}
       />
-      <div className="slider-bounds"><span>{slider.min.toLocaleString("it-IT")} {shownUnit}</span><span>{slider.max.toLocaleString("it-IT")} {shownUnit}</span></div>
+      <div className="slider-bounds"><span>{slider.min.toLocaleString(locale())} {shownUnit}</span><span>{slider.max.toLocaleString(locale())} {shownUnit}</span></div>
       {hint && <small>{hint}</small>}
     </div>
   );
@@ -206,7 +207,7 @@ export function Stepper({
       </span>
       <div className="stepper">
         <button
-          aria-label={`Riduci ${label.toLowerCase()}`}
+          aria-label={t("Riduci {toLowerCase}", { toLowerCase: label.toLowerCase() })}
           disabled={value <= min}
           onClick={() => onChange(Math.max(min, value - step))}
         >
@@ -216,7 +217,7 @@ export function Stepper({
           {value} <small>{unit}</small>
         </span>
         <button
-          aria-label={`Aumenta ${label.toLowerCase()}`}
+          aria-label={t("Aumenta {toLowerCase}", { toLowerCase: label.toLowerCase() })}
           disabled={value >= max}
           onClick={() => onChange(Math.min(max, value + step))}
         >

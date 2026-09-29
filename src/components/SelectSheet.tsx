@@ -1,3 +1,4 @@
+import { getLanguage, t } from "../i18n";
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { CaretDown, Check, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { useCloseOnBack } from "../services/backNavigation";
@@ -56,9 +57,10 @@ export function SelectSheet<T extends string>({
   const filtered = useMemo(() => {
     const needle = normalize(query.trim());
     return needle
-      ? options.filter((option) => normalize(`${option.label} ${option.description ?? ""} ${option.group ?? ""}`).includes(needle))
+      ? options.filter((option) => normalize(`${t(option.label)} ${t(option.description ?? "")} ${t(option.group ?? "")}`).includes(needle))
       : options;
-  }, [options, query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options, query, getLanguage()]);
   const groups = filtered.reduce<{ name: string; items: SelectOption<T>[] }[]>((acc, option) => {
     const name = option.group ?? "";
     const group = acc.find((item) => item.name === name);
@@ -87,8 +89,8 @@ export function SelectSheet<T extends string>({
       >
         {icon && <span className="select-trigger-icon">{icon}</span>}
         <span id={`${id}-value`} className="select-trigger-value">
-          <strong>{selected?.label ?? "Scegli"}</strong>
-          {selected?.description && <small>{selected.description}</small>}
+          <strong>{selected ? t(selected.label) : t("Scegli")}</strong>
+          {selected?.description && <small>{t(selected.description)}</small>}
         </span>
         <CaretDown className="select-caret" />
       </button>
@@ -98,10 +100,10 @@ export function SelectSheet<T extends string>({
           <section className="flour-picker-sheet select-sheet" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
             <header>
               <div>
-                <span className="eyebrow">Scegli</span>
+                <span className="eyebrow">{t("Scegli")}</span>
                 <h2 id={`${id}-title`}>{label}</h2>
               </div>
-              <button aria-label={`Chiudi ${label.toLowerCase()}`} onClick={() => setOpen(false)}>
+              <button aria-label={t("Chiudi {toLowerCase}", { toLowerCase: label.toLowerCase() })} onClick={() => setOpen(false)}>
                 <X />
               </button>
             </header>
@@ -109,8 +111,8 @@ export function SelectSheet<T extends string>({
               <div className="flour-picker-search">
                 <MagnifyingGlass />
                 <input
-                  aria-label={`Cerca in ${label.toLowerCase()}`}
-                  placeholder={searchPlaceholder ?? "Cerca…"}
+                  aria-label={t("Cerca in {toLowerCase}", { toLowerCase: label.toLowerCase() })}
+                  placeholder={searchPlaceholder ?? t("Cerca…")}
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                 />
@@ -119,7 +121,7 @@ export function SelectSheet<T extends string>({
             <div className="flour-picker-results">
               {groups.map((group) => (
                 <div key={group.name || "default"} className="select-group" role="group" aria-label={group.name || undefined}>
-                  {group.name && <p className="select-group-title">{group.name}</p>}
+                  {group.name && <p className="select-group-title">{t(group.name)}</p>}
                   {group.items.map((option) => (
                     <button
                       key={option.value}
@@ -128,8 +130,8 @@ export function SelectSheet<T extends string>({
                       onClick={() => choose(option.value)}
                     >
                       <span>
-                        <strong>{option.label}</strong>
-                        {option.description && <em>{option.description}</em>}
+                        <strong>{t(option.label)}</strong>
+                        {option.description && <em>{t(option.description)}</em>}
                       </span>
                       {option.value === value && <Check weight="bold" />}
                     </button>
@@ -139,8 +141,8 @@ export function SelectSheet<T extends string>({
               {filtered.length === 0 && (
                 <div className="flour-picker-empty">
                   <MagnifyingGlass />
-                  <strong>Nessun risultato</strong>
-                  <span>Prova con un’altra parola.</span>
+                  <strong>{t("Nessun risultato")}</strong>
+                  <span>{t("Prova con un’altra parola.")}</span>
                 </div>
               )}
             </div>

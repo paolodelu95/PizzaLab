@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { useEffect, useState } from "react";
 import { DeviceMobile, Export, PlusSquare, X } from "@phosphor-icons/react";
 import { isAppleMobile, isInstalledWebApp, isNativeApp } from "../services/platform";
@@ -54,16 +55,16 @@ export function InstallPrompt({ always = false }: { always?: boolean }) {
     <section className="install-prompt" aria-labelledby="install-title">
       <span className="install-icon" aria-hidden="true"><DeviceMobile weight="duotone" /></span>
       <div>
-        <strong id="install-title">Installa PizzaLab sul telefono</strong>
+        <strong id="install-title">{t("Installa PizzaLab sul telefono")}</strong>
         {apple ? (
           <ol>
-            <li>Tocca <Export aria-label="Condividi" /> <b>Condividi</b> in basso nella barra di Safari.</li>
-            <li>Scegli <PlusSquare aria-hidden="true" /> <b>Aggiungi alla schermata Home</b>.</li>
+            <li>{t("Tocca")} <Export aria-label={t("Condividi")} /> <b>{t("Condividi")}</b> {t("in basso nella barra di Safari.")}</li>
+            <li>{t("Scegli")} <PlusSquare aria-hidden="true" /> <b>{t("Aggiungi alla schermata Home")}</b>.</li>
           </ol>
         ) : (
-          <p>Si apre come un’app, a tutto schermo e anche senza connessione.</p>
+          <p>{t("Si apre come un’app, a tutto schermo e anche senza connessione.")}</p>
         )}
-        {apple && <p>Si apre come un’app, a tutto schermo e anche senza connessione. I dati restano sul telefono.</p>}
+        {apple && <p>{t("Si apre come un’app, a tutto schermo e anche senza connessione. I dati restano sul telefono.")}</p>}
         {!apple && installEvent && (
           <button
             className="button primary"
@@ -74,12 +75,12 @@ export function InstallPrompt({ always = false }: { always?: boolean }) {
               setInstallEvent(null);
             }}
           >
-            Installa l’app
+            {t("Installa l’app")}
           </button>
         )}
       </div>
       {!always && (
-        <button className="icon-button install-close" aria-label="Chiudi, lo farò più tardi" onClick={dismiss}>
+        <button className="icon-button install-close" aria-label={t("Chiudi, lo farò più tardi")} onClick={dismiss}>
           <X />
         </button>
       )}

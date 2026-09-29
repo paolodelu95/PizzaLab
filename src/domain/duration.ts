@@ -1,3 +1,4 @@
+import { locale } from "../i18n";
 /**
  * Durate leggibili in cucina: «1,33 h» non dice niente, «1 h 20 min» sì.
  * Sotto l’ora si leggono solo i minuti, fino a sei ore si usano ore e minuti,
@@ -12,5 +13,5 @@ export function durationLabel(hours: number) {
     const rest = minutes % 60;
     return rest === 0 ? `${whole} h` : `${whole} h ${rest} min`;
   }
-  return `${hours.toLocaleString("it-IT", { maximumFractionDigits: 1 })} h`;
+  return `${hours.toLocaleString(locale(), { maximumFractionDigits: 1 })} h`;
 }

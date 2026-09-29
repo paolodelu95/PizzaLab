@@ -1,7 +1,8 @@
+import { t } from "../i18n";
 import type { SourdoughProfile, StarterFeeding } from "./types";
 
 export const starterKindLabel = (kind: SourdoughProfile["kind"]) =>
-  kind === "licoli" ? "Li.Co.Li. · 100% idratazione" : "Pasta madre solida · 50% idratazione";
+  kind === "licoli" ? t("Li.Co.Li. · 100% idratazione") : t("Pasta madre solida · 50% idratazione");
 
 export function starterIntervalHours(profile: SourdoughProfile, at = new Date()) {
   const ageDays = (at.getTime() - new Date(profile.startedAt).getTime()) / 86400000;
@@ -69,7 +70,7 @@ export function createStarterProfile(
 ): SourdoughProfile {
   const profile: SourdoughProfile = {
     id: crypto.randomUUID(),
-    name: name?.trim() || (kind === "licoli" ? "Il mio Li.Co.Li." : "La mia pasta madre"),
+    name: name?.trim() || (kind === "licoli" ? t("Il mio Li.Co.Li.") : t("La mia pasta madre")),
     kind,
     phase: existing ? "strengthening" : "creating",
     storage: "room",
@@ -78,7 +79,7 @@ export function createStarterProfile(
     nextFeedAt: now.toISOString(),
     preferredTime: "08:00",
     starterGrams: 30,
-    flourName: "Farina forte non sbiancata",
+    flourName: t("Farina forte non sbiancata"),
     temperature: kind === "licoli" ? 24 : 26,
     feedRatio: 1,
     readyStreak: 0,

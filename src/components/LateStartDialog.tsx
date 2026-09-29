@@ -1,3 +1,4 @@
+import { locale, t } from "../i18n";
 import { ArrowRight, CalendarBlank, Clock, Warning } from "@phosphor-icons/react";
 import { buildTimeline, calculate } from "../domain/calculator";
 import { durationLabel } from "../domain/duration";
@@ -7,7 +8,7 @@ import { useCloseOnBack } from "../services/backNavigation";
 import { formatWeight } from "../services/units";
 
 const time = (value: string) =>
-  new Date(value).toLocaleString("it-IT", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  new Date(value).toLocaleString(locale(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 /**
  * L’orario di inizio è passato da poco: si può partire adesso spostando la cena
@@ -38,15 +39,15 @@ export function LateStartDialog({
     <div className="dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className="dialog late-start-dialog" role="dialog" aria-modal="true" aria-labelledby="late-title">
         <span className="late-icon" aria-hidden="true"><Clock weight="duotone" /></span>
-        <h2 id="late-title">Parti in ritardo?</h2>
+        <h2 id="late-title">{t("Parti in ritardo?")}</h2>
         <p>
-          L’impasto doveva iniziare {plannedStart ? time(plannedStart) : "prima"}. Scegli come recuperare:
+          {t("L’impasto doveva iniziare")} {plannedStart ? time(plannedStart) : t("prima")}{t(". Scegli come recuperare:")}
         </p>
         <button className="late-option" onClick={() => onChoose(shifted, "shift")}>
           <CalendarBlank />
           <span>
-            <strong>Sposta la cena</strong>
-            <small>Stessi tempi e stessa dose di lievito. Si inforna {time(shifted.bakeAt)}.</small>
+            <strong>{t("Sposta la cena")}</strong>
+            <small>{t("Stessi tempi e stessa dose di lievito. Si inforna")} {time(shifted.bakeAt)}.</small>
           </span>
           <ArrowRight />
         </button>
@@ -54,10 +55,10 @@ export function LateStartDialog({
           <button className="late-option" onClick={() => onChoose(kept.config, "keep")}>
             <Clock />
             <span>
-              <strong>Mangio comunque {time(config.bakeAt)}</strong>
+              <strong>{t("Mangio comunque")} {time(config.bakeAt)}</strong>
               <small>
-                Lievitazione da {durationLabel(hours(config))} a {durationLabel(hours(kept.config))};{" "}
-                {yeastLabel(config.yeast).toLowerCase()} da {formatWeight(before.yeast, natural ? 0 : 2)} a {formatWeight(after.yeast, natural ? 0 : 2)}.
+                {t("Lievitazione da")} {durationLabel(hours(config))} a {durationLabel(hours(kept.config))};{" "}
+                {yeastLabel(config.yeast).toLowerCase()} {t("da")} {formatWeight(before.yeast, natural ? 0 : 2)} a {formatWeight(after.yeast, natural ? 0 : 2)}.
               </small>
             </span>
             <ArrowRight />
@@ -66,12 +67,12 @@ export function LateStartDialog({
           <div className="notice warning">
             <Warning />
             <div>
-              <strong>Per la cena {time(config.bakeAt)} non c’è più tempo</strong>
-              <p>{kept.ok ? "Non riesco a ricalcolare questo impasto." : kept.error}</p>
+              <strong>{t("Per la cena")} {time(config.bakeAt)} {t("non c’è più tempo")}</strong>
+              <p>{kept.ok ? t("Non riesco a ricalcolare questo impasto.") : kept.error}</p>
             </div>
           </div>
         )}
-        <button className="button secondary" onClick={onClose}>Annulla</button>
+        <button className="button secondary" onClick={onClose}>{t("Annulla")}</button>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
+import { locale, t } from "../i18n";
 import type { DoughConfig, PizzaStyle } from '../domain/types';
 
-const fmt = (value:number,digits=1) => value.toLocaleString('it-IT',{maximumFractionDigits:digits});
+const fmt = (value:number,digits=1) => value.toLocaleString(locale(),{maximumFractionDigits:digits});
 
 export function HydrationChart({value,style,w}:{value:number;style:PizzaStyle;w:number|null}) {
   const min=45; const max=90;
@@ -10,15 +11,15 @@ export function HydrationChart({value,style,w}:{value:number;style:PizzaStyle;w:
   const practicalHigh=wCeiling===null?style.hydrationRange[1]:Math.min(style.hydrationRange[1],wCeiling);
   const hasOverlap=practicalHigh>=style.hydrationRange[0];
   const inside=hasOverlap&&value>=style.hydrationRange[0]&&value<=practicalHigh;
-  return <div className="dough-chart hydration-chart" aria-label={`Idratazione ${value}%. Intervallo dello stile ${style.hydrationRange[0]}–${style.hydrationRange[1]}%.`}>
-    <div className="chart-heading"><span>Zona pratica: stile + forza</span><strong className={inside?'is-good':'is-warning'}>{inside?'Buon punto di partenza':'Da gestire con attenzione'}</strong></div>
+  return <div className="dough-chart hydration-chart" aria-label={t("Idratazione {value}%. Intervallo dello stile {v}–{v2}%.", { value, v: style.hydrationRange[0], v2: style.hydrationRange[1] })}>
+    <div className="chart-heading"><span>{t("Zona pratica: stile + forza")}</span><strong className={inside?'is-good':'is-warning'}>{inside?t("Buon punto di partenza"):t("Da gestire con attenzione")}</strong></div>
     <div className="hydration-scale">
       {hasOverlap&&<span className="hydration-zone" style={{left:`${pos(style.hydrationRange[0])}%`,width:`${pos(practicalHigh)-pos(style.hydrationRange[0])}%`}} />}
-      {wCeiling!==null&&<span className="strength-marker" style={{left:`${pos(wCeiling)}%`}}><b>prudenza W</b></span>}
+      {wCeiling!==null&&<span className="strength-marker" style={{left:`${pos(wCeiling)}%`}}><b>{t("prudenza W")}</b></span>}
       <span className="hydration-marker" style={{left:`${pos(value)}%`}}><b>{fmt(value)}%</b></span>
     </div>
-    <div className="chart-axis"><span>45% · asciutto</span><span>{style.hydrationRange[0]}–{style.hydrationRange[1]}% · riferimento</span><span>90% · molto fluido</span></div>
-    <p>{w===null?'W della miscela non disponibile: il grafico usa solo l’intervallo dello stile e la tenuta va provata.':`W medio indicativo ${fmt(w,0)}; soglia prudenziale circa ${fmt(wCeiling!,0)}%. È una guida euristica: il W aiuta a valutare la tenuta, ma non misura da solo l’assorbimento reale.`}</p>
+    <div className="chart-axis"><span>{t("45% · asciutto")}</span><span>{style.hydrationRange[0]}–{style.hydrationRange[1]}{t("% · riferimento")}</span><span>{t("90% · molto fluido")}</span></div>
+    <p>{w===null?t("W della miscela non disponibile: il grafico usa solo l’intervallo dello stile e la tenuta va provata."):t("W medio indicativo {fmt}; soglia prudenziale circa {fmt2}%. È una guida euristica: il W aiuta a valutare la tenuta, ma non misura da solo l’assorbimento reale.", { fmt: fmt(w,0), fmt2: fmt(wCeiling!,0) })}</p>
   </div>;
 }
 
@@ -39,14 +40,14 @@ export function YeastChart({config,currentPercent}:{config:DoughConfig;currentPe
   const path=values.map((point,index)=>`${index?'L':'M'} ${x(point.hours).toFixed(1)} ${y(point.value).toFixed(1)}`).join(' ');
   const cx=x(Math.max(2,Math.min(maxHours,currentHours))); const cy=y(currentPercent);
   return <div className="dough-chart yeast-chart">
-    <div className="chart-heading"><span>Lievito stimato in funzione del tempo</span><strong>{fmt(currentPercent,2)}% sulla farina</strong></div>
-    <svg viewBox="0 0 300 96" role="img" aria-label={`Con ${fmt(currentHours)} ore combinate: ${fmt(currentPercent,2)}% di lievito ${config.yeast==='fresh'?'fresco':'secco'}.`}>
+    <div className="chart-heading"><span>{t("Lievito stimato in funzione del tempo")}</span><strong>{fmt(currentPercent,2)}{t("% sulla farina")}</strong></div>
+    <svg viewBox="0 0 300 96" role="img" aria-label={t(config.yeast==='fresh'?'Con {hours} ore combinate: {percent}% di lievito fresco.':'Con {hours} ore combinate: {percent}% di lievito secco.',{hours:fmt(currentHours),percent:fmt(currentPercent,2)})}>
       <line x1="12" y1="80" x2="288" y2="80" className="chart-grid"/>
       <line x1={cx} y1="7" x2={cx} y2="80" className="chart-current-line"/>
       <path d={path} className="yeast-curve"/>
       <circle cx={cx} cy={cy} r="4.5" className="yeast-dot"/>
     </svg>
     <div className="chart-axis"><span>2 h</span><span>{fmt(maxHours/2,0)} h</span><span>{maxHours} h</span></div>
-    <p>Curva calcolata mantenendo la tua proporzione fra ore in frigo e fuori frigo e le temperature impostate.</p>
+    <p>{t("Curva calcolata mantenendo la tua proporzione fra ore in frigo e fuori frigo e le temperature impostate.")}</p>
   </div>;
 }

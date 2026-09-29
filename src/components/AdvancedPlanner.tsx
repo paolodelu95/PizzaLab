@@ -1,3 +1,4 @@
+import { locale, t, msg } from "../i18n";
 import {
   ArrowSquareOut,
   Drop,
@@ -31,7 +32,7 @@ type Props = {
   userOvens?: UserOven[];
 };
 const fmt = (n: number, d = 1) =>
-  n.toLocaleString("it-IT", { maximumFractionDigits: d });
+  n.toLocaleString(locale(), { maximumFractionDigits: d });
 
 export function AdvancedPlanner({
   config: c,
@@ -64,13 +65,13 @@ export function AdvancedPlanner({
   };
   const heading =
     section === "dough"
-      ? ["Laboratorio impasto", "Metodo, autolisi e temperatura finale."]
+      ? [msg("Laboratorio impasto"), msg("Metodo, autolisi e temperatura finale.")]
       : section === "fermentation"
         ? [
-            "Controllo fermentazione",
-            "Scegli il lievito e rendi la dose realmente pesabile.",
+            msg("Controllo fermentazione"),
+            msg("Scegli il lievito e rendi la dose realmente pesabile."),
           ]
-        : ["Il tuo forno", "Profilo, temperatura reale e preriscaldamento."];
+        : [msg("Il tuo forno"), msg("Profilo, temperatura reale e preriscaldamento.")];
   return (
     <section className="panel advanced-planner">
       <div className="panel-title">
@@ -78,8 +79,8 @@ export function AdvancedPlanner({
           <Flask />
         </span>
         <div>
-          <h2>{heading[0]}</h2>
-          <p>{heading[1]}</p>
+          <h2>{t(heading[0])}</h2>
+          <p>{t(heading[1])}</p>
         </div>
       </div>
 
@@ -89,44 +90,43 @@ export function AdvancedPlanner({
             <div className="advanced-heading">
               <div>
                 <MagicWand />
-                <strong>Metodo</strong>
+                <strong>{t("Metodo")}</strong>
                 <HelpTip topic="metodo" />
               </div>
-              <span>Diretto, poolish o biga</span>
+              <span>{t("Diretto, poolish o biga")}</span>
             </div>
             <div className="method-toggle three">
               <button
                 className={c.preferment === "none" ? "selected" : ""}
                 onClick={() => onUpdate({ preferment: "none" })}
               >
-                Diretto
+                {t("Diretto")}
               </button>
               <button
                 disabled={naturalStarter}
                 className={c.preferment === "poolish" ? "selected" : ""}
                 onClick={() => onUpdate({ preferment: "poolish" })}
               >
-                Poolish
+                {t("Poolish")}
               </button>
               <button
                 disabled={naturalStarter}
                 className={c.preferment === "biga" ? "selected" : ""}
                 onClick={() => onUpdate({ preferment: "biga" })}
               >
-                Biga
+                {t("Biga")}
               </button>
             </div>
             {naturalStarter && (
               <p className="natural-note">
-                Il lievito naturale è già un prefermento: poolish e biga vengono
-                disattivati.
+                {t("Il lievito naturale è già un prefermento: poolish e biga vengono disattivati.")}
               </p>
             )}
             {c.preferment !== "none" && (
               <>
                 <div className="field-grid">
                   <NumberField
-                    label="Farina nel prefermento"
+                    label={t("Farina nel prefermento")}
                     value={c.prefermentPercent}
                     onChange={(v) => onUpdate({ prefermentPercent: v })}
                     min={5}
@@ -135,7 +135,7 @@ export function AdvancedPlanner({
                     unit="%"
                   />
                   <NumberField
-                    label="Durata prefermento"
+                    label={t("Durata prefermento")}
                     value={c.prefermentHours}
                     onChange={(v) => onUpdate({ prefermentHours: v })}
                     min={3}
@@ -144,7 +144,7 @@ export function AdvancedPlanner({
                     unit="ore"
                   />
                   <NumberField
-                    label="Temperatura prefermento"
+                    label={t("Temperatura prefermento")}
                     value={c.prefermentTemp}
                     onChange={(v) => onUpdate({ prefermentTemp: v })}
                     min={8}
@@ -152,17 +152,17 @@ export function AdvancedPlanner({
                     quantity="temp"
                   />
                   <FlourPicker
-                    label="Farina del prefermento"
+                    label={t("Farina del prefermento")}
                     value={c.prefermentFlourId}
                     flours={flours}
                     allowEmpty
-                    emptyLabel="Usa la farina principale"
+                    emptyLabel={t("Usa la farina principale")}
                     onChange={(value) => onUpdate({ prefermentFlourId: value })}
                   />
                 </div>
                 <div className="maturity-row">
                   <div>
-                    <span>MATURITÀ STIMATA <HelpTip topic="maturita" /></span>
+                    <span>{t("MATURITÀ STIMATA")} <HelpTip topic="maturita" /></span>
                     <strong>{result.preferment.maturity}</strong>
                   </div>
                   <div className="maturity-track">
@@ -176,24 +176,24 @@ export function AdvancedPlanner({
                     className="button secondary"
                     onClick={optimizePreferment}
                   >
-                    <MagicWand /> Ottimizza
+                    <MagicWand /> {t("Ottimizza")}
                   </button>
                 </div>
                 <div className="preferment-split">
                   <div>
                     <span>{c.preferment}</span>
                     <strong>
-                      {formatWeight(result.preferment.flour, 0)} farina ·{" "}
-                      {formatWeight(result.preferment.water, 0)} acqua ·{" "}
-                      {formatWeight(result.preferment.yeast, 2)} lievito
+                      {formatWeight(result.preferment.flour, 0)} {t("farina ·")}{" "}
+                      {formatWeight(result.preferment.water, 0)} {t("acqua ·")}{" "}
+                      {formatWeight(result.preferment.yeast, 2)} {t("lievito")}
                     </strong>
                   </div>
                   <div>
-                    <span>Impasto finale</span>
+                    <span>{t("Impasto finale")}</span>
                     <strong>
-                      {formatWeight(result.preferment.mainFlour, 0)} farina ·{" "}
-                      {formatWeight(result.preferment.mainWater, 0)} acqua ·{" "}
-                      {formatWeight(result.preferment.mainYeast, 2)} lievito
+                      {formatWeight(result.preferment.mainFlour, 0)} {t("farina ·")}{" "}
+                      {formatWeight(result.preferment.mainWater, 0)} {t("acqua ·")}{" "}
+                      {formatWeight(result.preferment.mainYeast, 2)} {t("lievito")}
                     </strong>
                   </div>
                 </div>
@@ -205,40 +205,40 @@ export function AdvancedPlanner({
             <div className="advanced-heading">
               <div>
                 <Drop />
-                <strong>Autolisi breve</strong>
+                <strong>{t("Autolisi breve")}</strong>
                 <HelpTip topic="autolisi" />
               </div>
-              <span>Utile per impasti molto idratati</span>
+              <span>{t("Utile per impasti molto idratati")}</span>
             </div>
             <div className="method-toggle">
               <button
                 className={!c.autolyse ? "selected" : ""}
                 onClick={() => onUpdate({ autolyse: false })}
               >
-                Non prevista
+                {t("Non prevista")}
               </button>
               <button
                 className={c.autolyse ? "selected" : ""}
                 onClick={() => onUpdate({ autolyse: true })}
               >
-                Aggiungi autolisi
+                {t("Aggiungi autolisi")}
               </button>
             </div>
             {c.autolyse && (
               <>
                 <div className="field-grid">
                   <NumberField
-                    label="Acqua usata nell’autolisi"
+                    label={t("Acqua usata nell’autolisi")}
                     value={c.autolyseWaterPercent}
                     onChange={(v) => onUpdate({ autolyseWaterPercent: v })}
                     min={30}
                     max={95}
                     step={5}
                     unit="%"
-                    hint="Percentuale dell’acqua disponibile nell’impasto finale."
+                    hint={t("Percentuale dell’acqua disponibile nell’impasto finale.")}
                   />
                   <NumberField
-                    label="Durata del riposo"
+                    label={t("Durata del riposo")}
                     value={c.autolyseMinutes}
                     onChange={(v) => onUpdate({ autolyseMinutes: v })}
                     min={10}
@@ -249,17 +249,16 @@ export function AdvancedPlanner({
                 </div>
                 <div className="autolyse-recipe">
                   <div>
-                    <span>AUTOLISI</span>
+                    <span>{t("AUTOLISI")}</span>
                     <strong>
-                      {formatWeight(result.autolyse.flour, 0)} farina +{" "}
-                      {formatWeight(result.autolyse.water, 0)} acqua
+                      {formatWeight(result.autolyse.flour, 0)} {t("farina +")}{" "}
+                      {formatWeight(result.autolyse.water, 0)} {t("acqua")}
                     </strong>
                   </div>
                   <div>
-                    <span>ACQUA DI RISERVA</span>
+                    <span>{t("ACQUA DI RISERVA")}</span>
                     <strong>
-                      {formatWeight(result.autolyse.reservedWater, 0)} con il lievito,
-                      poi poco alla volta
+                      {formatWeight(result.autolyse.reservedWater, 0)} {t("con il lievito, poi poco alla volta")}
                     </strong>
                   </div>
                 </div>
@@ -271,19 +270,19 @@ export function AdvancedPlanner({
             <div className="advanced-heading">
               <div>
                 <Timer />
-                <strong>Pieghe di rinforzo</strong>
+                <strong>{t("Pieghe di rinforzo")}</strong>
                 <HelpTip topic="pieghe" />
               </div>
-              <span>Programmate durante la puntata</span>
+              <span>{t("Programmate durante la puntata")}</span>
             </div>
             <div className={`fold-advice ${foldAdvice.count ? "is-recommended" : ""}`}>
               <div>
                 <strong>
                   {foldAdvice.count
-                    ? `Consigliate per lo stile «${styleName}»: ${foldAdvice.count} pieghe ogni ${foldAdvice.interval} min`
-                    : `Non necessarie per lo stile «${styleName}»`}
+                    ? t("Consigliate per lo stile «{styleName}»: {count} pieghe ogni {interval} min", { styleName, count: foldAdvice.count, interval: foldAdvice.interval })
+                    : t("Non necessarie per lo stile «{styleName}»", { styleName })}
                 </strong>
-                <span>Perché {foldAdvice.reason}.</span>
+                <span>{t("Perché")} {t(foldAdvice.reason)}.</span>
               </div>
               {c.foldCount !== foldAdvice.count && (
                 <button
@@ -296,13 +295,13 @@ export function AdvancedPlanner({
                     })
                   }
                 >
-                  {foldAdvice.count ? `Usa ${foldAdvice.count} pieghe` : "Togli le pieghe"}
+                  {foldAdvice.count ? t("Usa {count} pieghe", { count: foldAdvice.count }) : t("Togli le pieghe")}
                 </button>
               )}
             </div>
             <div className="field-grid">
               <NumberField
-                label="Numero di pieghe"
+                label={t("Numero di pieghe")}
                 value={c.foldCount}
                 onChange={(value) => {
                   const foldCount = Math.round(value);
@@ -319,7 +318,7 @@ export function AdvancedPlanner({
                 step={1}
               />
               <NumberField
-                label="Intervallo tra le pieghe"
+                label={t("Intervallo tra le pieghe")}
                 value={c.foldIntervalMinutes}
                 onChange={(foldIntervalMinutes) =>
                   onUpdate({
@@ -339,19 +338,17 @@ export function AdvancedPlanner({
             {c.foldCount > 0 && (
               <div className="folds-summary">
                 <strong>
-                  Puntata minima: {durationLabel(minimumFoldMinutes / 60)}
+                  {t("Puntata minima:")} {durationLabel(minimumFoldMinutes / 60)}
                 </strong>
                 <span>
-                  {c.foldCount} {c.foldCount === 1 ? "piega" : "pieghe"} · ai
-                  minuti{" "}
+                  {c.foldCount} {c.foldCount === 1 ? t("piega") : t("pieghe")} {t("· ai minuti")}{" "}
                   {Array.from(
                     { length: c.foldCount },
                     (_, index) => (index + 1) * c.foldIntervalMinutes,
                   ).join(", ")}
                 </span>
                 <small>
-                  PizzaLab non permette di mettere l’impasto in frigo prima
-                  dell’ultima piega.
+                  {t("PizzaLab non permette di mettere l’impasto in frigo prima dell’ultima piega.")}
                 </small>
               </div>
             )}
@@ -361,21 +358,21 @@ export function AdvancedPlanner({
             <div className="advanced-heading">
               <div>
                 <Thermometer />
-                <strong>Temperatura impasto</strong>
+                <strong>{t("Temperatura impasto")}</strong>
                 <HelpTip topic="temperatura" />
               </div>
-              <span>Metodo del fattore 3</span>
+              <span>{t("Metodo del fattore 3")}</span>
             </div>
             <div className="field-grid">
               <SelectSheet
-                label="Lavorazione"
+                label={t("Lavorazione")}
                 help="lavorazione"
                 value={c.mixer}
                 options={mixerOptions}
                 onChange={(mixer) => onUpdate({ mixer })}
               />
               <NumberField
-                label="Temperatura farina"
+                label={t("Temperatura farina")}
                 value={c.flourTemp}
                 onChange={(v) => onUpdate({ flourTemp: v })}
                 min={5}
@@ -383,7 +380,7 @@ export function AdvancedPlanner({
                 quantity="temp"
               />
               <NumberField
-                label="Temperatura impasto desiderata"
+                label={t("Temperatura impasto desiderata")}
                 value={c.desiredDoughTemp}
                 onChange={(v) => onUpdate({ desiredDoughTemp: v })}
                 min={18}
@@ -392,44 +389,44 @@ export function AdvancedPlanner({
               />
               <div className="water-temp">
                 <Drop />
-                <span>Acqua consigliata</span>
+                <span>{t("Acqua consigliata")}</span>
                 <strong>{formatTemp(result.waterTemp)}</strong>
               </div>
             </div>
             {c.mixer === "stand" && (
               <div className="mixer-guide">
                 <SelectSheet
-                  label="La tua planetaria"
+                  label={t("La tua planetaria")}
                   value={mixerProfile.id}
                   options={planetaryOptions}
                   onChange={(mixerProfileId) => onUpdate({ mixerProfileId })}
                 />
                 <div className="mixer-steps">
                   <div>
-                    <span>INSERTO</span>
-                    <strong>{mixerProfile.tool}</strong>
+                    <span>{t("INSERTO")}</span>
+                    <strong>{t(mixerProfile.tool)}</strong>
                   </div>
                   <div>
-                    <span>PARTENZA</span>
-                    <strong>{mixerProfile.start}</strong>
+                    <span>{t("PARTENZA")}</span>
+                    <strong>{t(mixerProfile.start)}</strong>
                   </div>
                   <div>
-                    <span>IMPASTO</span>
-                    <strong>{mixerProfile.knead}</strong>
+                    <span>{t("IMPASTO")}</span>
+                    <strong>{t(mixerProfile.knead)}</strong>
                   </div>
                   <div>
-                    <span>CHIUSURA</span>
-                    <strong>{mixerProfile.finish}</strong>
+                    <span>{t("CHIUSURA")}</span>
+                    <strong>{t(mixerProfile.finish)}</strong>
                   </div>
                 </div>
-                <p>{mixerProfile.note}</p>
+                <p>{t(mixerProfile.note)}</p>
                 {mixerProfile.source && (
                   <a
                     href={mixerProfile.source}
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Indicazioni del produttore <ArrowSquareOut />
+                    {t("Indicazioni del produttore")} <ArrowSquareOut />
                   </a>
                 )}
               </div>
@@ -443,19 +440,19 @@ export function AdvancedPlanner({
           <div className="advanced-heading">
             <div>
               <Timer />
-              <strong>Controllo lievito</strong>
+              <strong>{t("Controllo lievito")}</strong>
                 <HelpTip topic="dosaggio" />
             </div>
             <span>
               {naturalStarter
-                ? "Dose e idratazione della coltura"
-                : "Automatico o dose bloccata"}
+                ? t("Dose e idratazione della coltura")
+                : t("Automatico o dose bloccata")}
             </span>
           </div>
           {c.planMode === "automatic" ? (
             <div className="automatic-yeast-lock">
               <MagicWand />
-              <div><strong>Dose sincronizzata con gli orari</strong><p>{naturalStarter ? "PizzaLab stima la quantità dai tempi e dalle temperature. Verifica sempre la vitalità reale della coltura dalla sua crescita." : "In modalità automatica PizzaLab calcola il lievito dai tempi e dalle temperature. Passa a Manuale per bloccare grammi o percentuale."}</p></div>
+              <div><strong>{t("Dose sincronizzata con gli orari")}</strong><p>{naturalStarter ? t("PizzaLab stima la quantità dai tempi e dalle temperature. Verifica sempre la vitalità reale della coltura dalla sua crescita.") : t("In modalità automatica PizzaLab calcola il lievito dai tempi e dalle temperature. Passa a Manuale per bloccare grammi o percentuale.")}</p></div>
               <span>{formatWeight(result.yeast, 2)}</span>
             </div>
           ) : naturalStarter ? (
@@ -463,8 +460,8 @@ export function AdvancedPlanner({
               <NumberField
                 label={
                   c.yeast === "licoli"
-                    ? "Licoli sulla farina"
-                    : "Pasta madre sulla farina"
+                    ? t("Licoli sulla farina")
+                    : t("Pasta madre sulla farina")
                 }
                 value={c.starterPercent}
                 onChange={(v) => onUpdate({ starterPercent: v })}
@@ -472,17 +469,17 @@ export function AdvancedPlanner({
                 max={50}
                 step={1}
                 unit="%"
-                hint="Percentuale sul peso totale della farina."
+                hint={t("Percentuale sul peso totale della farina.")}
               />
               <NumberField
-                label="Idratazione del lievito"
+                label={t("Idratazione del lievito")}
                 value={c.starterHydration}
                 onChange={(v) => onUpdate({ starterHydration: v })}
                 min={40}
                 max={150}
                 step={5}
                 unit="%"
-                hint="In genere 45–55% per pasta madre e 100% per licoli."
+                hint={t("In genere 45–55% per pasta madre e 100% per licoli.")}
               />
             </div>
           ) : <>
@@ -491,66 +488,66 @@ export function AdvancedPlanner({
                   className={c.yeastMode === "auto" ? "selected" : ""}
                   onClick={() => onUpdate({ yeastMode: "auto" })}
                 >
-                  Automatico
+                  {t("Automatico")}
                 </button>
                 <button
                   className={c.yeastMode === "weighable" ? "selected" : ""}
                   onClick={() => onUpdate({ yeastMode: "weighable" })}
                 >
-                  Grammi interi
+                  {t("Grammi interi")}
                 </button>
                 <button
                   className={c.yeastMode === "manual" ? "selected" : ""}
                   onClick={() => onUpdate({ yeastMode: "manual" })}
                 >
-                  Percentuale
+                  {t("Percentuale")}
                 </button>
               </div>
               {c.yeastMode === "manual" && (
                 <NumberField
-                  label={`Lievito ${c.yeast === "fresh" ? "fresco" : "secco"} sulla farina`}
+                  label={c.yeast === "fresh" ? t("Lievito fresco sulla farina") : t("Lievito secco sulla farina")}
                   value={c.manualYeastPercent}
                   onChange={(v) => onUpdate({ manualYeastPercent: v })}
                   min={0.001}
                   max={5}
                   step={0.01}
                   unit="%"
-                  hint="Il programma mantiene fissi gli orari e mostra come cambia la maturazione."
+                  hint={t("Il programma mantiene fissi gli orari e mostra come cambia la maturazione.")}
                 />
               )}
               {c.yeastMode === "weighable" && (
                 <div className="weighable-yeast">
                   <NumberField
-                    label={`Lievito ${c.yeast === "fresh" ? "fresco" : "secco"} da pesare`}
+                    label={c.yeast === "fresh" ? t("Lievito fresco da pesare") : t("Lievito secco da pesare")}
                     value={c.weighableYeastGrams}
                     onChange={(v) => onUpdate({ weighableYeastGrams: v })}
                     min={1}
                     max={30}
                     step={1}
                     unit="g"
-                    hint="Solo grammi interi: utile con una bilancia sensibile a 1 g."
+                    hint={t("Solo grammi interi: utile con una bilancia sensibile a 1 g.")}
                   />
                   {result.yeastAdjustment && (
                     <div className="yeast-compensation">
                       <div>
-                        <span>STIMA AUTOMATICA</span>
+                        <span>{t("STIMA AUTOMATICA")}</span>
                         <strong>
-                          {fmt(result.yeastAdjustment.autoGrams, 2)} g → userai{" "}
+                          {fmt(result.yeastAdjustment.autoGrams, 2)} {t("g → userai")}{" "}
                           {fmt(result.yeastAdjustment.selectedGrams, 0)} g
                         </strong>
                         <p>{result.yeastAdjustment.summary}</p>
                       </div>
                       <div className="compensation-times">
                         <span>
-                          <small>PUNTATA</small>
+                          <small>{t("PUNTATA")}</small>
                           {durationLabel(result.yeastAdjustment.bulkHours)}
                         </span>
                         <span>
-                          <small>FRIGO</small>
+                          <small>{t("FRIGO")}</small>
                           {durationLabel(result.yeastAdjustment.coldHours)}
                         </span>
                         <span>
-                          <small>APPRETTO</small>
+                          <small>{t("APPRETTO")}</small>
                           {durationLabel(result.yeastAdjustment.proofHours)}
                         </span>
                       </div>
@@ -564,12 +561,10 @@ export function AdvancedPlanner({
                           })
                         }
                       >
-                        Applica tempi compensati
+                        {t("Applica tempi compensati")}
                       </button>
                       <small>
-                        È una stima basata sulla temperatura indicata: volume e
-                        consistenza dell’impasto restano il controllo
-                        principale.
+                        {t("È una stima basata sulla temperatura indicata: volume e consistenza dell’impasto restano il controllo principale.")}
                       </small>
                     </div>
                   )}
@@ -584,16 +579,16 @@ export function AdvancedPlanner({
           <div className="advanced-heading">
             <div>
               <Fire />
-              <strong>Profilo del forno</strong>
+              <strong>{t("Profilo del forno")}</strong>
             </div>
-            <span>Indicazioni coerenti con l’attrezzatura</span>
+            <span>{t("Indicazioni coerenti con l’attrezzatura")}</span>
           </div>
           <div className="field-grid">
             <SelectSheet
-              label="Tipo di forno"
+              label={t("Tipo di forno")}
               value={c.ovenType}
               options={ovenOptions()}
-              searchPlaceholder="Cerca Ariete, Ooni, legna…"
+              searchPlaceholder={t("Cerca Ariete, Ooni, legna…")}
               onChange={(id) => {
                 const next = ovenProfiles.find((o) => o.id === id)!;
                 const patch: Partial<DoughConfig> = {
@@ -606,7 +601,7 @@ export function AdvancedPlanner({
               }}
             />
             <NumberField
-              label="Temperatura effettiva"
+              label={t("Temperatura effettiva")}
               value={c.ovenTemp}
               onChange={(v) => onUpdate({ ovenTemp: v })}
               min={180}
@@ -619,14 +614,14 @@ export function AdvancedPlanner({
             <Gauge />
             <p>
               <strong>
-                {oven.family} · preriscaldamento indicativo {oven.preheat} min
+                {t(oven.family)} {t("· preriscaldamento indicativo")} {oven.preheat} {t("min")}
               </strong>
-              {localizeTemperatures(oven.note)}
+              {localizeTemperatures(t(oven.note))}
               {oven.source && (
                 <>
                   {" "}
                   <a href={oven.source} target="_blank" rel="noreferrer">
-                    Scheda del produttore <ArrowSquareOut />
+                    {t("Scheda del produttore")} <ArrowSquareOut />
                   </a>
                 </>
               )}
@@ -634,7 +629,7 @@ export function AdvancedPlanner({
           </div>
           {userOvens.length > 0 && (
             <div className="my-ovens-picker">
-              <span>I tuoi forni</span>
+              <span>{t("I tuoi forni")}</span>
               <div>
                 {userOvens.map((item) => (
                   <button

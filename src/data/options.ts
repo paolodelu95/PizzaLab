@@ -4,6 +4,7 @@ import { bakeSurfaceLabels } from "../domain/calculator";
 import { mixerProfiles } from "./mixers";
 import { ovenProfiles } from "./ovens";
 import { formatTemp } from "../services/units";
+import { t } from "../i18n";
 
 export const mixerOptions: SelectOption<DoughConfig["mixer"]>[] = [
   { value: "hand", label: "A mano", description: "L’impasto si scalda poco: servono pause e pieghe" },
@@ -22,7 +23,7 @@ export const ovenOptions = (prefix = ""): SelectOption<string>[] =>
   ovenProfiles.map((item) => ({
     value: `${prefix}${item.id}`,
     label: item.name,
-    description: `${item.family} · fino a ${formatTemp(item.maxTemp)}`,
+    description: t("{family} · fino a {temp}", { family: t(item.family), temp: formatTemp(item.maxTemp) }),
     group: item.group === "pizza" ? "Forni per pizza" : "Tipi di forno",
   }));
 
@@ -30,7 +31,7 @@ export const userOvenOptions = (ovens: UserOven[], prefix = ""): SelectOption<st
   ovens.map((oven) => ({
     value: `${prefix}${oven.id}`,
     label: oven.name,
-    description: `Fino a ${formatTemp(oven.temp)} · ${bakeSurfaceLabels[oven.bakeSurface].toLowerCase()}`,
+    description: t("Fino a {temp} · {surface}", { temp: formatTemp(oven.temp), surface: bakeSurfaceLabels[oven.bakeSurface].toLowerCase() }),
     group: "I tuoi forni",
   }));
 

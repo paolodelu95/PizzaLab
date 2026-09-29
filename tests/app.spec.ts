@@ -744,3 +744,25 @@ test("units can be switched to ounces and Fahrenheit without changing the saved 
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await expect(page.getByLabel("Temperatura ambiente", { exact: true })).toHaveValue("25");
 });
+
+test("the language follows the device by default and can be changed from the profile", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: /Progetta\. Impasta\./ })).toBeVisible();
+  await page.getByRole("button", { name: "Profilo", exact: true }).click();
+  await page.getByRole("radio", { name: "English" }).click();
+  await expect(page.getByRole("heading", { name: "Your profile." })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "English" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+
+  // La scelta resta dopo aver riaperto l’app e vale anche per date e numeri.
+  await page.reload();
+  await page.getByRole("button", { name: "Your dough", exact: true }).click();
+  await expect(page.getByRole("heading", { name: /Design\. Knead\./ })).toBeVisible();
+  await page.getByRole("button", { name: /^4 Summary/ }).click();
+  await expect(page.getByText(/1\.\d\d g|\d+\.\d g/).first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Profile", exact: true }).first().click();
+  await page.getByRole("radio", { name: "Italiano" }).click();
+  await expect(page.getByRole("heading", { name: "Il tuo profilo." })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "it");
+});

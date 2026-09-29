@@ -1,3 +1,4 @@
+import { locale, t } from "../i18n";
 import { CheckCircle, Clock, Gauge } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import type { DoughConfig, Recipe, Stage } from "../domain/types";
@@ -5,7 +6,7 @@ import { FermentationCheck } from "./FermentationCheck";
 import { TemperatureLog } from "./TemperatureLog";
 
 const dateLabel = (date: string) =>
-  new Date(date).toLocaleString("it-IT", {
+  new Date(date).toLocaleString(locale(), {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -36,22 +37,22 @@ export function ActiveDoughJournal({
   };
 
   return (
-    <section className="active-dough-journal" aria-label="Controlli impasto attivo">
+    <section className="active-dough-journal" aria-label={t("Controlli impasto attivo")}>
       <header className="active-dough-head">
         <span className="live-dot" aria-hidden="true" />
         <div>
-          <span>IMPASTO IN CORSO</span>
-          <strong>{nextStage ? nextStage.title : "Piano completato"}</strong>
+          <span>{t("IMPASTO IN CORSO")}</span>
+          <strong>{nextStage ? nextStage.title : t("Piano completato")}</strong>
           <small>
             {nextStage
-              ? `Prossima fase · ${dateLabel(nextStage.at)}`
-              : "Tutte le fasi risultano completate"}
+              ? t("Prossima fase · {dateLabel}", { dateLabel: dateLabel(nextStage.at) })
+              : t("Tutte le fasi risultano completate")}
           </small>
         </div>
         <b>{completedCount}/{stages.length}</b>
       </header>
 
-      <div className="active-dough-progress" aria-label={`${completedCount} fasi completate su ${stages.length}`}>
+      <div className="active-dough-progress" aria-label={t("{completedCount} fasi completate su {length}", { completedCount, length: stages.length })}>
         <span style={{ width: `${progress}%` }} />
       </div>
 
@@ -59,7 +60,7 @@ export function ActiveDoughJournal({
         <article className="next-stage-card">
           <Clock />
           <div>
-            <span>ADESSO GUARDA QUESTO</span>
+            <span>{t("ADESSO GUARDA QUESTO")}</span>
             <strong>{nextStage.title}</strong>
             <p>{nextStage.detail}</p>
           </div>
@@ -67,14 +68,14 @@ export function ActiveDoughJournal({
       ) : (
         <article className="next-stage-card complete">
           <CheckCircle weight="fill" />
-          <div><span>PIANO COMPLETATO</span><strong>È il momento di annotare il risultato</strong></div>
+          <div><span>{t("PIANO COMPLETATO")}</span><strong>{t("È il momento di annotare il risultato")}</strong></div>
         </article>
       )}
 
       {tools}
 
       <details className="active-stage-list">
-        <summary><Gauge /><span>Segna le fasi fatte · {completedCount}/{stages.length}</span></summary>
+        <summary><Gauge /><span>{t("Segna le fasi fatte ·")} {completedCount}/{stages.length}</span></summary>
         <div className="checklist">
           {stages.map((stage) => (
             <label key={stage.id}>
@@ -101,13 +102,13 @@ export function ActiveDoughJournal({
 
       <div className="live-check-zone">
         <div className="live-check-intro">
-          <span>CONTROLLO DURANTE LA LAVORAZIONE</span>
-          <p>Usalo solo mentre stai seguendo questo impasto: le correzioni aggiornano il piano salvato, non il calcolatore.</p>
+          <span>{t("CONTROLLO DURANTE LA LAVORAZIONE")}</span>
+          <p>{t("Usalo solo mentre stai seguendo questo impasto: le correzioni aggiornano il piano salvato, non il calcolatore.")}</p>
         </div>
         <FermentationCheck
           config={recipe.config}
           onUpdate={updateConfig}
-          onApplied={() => onMessage("Tempi dell’impasto attivo aggiornati nel diario.")}
+          onApplied={() => onMessage(t("Tempi dell’impasto attivo aggiornati nel diario."))}
         />
         <TemperatureLog
           recipe={recipe}

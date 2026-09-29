@@ -1,3 +1,4 @@
+import { detectLanguage, locale, setLocaleState, t, type Language, msg } from "./i18n";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   ArrowLeft,
@@ -73,7 +74,7 @@ import { SourdoughCare } from "./components/SourdoughCare";
 import { StarterDoughLink } from "./components/StarterDoughLink";
 import { Diary, type DiaryView } from "./components/Diary";
 import { durationLabel } from "./domain/duration";
-import { applyAutomaticPlan, recipeStatus, startTiming } from "./domain/recipes";
+import { applyAutomaticPlan, recipeStatus, startTiming, yeastLabel } from "./domain/recipes";
 import { emptyState, readState, writeState } from "./services/storage";
 import {
   cancelReminders,
@@ -93,6 +94,7 @@ import { buildCalendar, downloadCalendar, stagesToEvents } from "./services/cale
 import { usesCalendarReminders } from "./services/platform";
 import { formatTemp, formatWeight, normalizeUnits, setUnits, type Units } from "./services/units";
 import { WeightValue } from "./components/WeightValue";
+import { normalizeLanguage } from "./i18n";
 import { markTutorialSeen, tutorialSeen } from "./services/tutorial";
 import { Onboarding } from "./components/Onboarding";
 import { InstallPrompt } from "./components/InstallPrompt";
@@ -102,43 +104,43 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.21.2";
+const APP_VERSION = "0.22.0";
 type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
 const nav = [
-  { id: "impasto", label: "Il tuo impasto", short: "Impasto", icon: CookingPot },
-  { id: "farine", label: "Farine", short: "Farine", icon: Wheat },
-  { id: "condimenti", label: "Condimenti", short: "Condimenti", icon: Pizza },
-  { id: "madre", label: "Lievito", short: "Lievito", icon: Jar },
-  { id: "diario", label: "Diario", short: "Diario", icon: Notebook },
-  { id: "guida", label: "Impara", short: "Impara", icon: BookOpen },
-  { id: "profilo", label: "Profilo", short: "Profilo", icon: UserCircle },
+  { id: "impasto", label: msg("Il tuo impasto"), short: msg("Impasto"), icon: CookingPot },
+  { id: "farine", label: msg("Farine"), short: msg("Farine"), icon: Wheat },
+  { id: "condimenti", label: msg("Condimenti"), short: msg("Condimenti"), icon: Pizza },
+  { id: "madre", label: msg("Lievito"), short: msg("Lievito"), icon: Jar },
+  { id: "diario", label: msg("Diario"), short: msg("Diario"), icon: Notebook },
+  { id: "guida", label: msg("Impara"), short: msg("Impara"), icon: BookOpen },
+  { id: "profilo", label: msg("Profilo"), short: msg("Profilo"), icon: UserCircle },
 ] as const;
 const plannerSteps = [
-  ["dough", "1", "Impasto", "Farina e dosi", Wheat],
-  ["fermentation", "2", "Lievitazione", "Tempi e lievito", Clock],
-  ["baking", "3", "Cottura", "Forno e tempi", Fire],
-  ["summary", "4", "Riepilogo", "Parti o salva", ListChecks],
+  ["dough", "1", msg("Impasto"), msg("Farina e dosi"), Wheat],
+  ["fermentation", "2", msg("Lievitazione"), msg("Tempi e lievito"), Clock],
+  ["baking", "3", msg("Cottura"), msg("Forno e tempi"), Fire],
+  ["summary", "4", msg("Riepilogo"), msg("Parti o salva"), ListChecks],
 ] as const;
 const styleTaglines: Record<string, string> = {
-  napoletana: "Il grande classico",
-  contemporanea: "Alta e ariosa",
-  romana: "Sottile e croccante",
-  teglia: "Da condividere",
-  pala: "Leggera e croccante",
-  padellino: "Soffice e dorata",
-  focaccia: "Soffice e oliata",
-  "focaccia-barese": "Pomodorini e olive",
-  "new-york": "Grande e pieghevole",
-  detroit: "Alta, bordi croccanti",
-  pinsa: "Ovale e leggera",
-  sfincione: "Alta e soffice",
-  "tonda-casa": "Ideale per iniziare",
+  napoletana: msg("Il grande classico"),
+  contemporanea: msg("Alta e ariosa"),
+  romana: msg("Sottile e croccante"),
+  teglia: msg("Da condividere"),
+  pala: msg("Leggera e croccante"),
+  padellino: msg("Soffice e dorata"),
+  focaccia: msg("Soffice e oliata"),
+  "focaccia-barese": msg("Pomodorini e olive"),
+  "new-york": msg("Grande e pieghevole"),
+  detroit: msg("Alta, bordi croccanti"),
+  pinsa: msg("Ovale e leggera"),
+  sfincione: msg("Alta e soffice"),
+  "tonda-casa": msg("Ideale per iniziare"),
 };
 const fmt = (n: number, digits = 0) =>
-  n.toLocaleString("it-IT", { maximumFractionDigits: digits });
+  n.toLocaleString(locale(), { maximumFractionDigits: digits });
 const dateLabel = (s: string) =>
-  new Date(s).toLocaleString("it-IT", {
+  new Date(s).toLocaleString(locale(), {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -206,7 +208,7 @@ export default function App() {
       .catch(() => {
         if (alive) {
           setStorageError(
-            "Non riesco a leggere l’archivio locale. I dati esistenti non sono stati sovrascritti.",
+            t("Non riesco a leggere l’archivio locale. I dati esistenti non sono stati sovrascritti."),
           );
           setLoadError(true);
           setReady(true);
@@ -220,7 +222,7 @@ export default function App() {
     if (ready && !loadError)
       void writeState(state).catch(() =>
         setStorageError(
-          "Salvataggio locale non riuscito. Mantieni aperta l’app e riprova.",
+          t("Salvataggio locale non riuscito. Mantieni aperta l’app e riprova."),
         ),
       );
   }, [state, ready, loadError]);
@@ -237,7 +239,12 @@ export default function App() {
   // e le chiavi entrano nelle dipendenze dei memo perché i testi del dominio contengono già g/oz e °C/°F.
   const units = normalizeUnits(state.units);
   setUnits(units);
-  const unitsKey = `${units.weight}${units.temp}`;
+  const language = state.language ?? detectLanguage();
+  setLocaleState({ language, imperial: units.weight === "oz" || units.temp === "F" });
+  const unitsKey = `${units.weight}${units.temp}${language}`;
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
   const activeSourdough = state.sourdoughProfiles.find(
     (profile) => profile.id === state.activeSourdoughId,
   ) ?? null;
@@ -343,7 +350,7 @@ export default function App() {
   function selectFlour(f: Flour) {
     update("flourId", f.id);
     setTab("impasto");
-    setMessage(`${f.brand} ${f.name} selezionata.`);
+    setMessage(t("{brand} {name} selezionata.", { brand: f.brand, name: f.name }));
     window.scrollTo({ top: 0 });
   }
   function saveBlend() {
@@ -360,7 +367,7 @@ export default function App() {
     if (components.length < 2) return;
     const name = components
       .map(
-        (item) => flours.find((f) => f.id === item.flourId)?.brand ?? "Farina",
+        (item) => flours.find((f) => f.id === item.flourId)?.brand ?? msg("Farina"),
       )
       .join(" + ");
     setState((s) => ({
@@ -375,7 +382,7 @@ export default function App() {
         ...s.savedBlends,
       ],
     }));
-    setMessage("Miscela salvata e pronta da riutilizzare.");
+    setMessage(t("Miscela salvata e pronta da riutilizzare."));
   }
   function loadBlend(blend: StoredState["savedBlends"][number]) {
     const p = blend.components;
@@ -388,7 +395,7 @@ export default function App() {
       fourthFlourId: p[3]?.flourId ?? "",
       fourthFlourPercent: p[3]?.percent ?? 0,
     });
-    setMessage(`Miscela “${blend.name}” caricata.`);
+    setMessage(t("Miscela “{name}” caricata.", { name: blend.name }));
   }
   const fileSlug = (text: string) =>
     text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "pizza";
@@ -396,24 +403,27 @@ export default function App() {
   function addRecipeToCalendar(recipe: Recipe) {
     const events = stagesToEvents(recipe.id, recipe.name, buildTimeline(recipe.config, flours));
     if (!events.length) {
-      setMessage("Non ci sono fasi future da aggiungere al calendario.");
+      setMessage(t("Non ci sono fasi future da aggiungere al calendario."));
       return;
     }
     downloadCalendar(`pizzalab-${fileSlug(recipe.name)}.ics`, buildCalendar(`PizzaLab · ${recipe.name}`, events, leadMinutes));
     setMessage(
-      `${events.length} fasi pronte: nel Calendario conferma «Aggiungi tutti» e riceverai un avviso ${leadMinutes ? `${leadMinutes} minuti prima di ogni fase` : "all’inizio di ogni fase"}.`,
+      t("{count} fasi pronte: nel Calendario conferma «Aggiungi tutti» e riceverai un avviso {when}.", {
+        count: events.length,
+        when: leadMinutes ? t("{minutes} minuti prima di ogni fase", { minutes: leadMinutes }) : t("all’inizio di ogni fase"),
+      }),
     );
   }
   function addStarterToCalendar(profile: SourdoughProfile) {
     const events = starterReminderDates(profile, 14).map((at, index) => ({
       uid: `${profile.id}-feed-${at.getTime()}@pizzalab`,
       title: `PizzaLab · Rinfresca ${profile.name}`,
-      description: index === 0 ? "Osserva il lievito e procedi con il rinfresco." : "Rinfresco programmato dalla routine del lievito.",
+      description: index === 0 ? t("Osserva il lievito e procedi con il rinfresco.") : t("Rinfresco programmato dalla routine del lievito."),
       start: at,
       end: new Date(at.getTime() + 15 * 60000),
     }));
     downloadCalendar(`pizzalab-lievito-${fileSlug(profile.name)}.ics`, buildCalendar(`PizzaLab · ${profile.name}`, events, leadMinutes));
-    setMessage(`${events.length} rinfreschi pronti: nel Calendario conferma «Aggiungi tutti» per ricevere gli avvisi.`);
+    setMessage(t("{length} rinfreschi pronti: nel Calendario conferma «Aggiungi tutti» per ricevere gli avvisi.", { length: events.length }));
   }
   function usePan(pan: UserPan) {
     const round = pan.shape === "round";
@@ -424,7 +434,7 @@ export default function App() {
         : { panWidth: pan.width, panLength: pan.length, toppingWidth: pan.width, toppingLength: pan.length }),
       bakeSurface: pan.surface,
     });
-    setMessage(`Userai «${pan.name}» (${panSize(pan)}) per gli impasti in teglia.`);
+    setMessage(t("Userai «{name}» ({panSize}) per gli impasti in teglia.", { name: pan.name, panSize: panSize(pan) }));
   }
   function exportArchive() {
     const blob = new Blob(
@@ -445,6 +455,7 @@ export default function App() {
             userPans: state.userPans,
             profileName: state.profileName,
             units,
+            language: state.language,
           },
           null,
           2,
@@ -458,7 +469,7 @@ export default function App() {
     a.download = `pizzalab-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setMessage("Archivio esportato in formato JSON.");
+    setMessage(t("Archivio esportato in formato JSON."));
   }
   async function importArchive(file: File) {
     try {
@@ -548,13 +559,14 @@ export default function App() {
         ],
         profileName: s.profileName || (typeof data.profileName === "string" ? data.profileName : ""),
         units: data.units ? normalizeUnits(data.units) : s.units,
+        language: normalizeLanguage(data.language) ?? s.language,
       }));
       setMessage(
-        `Importazione completata: ${recipes.length} ricette recuperate.`,
+        t("Importazione completata: {length} ricette recuperate.", { length: recipes.length }),
       );
     } catch {
       setMessage(
-        "File non riconosciuto: usa un archivio JSON esportato da PizzaLab.",
+        t("File non riconosciuto: usa un archivio JSON esportato da PizzaLab."),
       );
     }
   }
@@ -567,12 +579,12 @@ export default function App() {
           `• ${item.name}: ${formatWeight(item.grams)} (${fmt(item.percent, 1)}%)`,
       )
       .join("\n");
-    const text = `${recipe.name}\n${r.style.name}\nFarina totale: ${formatWeight(r.flour)}\n${flourLines}\nAcqua: ${formatWeight(r.water)} · Sale: ${formatWeight(r.salt, 1)} · Lievito: ${formatWeight(r.yeast, 2)}.\nCottura: ${dateLabel(recipe.config.bakeAt)}.`;
+    const text = `${recipe.name}\n${t(r.style.name)}\n${t("Farina totale: {flour}", { flour: formatWeight(r.flour) })}\n${flourLines}\n${t("Acqua: {water} · Sale: {salt} · Lievito: {yeast}.", { water: formatWeight(r.water), salt: formatWeight(r.salt, 1), yeast: formatWeight(r.yeast, 2) })}\n${t("Cottura: {when}.", { when: dateLabel(recipe.config.bakeAt) })}`;
     try {
       if (navigator.share) await navigator.share({ title: recipe.name, text });
       else {
         await navigator.clipboard.writeText(text);
-        setMessage("Ricetta copiata negli appunti.");
+        setMessage(t("Ricetta copiata negli appunti."));
       }
     } catch {
       /* L’utente può chiudere il pannello di condivisione senza conseguenze. */
@@ -589,7 +601,7 @@ export default function App() {
       name:
         recipeName.trim() ||
         existing?.name ||
-        `${result.style.name} · ${new Date(cfg.bakeAt).toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`,
+        `${t(result.style.name)} · ${new Date(cfg.bakeAt).toLocaleDateString(locale(), { day: "numeric", month: "short" })}`,
       config: { ...cfg },
       completedStages: [],
       temperatureReadings: [],
@@ -613,11 +625,11 @@ export default function App() {
         await activate(recipe);
       } else {
         setDiaryView("saved");
-        setMessage("Pizza salvata per dopo: la trovi nel diario, tra le salvate. Quando vuoi, premi «Programma» e partirà da sola all’orario impostato.");
+        setMessage(t("Pizza salvata per dopo: la trovi nel diario, tra le salvate. Quando vuoi, premi «Programma» e partirà da sola all’orario impostato."));
       }
       openTab("diario");
     } catch {
-      setStorageError("Piano non salvato: memoria locale non disponibile.");
+      setStorageError(t("Piano non salvato: memoria locale non disponibile."));
     }
   }
   async function activate(recipe: Recipe) {
@@ -636,15 +648,15 @@ export default function App() {
       setMessage(
         future
           ? usesCalendarReminders()
-            ? `Programmata! Si parte ${dateLabel(first.at)}. ${note}`
-            : `Programmata! Si parte ${dateLabel(first.at)}: riceverai una notifica a ogni fase. ${note}`
-          : `Si parte! ${note}`,
+            ? t("Programmata! Si parte {dateLabel}. {note}", { dateLabel: dateLabel(first.at), note })
+            : t("Programmata! Si parte {dateLabel}: riceverai una notifica a ogni fase. {note}", { dateLabel: dateLabel(first.at), note })
+          : t("Si parte! {note}", { note }),
       );
     } catch (e) {
       setMessage(
         e instanceof Error
           ? e.message
-          : "Non riesco a programmare i promemoria.",
+          : t("Non riesco a programmare i promemoria."),
       );
       setDiaryView("saved");
     } finally {
@@ -657,9 +669,9 @@ export default function App() {
       await cancelReminders();
       setState((s) => ({ ...s, activeId: null }));
       setDiaryView("saved");
-      setMessage("Impasto interrotto e promemoria cancellati: lo ritrovi tra le salvate.");
+      setMessage(t("Impasto interrotto e promemoria cancellati: lo ritrovi tra le salvate."));
     } catch {
-      setMessage("Cancellazione dei promemoria non riuscita. Riprova.");
+      setMessage(t("Cancellazione dei promemoria non riuscita. Riprova."));
     } finally {
       setBusy(false);
     }
@@ -675,9 +687,9 @@ export default function App() {
         recipes: s.recipes.map((r) => (r.id === recipe.id ? { ...r, finishedAt } : r)),
       }));
       setDiaryView("past");
-      setMessage("Buon appetito! Ora dai un voto e, se vuoi, registra com’è andata la cottura.");
+      setMessage(t("Buon appetito! Ora dai un voto e, se vuoi, registra com’è andata la cottura."));
     } catch {
-      setMessage("Non riesco a cancellare i promemoria. Riprova.");
+      setMessage(t("Non riesco a cancellare i promemoria. Riprova."));
     } finally {
       setBusy(false);
     }
@@ -690,10 +702,10 @@ export default function App() {
     openTab("impasto");
     setMessage(
       mode === "copy"
-        ? "Ricetta caricata: scegli la nuova data nel passaggio 2 e salva un nuovo piano."
+        ? t("Ricetta caricata: scegli la nuova data nel passaggio 2 e salva un nuovo piano.")
         : mode === "reschedule"
-          ? "Scegli una nuova data di cottura, poi conferma dal riepilogo."
-          : `Stai modificando «${recipe.name}»: le modifiche si salvano dal riepilogo.`,
+          ? t("Scegli una nuova data di cottura, poi conferma dal riepilogo.")
+          : t("Stai modificando «{name}»: le modifiche si salvano dal riepilogo.", { name: recipe.name }),
     );
   }
   function openDiary() {
@@ -717,8 +729,8 @@ export default function App() {
     }));
     setMessage(
       existing
-        ? "Profilo creato: registra tre rinfreschi per valutarne la forza."
-        : "Percorso avviato. Il primo rinfresco è nella tua routine.",
+        ? t("Profilo creato: registra tre rinfreschi per valutarne la forza.")
+        : t("Percorso avviato. Il primo rinfresco è nella tua routine."),
     );
   }
   function changeSourdough(profile: StoredState["sourdoughProfiles"][number]) {
@@ -738,7 +750,7 @@ export default function App() {
     }));
     if (scheduleChanged && updated.remindersEnabled)
       void scheduleStarterReminders(updated, leadMinutes).catch(() =>
-        setMessage("Routine aggiornata, ma non ho potuto riprogrammare le notifiche."),
+        setMessage(t("Routine aggiornata, ma non ho potuto riprogrammare le notifiche.")),
       );
   }
   function logStarterFeeding(feeding: StarterFeeding) {
@@ -752,12 +764,12 @@ export default function App() {
     }));
     setMessage(
       updated.phase === "mature" && activeSourdough.phase !== "mature"
-        ? "Tre crescite efficaci consecutive: il lievito è entrato nella fase matura."
-        : `Rinfresco registrato. Prossimo controllo: ${dateLabel(updated.nextFeedAt)}.`,
+        ? t("Tre crescite efficaci consecutive: il lievito è entrato nella fase matura.")
+        : t("Rinfresco registrato. Prossimo controllo: {dateLabel}.", { dateLabel: dateLabel(updated.nextFeedAt) }),
     );
     if (updated.remindersEnabled)
       void scheduleStarterReminders(updated, leadMinutes).catch(() =>
-        setMessage("Rinfresco salvato, ma non ho potuto aggiornare le notifiche."),
+        setMessage(t("Rinfresco salvato, ma non ho potuto aggiornare le notifiche.")),
       );
   }
   async function enableStarterReminders() {
@@ -768,7 +780,7 @@ export default function App() {
       changeSourdough(profile);
       setMessage(note);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Non riesco ad attivare i promemoria.");
+      setMessage(error instanceof Error ? error.message : t("Non riesco ad attivare i promemoria."));
     }
   }
   async function disableStarterReminders() {
@@ -782,7 +794,7 @@ export default function App() {
           : profile,
       ),
     }));
-    setMessage("Promemoria del lievito madre disattivati.");
+    setMessage(t("Promemoria del lievito madre disattivati."));
   }
   async function deleteSourdough(id: string) {
     await cancelStarterReminders(id);
@@ -795,7 +807,7 @@ export default function App() {
           s.activeSourdoughId === id ? remaining[0]?.id ?? null : s.activeSourdoughId,
       };
     });
-    setMessage("Lievito eliminato insieme ai suoi promemoria.");
+    setMessage(t("Lievito eliminato insieme ai suoi promemoria."));
   }
   async function deleteRecipe(id: string) {
     setBusy(true);
@@ -810,7 +822,7 @@ export default function App() {
       setDeleteId(null);
     } catch {
       setMessage(
-        "Non riesco a cancellare i promemoria. Il piano è stato conservato.",
+        t("Non riesco a cancellare i promemoria. Il piano è stato conservato."),
       );
     } finally {
       setBusy(false);
@@ -825,20 +837,20 @@ export default function App() {
     // Se il check di fermentazione cambia i tempi dell’impasto in corso, i promemoria vanno riallineati.
     if (current && patch.config && state.activeId === id)
       void scheduleReminders({ ...current, ...patch }, leadMinutes).catch(() =>
-        setMessage("Tempi aggiornati, ma non ho potuto riprogrammare i promemoria."),
+        setMessage(t("Tempi aggiornati, ma non ho potuto riprogrammare i promemoria.")),
       );
   }
   async function changeLeadMinutes(minutes: number) {
     setState((s) => ({ ...s, reminderLeadMinutes: minutes }));
-    const label = minutes ? `${minutes} minuti prima di ogni fase` : "all’orario esatto di ogni fase";
+    const label = minutes ? t("{minutes} minuti prima di ogni fase", { minutes }) : t("all’orario esatto di ogni fase");
     try {
       const running = state.recipes.find((r) => r.id === state.activeId);
       if (running) await scheduleReminders(running, minutes);
       for (const profile of state.sourdoughProfiles.filter((item) => item.remindersEnabled))
         await scheduleStarterReminders(profile, minutes);
-      setMessage(`Ti avviserò ${label}.`);
+      setMessage(t("Ti avviserò {label}.", { label }));
     } catch {
-      setMessage(`Impostazione salvata (${label}), ma non ho potuto aggiornare le notifiche già programmate.`);
+      setMessage(t("Impostazione salvata ({label}), ma non ho potuto aggiornare le notifiche già programmate.", { label }));
     }
   }
   function saveCalibration(recipe: Recipe, calibration: BakeCalibration) {
@@ -847,7 +859,7 @@ export default function App() {
       bakeCalibrations: [calibration, ...s.bakeCalibrations.filter((item) => item.id !== calibration.id)].slice(0, 100),
       recipes: s.recipes.map((r) => (r.id === recipe.id ? { ...r, calibrationId: calibration.id } : r)),
     }));
-    setMessage("Taratura salvata: le prossime previsioni di cottura con questo forno terranno conto del risultato reale.");
+    setMessage(t("Taratura salvata: le prossime previsioni di cottura con questo forno terranno conto del risultato reale."));
   }
   const isPan = styles.find((s) => s.id === c.styleId)?.pan;
   const startPast =
@@ -865,12 +877,12 @@ export default function App() {
     return (
       <div className="loading">
         <Pizza size={44} />
-        <p>Prepariamo il banco…</p>
+        <p>{t("Prepariamo il banco…")}</p>
       </div>
     );
   return (
     <div className={`app-shell tab-${tab}`}>
-      <nav className="app-nav" aria-label="Navigazione principale">
+      <nav className="app-nav" aria-label={t("Navigazione principale")}>
         <a
           href="#impasto"
           className="brand nav-brand"
@@ -891,7 +903,7 @@ export default function App() {
             <button
               key={n.id}
               className={`nav-item nav-${n.id} ${tab === n.id ? "active" : ""}`}
-              aria-label={n.label}
+              aria-label={t(n.label)}
               aria-current={tab === n.id ? "page" : undefined}
               onClick={() => (n.id === "diario" ? openDiary() : openTab(n.id))}
             >
@@ -901,16 +913,15 @@ export default function App() {
                   <small className="nav-badge">{state.recipes.length}</small>
                 )}
               </span>
-              <span className="nav-label nav-label-long">{n.label}</span>
-              <span className="nav-label nav-label-short">{n.short}</span>
+              <span className="nav-label nav-label-long">{t(n.label)}</span>
+              <span className="nav-label nav-label-short">{t(n.short)}</span>
             </button>
           ))}
         </div>
         <div className="sidebar-bottom">
           <Leaf size={18} />
           <p>
-            <strong>I tuoi dati restano sul dispositivo.</strong> Nessun account,
-            funziona anche offline.
+            <strong>{t("I tuoi dati restano sul dispositivo.")}</strong> {t("Nessun account, funziona anche offline.")}
           </p>
         </div>
       </nav>
@@ -932,22 +943,22 @@ export default function App() {
             </span>
           </a>
           <span className="topbar-title">
-            {nav.find((n) => n.id === tab)?.label}
+            {t(nav.find((n) => n.id === tab)?.label ?? "")}
           </span>
           <div className="topbar-actions">
             {active && tab !== "diario" && (
               <button
                 className="live-chip"
                 onClick={() => openDiary()}
-                aria-label={`Impasto in corso: ${active.name}`}
+                aria-label={t("Impasto in corso: {name}", { name: active.name })}
               >
                 <span className="live-dot" aria-hidden="true" />
-                <span>In corso</span>
+                <span>{t("In corso")}</span>
               </button>
             )}
             <button
               className={`profile-button ${tab === "profilo" ? "active" : ""}`}
-              aria-label="Profilo"
+              aria-label={t("Profilo")}
               onClick={() => openTab("profilo")}
             >
               {state.profileName?.trim() ? (
@@ -961,7 +972,7 @@ export default function App() {
               onClick={() => openTab("guida")}
             >
               <BookOpen size={20} weight={tab === "guida" ? "fill" : "regular"} />
-              <span>Impara</span>
+              <span>{t("Impara")}</span>
             </button>
           </div>
         </header>
@@ -973,8 +984,7 @@ export default function App() {
                 {storageError}
                 {loadError && (
                   <p>
-                    Ricarica l’app per riprovare. Il salvataggio è sospeso per
-                    proteggere l’archivio.
+                    {t("Ricarica l’app per riprovare. Il salvataggio è sospeso per proteggere l’archivio.")}
                   </p>
                 )}
               </div>
@@ -985,7 +995,7 @@ export default function App() {
               <Info size={22} weight="fill" />
               <p>{message}</p>
               <button
-                aria-label="Chiudi messaggio"
+                aria-label={t("Chiudi messaggio")}
                 onClick={() => setMessage("")}
               >
                 <X />
@@ -996,13 +1006,12 @@ export default function App() {
             <>
               <div className="page-heading home-heading">
                 <div>
-                  <span className="eyebrow">Il tuo laboratorio della pizza</span>
+                  <span className="eyebrow">{t("Il tuo laboratorio della pizza")}</span>
                   <h1>
-                    Progetta. Impasta. <span>Perfeziona.</span>
+                    {t("Progetta. Impasta.")} <span>{t("Perfeziona.")}</span>
                   </h1>
                   <p>
-                    Scegli lo stile e segui i quattro passaggi: dosi, tempi e
-                    promemoria li calcola PizzaLab per te.
+                    {t("Scegli lo stile e segui i quattro passaggi: dosi, tempi e promemoria li calcola PizzaLab per te.")}
                   </p>
                 </div>
                 <div className="heading-illustration" aria-hidden="true">
@@ -1019,11 +1028,11 @@ export default function App() {
                     <Clock size={22} weight="bold" />
                   </span>
                   <div>
-                    <small>Impasto in corso · {active.name}</small>
+                    <small>{t("Impasto in corso ·")} {active.name}</small>
                     <strong>
                       {activeNext
                         ? `${activeNext.title} · ${dateLabel(activeNext.at)}`
-                        : "Tabella di marcia terminata. Com’è andata?"}
+                        : t("Tabella di marcia terminata. Com’è andata?")}
                     </strong>
                   </div>
                   <ArrowRight />
@@ -1031,8 +1040,8 @@ export default function App() {
               )}
               <section className="style-section">
                 <div className="section-title">
-                  <h2>Che pizza ti va?</h2>
-                  <span>Tocca uno stile: dosi e tempi si impostano da soli.</span>
+                  <h2>{t("Che pizza ti va?")}</h2>
+                  <span>{t("Tocca uno stile: dosi e tempi si impostano da soli.")}</span>
                 </div>
                 <div className="style-options">
                   {styles.map((s, i) => (
@@ -1050,8 +1059,8 @@ export default function App() {
                           <Pizza weight="duotone" />
                         )}
                       </span>
-                      <strong>{s.name}</strong>
-                      <small>{styleTaglines[s.id] ?? (s.pan ? "Da condividere" : "Il grande classico")}</small>
+                      <strong>{t(s.name)}</strong>
+                      <small>{t(styleTaglines[s.id] ?? (s.pan ? "Da condividere" : "Il grande classico"))}</small>
                       {c.styleId === s.id && (
                         <CheckCircle className="style-check" weight="fill" />
                       )}
@@ -1062,43 +1071,43 @@ export default function App() {
               {result.ok && plannerStage !== "summary" && (
                 <div
                   className="mobile-dose"
-                  aria-label="Dosi rapide"
+                  aria-label={t("Dosi rapide")}
                 >
                   <div>
-                    <small>Farina</small>
+                    <small>{t("Farina")}</small>
                     <strong>
                       <WeightValue grams={result.flour} />
                     </strong>
                   </div>
                   <div>
-                    <small>Acqua</small>
+                    <small>{t("Acqua")}</small>
                     <strong>
                       <WeightValue grams={result.water} />
                     </strong>
                   </div>
                   <div>
-                    <small>{["sourdough", "licoli"].includes(c.yeast) ? "Madre" : "Lievito"}</small>
+                    <small>{["sourdough", "licoli"].includes(c.yeast) ? t("Madre") : t("Lievito")}</small>
                     <strong>
                       <WeightValue grams={result.yeast} digits={["sourdough", "licoli"].includes(c.yeast) ? 0 : 2} />
                     </strong>
                   </div>
                   <div className="dose-salt">
-                    <small>Sale</small>
+                    <small>{t("Sale")}</small>
                     <strong>
                       <WeightValue grams={result.salt} digits={1} />
                     </strong>
                   </div>
                   <button
-                    aria-label="Vai al riepilogo della ricetta"
+                    aria-label={t("Vai al riepilogo della ricetta")}
                     onClick={() => goToPlannerStage("summary")}
                   >
-                    <span>Riepilogo</span>
+                    <span>{t("Riepilogo")}</span>
                     <ArrowRight weight="bold" />
                   </button>
                 </div>
               )}
               <span id="planner-anchor" className="planner-anchor" aria-hidden="true" />
-              <nav id="planner-steps" className="planner-steps" aria-label="Fasi di progettazione">
+              <nav id="planner-steps" className="planner-steps" aria-label={t("Fasi di progettazione")}>
                 {plannerSteps.map(([id, number, label, detail, Icon]) => (
                   <button
                     key={id}
@@ -1109,8 +1118,8 @@ export default function App() {
                     <span>{number}</span>
                     <Icon />
                     <div>
-                      <strong>{label}</strong>
-                      <small>{detail}</small>
+                      <strong>{t(label)}</strong>
+                      <small>{t(detail)}</small>
                     </div>
                   </button>
                 ))}
@@ -1121,7 +1130,7 @@ export default function App() {
                     <div className="notice warning" role="alert">
                       <Warning />
                       <div>
-                        <strong>Controlla questi valori</strong>
+                        <strong>{t("Controlla questi valori")}</strong>
                         <ul>
                           {result.errors.map((e) => (
                             <li key={e}>{e}</li>
@@ -1137,12 +1146,12 @@ export default function App() {
                           <Wheat />
                         </span>
                         <div>
-                          <h2>La base giusta</h2>
-                          <p>Farina e quantità, come piacciono a te.</p>
+                          <h2>{t("La base giusta")}</h2>
+                          <p>{t("Farina e quantità, come piacciono a te.")}</p>
                         </div>
                       </div>
                       <FlourPicker
-                        label="La tua farina"
+                        label={t("La tua farina")}
                         value={c.flourId}
                         flours={flours}
                         onChange={(value) => update("flourId", value)}
@@ -1151,40 +1160,40 @@ export default function App() {
                         <span>
                           {selectedFlour?.w
                             ? `W ${selectedFlour.w.join("–")}`
-                            : "W non disponibile"}
+                            : t("W non disponibile")}
                         </span>
                         <HelpTip topic="forza" />
                         <span>
                           {selectedFlour?.protein !== null &&
                           selectedFlour?.protein !== undefined
-                            ? `${fmt(selectedFlour.protein, 1)}% proteine`
-                            : "Proteine n.d."}
+                            ? t("{fmt}% proteine", { fmt: fmt(selectedFlour.protein, 1) })
+                            : t("Proteine n.d.")}
                         </span>
                         <button onClick={() => openTab("farine")}>
-                          Esplora le farine <ArrowRight />
+                          {t("Esplora le farine")} <ArrowRight />
                         </button>
                       </div>
                       <details className="blend-details">
                         <summary>
                           <span>
-                            <b>Miscela di farine</b>
+                            <b>{t("Miscela di farine")}</b>
                             <small>
                               {c.secondFlourId
-                                ? `${result.ok ? result.flourBreakdown.length : 2} farine in miscela`
-                                : "Una sola farina · aggiungine fino ad altre tre"}
+                                ? t("{v} farine in miscela", { v: result.ok ? result.flourBreakdown.length : 2 })
+                                : t("Una sola farina · aggiungine fino ad altre tre")}
                             </small>
-                            <em className="optional-badge">Facoltativo</em>
+                            <em className="optional-badge">{t("Facoltativo")}</em>
                           </span>
                         </summary>
                         <div className="blend-section">
-                        <p>Vuoi mescolare più farine? Aggiungine fino ad altre tre e scegli la quota di ciascuna. <HelpTip topic="miscela" /></p>
+                        <p>{t("Vuoi mescolare più farine? Aggiungine fino ad altre tre e scegli la quota di ciascuna.")} <HelpTip topic="miscela" /></p>
                         <div className="field-grid blend-fields">
                             <FlourPicker
-                              label="Seconda farina"
+                              label={t("Seconda farina")}
                               value={c.secondFlourId}
                               flours={flours}
                               allowEmpty
-                              emptyLabel="Una sola farina"
+                              emptyLabel={t("Una sola farina")}
                               onChange={(value) => {
                                 if (value) update("secondFlourId", value);
                                 else
@@ -1200,7 +1209,7 @@ export default function App() {
                             />
                             {c.secondFlourId && (
                               <NumberField
-                                label="Quota seconda farina"
+                                label={t("Quota seconda farina")}
                                 value={c.secondFlourPercent}
                                 onChange={(v) => update("secondFlourPercent", v)}
                                 min={0}
@@ -1215,11 +1224,11 @@ export default function App() {
                             )}
                             {c.secondFlourId && (
                               <FlourPicker
-                                label="Terza farina"
+                                label={t("Terza farina")}
                                 value={c.thirdFlourId}
                                 flours={flours}
                                 allowEmpty
-                                emptyLabel="Nessuna terza farina"
+                                emptyLabel={t("Nessuna terza farina")}
                                 onChange={(value) => {
                                   if (value) update("thirdFlourId", value);
                                   else
@@ -1234,7 +1243,7 @@ export default function App() {
                             )}
                             {c.thirdFlourId && (
                               <NumberField
-                                label="Quota terza farina"
+                                label={t("Quota terza farina")}
                                 value={c.thirdFlourPercent}
                                 onChange={(v) => update("thirdFlourPercent", v)}
                                 min={0}
@@ -1249,11 +1258,11 @@ export default function App() {
                             )}
                             {c.thirdFlourId && (
                               <FlourPicker
-                                label="Quarta farina"
+                                label={t("Quarta farina")}
                                 value={c.fourthFlourId}
                                 flours={flours}
                                 allowEmpty
-                                emptyLabel="Nessuna quarta farina"
+                                emptyLabel={t("Nessuna quarta farina")}
                                 onChange={(value) => {
                                   update("fourthFlourId", value);
                                   if (!value) update("fourthFlourPercent", 0);
@@ -1262,7 +1271,7 @@ export default function App() {
                             )}
                             {c.fourthFlourId && (
                               <NumberField
-                                label="Quota quarta farina"
+                                label={t("Quota quarta farina")}
                                 value={c.fourthFlourPercent}
                                 onChange={(v) => update("fourthFlourPercent", v)}
                                 min={0}
@@ -1295,7 +1304,7 @@ export default function App() {
                       </details>
                       <div className="field-grid quantity-fields">
                         <Stepper
-                          label={isPan ? "Numero di teglie" : "Numero di pizze"}
+                          label={isPan ? t("Numero di teglie") : t("Numero di pizze")}
                           value={c.count}
                           onChange={(v) => update("count", v)}
                           min={1}
@@ -1303,20 +1312,20 @@ export default function App() {
                         />
                         {!isPan && (
                           <NumberField
-                            label="Peso del panetto"
+                            label={t("Peso del panetto")}
                             value={c.ballWeight}
                             onChange={(v) => update("ballWeight", v)}
                             min={100}
                             max={2000}
                             step={10}
                             quantity="weight"
-                            hint="Il peso di ogni pallina di impasto."
+                            hint={t("Il peso di ogni pallina di impasto.")}
                           />
                         )}
                       </div>
                       {isPan && (state.userPans ?? []).length > 0 && (
                         <div className="my-ovens-picker pan-picker">
-                          <span>Le tue teglie</span>
+                          <span>{t("Le tue teglie")}</span>
                           <div>
                             {(state.userPans ?? []).map((pan) => (
                               <button
@@ -1333,24 +1342,24 @@ export default function App() {
                       )}
                       {isPan && (state.userPans ?? []).length === 0 && (
                         <p className="small-muted pan-tip">
-                          Hai più teglie? Salvale nel <button className="text-button inline-link" aria-label="Apri il profilo" onClick={() => openTab("profilo")}>Profilo</button> e le sceglierai con un tocco.
+                          {t("Hai più teglie? Salvale nel")} <button className="text-button inline-link" aria-label={t("Apri il profilo")} onClick={() => openTab("profilo")}>{t("Profilo")}</button> {t("e le sceglierai con un tocco.")}
                         </p>
                       )}
                       {isPan && (
-                        <div className="method-toggle pan-shape-toggle" role="group" aria-label="Forma della teglia">
+                        <div className="method-toggle pan-shape-toggle" role="group" aria-label={t("Forma della teglia")}>
                           <button
                             className={c.panShape !== "round" ? "selected" : ""}
                             aria-pressed={c.panShape !== "round"}
                             onClick={() => update("panShape", "rect")}
                           >
-                            <span className="shape-icon rect" aria-hidden="true" /> Rettangolare
+                            <span className="shape-icon rect" aria-hidden="true" /> {t("Rettangolare")}
                           </button>
                           <button
                             className={c.panShape === "round" ? "selected" : ""}
                             aria-pressed={c.panShape === "round"}
                             onClick={() => updateMany({ panShape: "round", pizzaDiameter: c.panDiameter })}
                           >
-                            <span className="shape-icon round" aria-hidden="true" /> Tonda
+                            <span className="shape-icon round" aria-hidden="true" /> {t("Tonda")}
                           </button>
                         </div>
                       )}
@@ -1358,18 +1367,18 @@ export default function App() {
                         <div className="field-grid">
                           {c.panShape === "round" ? (
                             <NumberField
-                              label="Diametro teglia"
+                              label={t("Diametro teglia")}
                               value={c.panDiameter}
                               onChange={(v) => update("panDiameter", v)}
                               min={14}
                               max={60}
                               unit="cm"
-                              hint="Misurato sul fondo, da bordo interno a bordo interno."
+                              hint={t("Misurato sul fondo, da bordo interno a bordo interno.")}
                             />
                           ) : (
                             <>
                               <NumberField
-                                label="Larghezza teglia"
+                                label={t("Larghezza teglia")}
                                 value={c.panWidth}
                                 onChange={(v) => update("panWidth", v)}
                                 min={10}
@@ -1377,7 +1386,7 @@ export default function App() {
                                 unit="cm"
                               />
                               <NumberField
-                                label="Lunghezza teglia"
+                                label={t("Lunghezza teglia")}
                                 value={c.panLength}
                                 onChange={(v) => update("panLength", v)}
                                 min={10}
@@ -1387,7 +1396,7 @@ export default function App() {
                             </>
                           )}
                           <NumberField
-                            label="Impasto per superficie"
+                            label={t("Impasto per superficie")}
                             help="superficie"
                             value={c.panDensity}
                             onChange={(v) => update("panDensity", v)}
@@ -1395,13 +1404,13 @@ export default function App() {
                             max={1}
                             step={0.05}
                             unit="g/cm²"
-                            hint="0,6 è un punto di partenza; aumenta per una pizza più alta."
+                            hint={t("0,6 è un punto di partenza; aumenta per una pizza più alta.")}
                           />
                         </div>
                       )}
                       <div className="hydration-field">
                         <SliderField
-                          label="Idratazione"
+                          label={t("Idratazione")}
                           help="idratazione"
                           value={c.hydration}
                           onChange={(v) => update("hydration", v)}
@@ -1409,7 +1418,7 @@ export default function App() {
                           max={90}
                           step={1}
                           unit="%"
-                          hint="Acqua ogni 100 g di farina: 65% = 650 g d’acqua per 1 kg. Più bassa è più facile da lavorare; più alta dà una pizza ariosa ma più impegnativa."
+                          hint={t("Acqua ogni 100 g di farina: 65% = 650 g d’acqua per 1 kg. Più bassa è più facile da lavorare; più alta dà una pizza ariosa ma più impegnativa.")}
                         />
                       </div>
                       {result.ok && (
@@ -1422,12 +1431,12 @@ export default function App() {
                       <details className="extras-details">
                         <summary>
                           <span>
-                            Ingredienti aggiuntivi
+                            {t("Ingredienti aggiuntivi")}
                             <small>
-                              Sale {fmt(c.salt, 1)}% · Olio {fmt(c.oil, 1)}% · Zucchero {fmt(c.sugar, 1)}% · Malto {fmt(c.malt, 1)}%
+                              {t("Sale")} {fmt(c.salt, 1)}{t("% · Olio")} {fmt(c.oil, 1)}{t("% · Zucchero")} {fmt(c.sugar, 1)}{t("% · Malto")} {fmt(c.malt, 1)}%
                             </small>
                             <em className={`optional-badge ${extrasMatch ? "saved-badge" : ""}`}>
-                              {extrasMatch ? "Come da ricetta" : "Personalizzati"}
+                              {extrasMatch ? t("Come da ricetta") : t("Personalizzati")}
                             </em>
                           </span>
                         </summary>
@@ -1435,10 +1444,10 @@ export default function App() {
                           <p className="field-explainer">
                             <Info size={16} />
                             <span>
-                              Per la <strong>{currentStyle.name}</strong> la ricetta prevede sale {fmt(recommended.salt, 1)}%
-                              {recommended.oil ? `, olio ${fmt(recommended.oil, 1)}%` : ", niente olio"}
-                              {recommended.sugar ? `, zucchero ${fmt(recommended.sugar, 1)}%` : ""}
-                              {recommended.malt ? ` e malto ${fmt(recommended.malt, 1)}% (facoltativo)` : ""}. Le percentuali sono calcolate sul peso della farina.
+                              {t("Per la")} <strong>{t(currentStyle.name)}</strong> {t("la ricetta prevede sale")} {fmt(recommended.salt, 1)}%
+                              {recommended.oil ? t(", olio {fmt}%", { fmt: fmt(recommended.oil, 1) }) : t(", niente olio")}
+                              {recommended.sugar ? t(", zucchero {fmt}%", { fmt: fmt(recommended.sugar, 1) }) : ""}
+                              {recommended.malt ? t(" e malto {fmt}% (facoltativo)", { fmt: fmt(recommended.malt, 1) }) : ""}{t(". Le percentuali sono calcolate sul peso della farina.")}
                             </span>
                           </p>
                           {!extrasMatch && (
@@ -1452,13 +1461,13 @@ export default function App() {
                                 })
                               }
                             >
-                              <Sparkle /> Usa i valori della ricetta
+                              <Sparkle /> {t("Usa i valori della ricetta")}
                             </button>
                           )}
                           <div className="field-grid">
                           <NumberField
-                            label="Sale sulla farina"
-                            hint={`Consigliato: ${fmt(recommended.salt, 1)}%`}
+                            label={t("Sale sulla farina")}
+                            hint={t("Consigliato: {fmt}%", { fmt: fmt(recommended.salt, 1) })}
                             value={c.salt}
                             onChange={(v) => update("salt", v)}
                             min={0}
@@ -1467,8 +1476,8 @@ export default function App() {
                             unit="%"
                           />
                           <NumberField
-                            label="Olio sulla farina"
-                            hint={recommended.oil ? `Consigliato: ${fmt(recommended.oil, 1)}%` : "Questo stile non lo prevede"}
+                            label={t("Olio sulla farina")}
+                            hint={recommended.oil ? t("Consigliato: {fmt}%", { fmt: fmt(recommended.oil, 1) }) : t("Questo stile non lo prevede")}
                             value={c.oil}
                             onChange={(v) => update("oil", v)}
                             min={0}
@@ -1477,8 +1486,8 @@ export default function App() {
                             unit="%"
                           />
                           <NumberField
-                            label="Zucchero sulla farina"
-                            hint={recommended.sugar ? `Consigliato: ${fmt(recommended.sugar, 1)}%` : "Questo stile non lo prevede"}
+                            label={t("Zucchero sulla farina")}
+                            hint={recommended.sugar ? t("Consigliato: {fmt}%", { fmt: fmt(recommended.sugar, 1) }) : t("Questo stile non lo prevede")}
                             value={c.sugar}
                             onChange={(v) => update("sugar", v)}
                             min={0}
@@ -1487,8 +1496,8 @@ export default function App() {
                             unit="%"
                           />
                           <NumberField
-                            label="Malto diastatico"
-                            hint={recommended.malt ? `Facoltativo · la ricetta ne prevede ${fmt(recommended.malt, 1)}%` : "Facoltativo · questo stile non lo prevede"}
+                            label={t("Malto diastatico")}
+                            hint={recommended.malt ? t("Facoltativo · la ricetta ne prevede {fmt}%", { fmt: fmt(recommended.malt, 1) }) : t("Facoltativo · questo stile non lo prevede")}
                             value={c.malt}
                             onChange={(v) => update("malt", v)}
                             min={0}
@@ -1501,13 +1510,12 @@ export default function App() {
                             <div className="notice malt-note">
                               <Info />
                               <div>
-                                <strong>Il malto è facoltativo</strong>
+                                <strong>{t("Il malto è facoltativo")}</strong>
                                 <p>
-                                  La ricetta {currentStyle.name} ne prevede {fmt(recommended.malt, 1)}% ({formatWeight((result.flour * recommended.malt) / 100, 1)}): aiuta colore e
-                                  morbidezza, ma è difficile da trovare e si può omettere senza problemi.
+                                  {t("La ricetta")} {t(currentStyle.name)} {t("ne prevede")} {fmt(recommended.malt, 1)}% ({formatWeight((result.flour * recommended.malt) / 100, 1)}{t("): aiuta colore e morbidezza, ma è difficile da trovare e si può omettere senza problemi.")}
                                 </p>
                                 <button className="text-button" onClick={() => update("malt", recommended.malt)}>
-                                  Ce l’ho: aggiungilo
+                                  {t("Ce l’ho: aggiungilo")}
                                 </button>
                               </div>
                             </div>
@@ -1523,30 +1531,30 @@ export default function App() {
                           <Clock />
                         </span>
                         <div>
-                          <h2>Il tempo fa la sua parte</h2>
-                          <p>Fasi calde e fredde, con i ritmi che scegli tu.</p>
+                          <h2>{t("Il tempo fa la sua parte")}</h2>
+                          <p>{t("Fasi calde e fredde, con i ritmi che scegli tu.")}</p>
                         </div>
                       </div>
                       <div className="planning-mode-card">
                         <div>
-                          <span className="eyebrow">COME VUOI PIANIFICARE? <HelpTip topic="pianificazione" /></span>
-                          <strong>{c.planMode === "automatic" ? "L’app costruisce il piano" : "Decidi tu ogni fase"}</strong>
-                          <p>{c.planMode === "automatic" ? "Indica quando inizi e quando vuoi mangiare: tempi e lievito li calcola PizzaLab." : "Scegli tu le ore di ogni riposo. Consigliato se conosci già il tuo impasto."}</p>
+                          <span className="eyebrow">{t("COME VUOI PIANIFICARE?")} <HelpTip topic="pianificazione" /></span>
+                          <strong>{c.planMode === "automatic" ? t("L’app costruisce il piano") : t("Decidi tu ogni fase")}</strong>
+                          <p>{c.planMode === "automatic" ? t("Indica quando inizi e quando vuoi mangiare: tempi e lievito li calcola PizzaLab.") : t("Scegli tu le ore di ogni riposo. Consigliato se conosci già il tuo impasto.")}</p>
                         </div>
-                        <div className="method-toggle" aria-label="Modalità di pianificazione">
+                        <div className="method-toggle" aria-label={t("Modalità di pianificazione")}>
                           <button
                             className={c.planMode !== "automatic" ? "selected" : ""}
                             aria-pressed={c.planMode !== "automatic"}
                             onClick={() => update("planMode", "date")}
                           >
-                            <Timer /> Manuale
+                            <Timer /> {t("Manuale")}
                           </button>
                           <button
                             className={c.planMode === "automatic" ? "selected" : ""}
                             aria-pressed={c.planMode === "automatic"}
                             onClick={() => updateMany({ planMode: "automatic", yeastMode: "auto" })}
                           >
-                            <Sparkle /> Automatica
+                            <Sparkle /> {t("Automatica")}
                           </button>
                         </div>
                       </div>
@@ -1554,26 +1562,26 @@ export default function App() {
                         <div className="automatic-window">
                           <div className="automatic-dates">
                             <label className="field">
-                              Voglio iniziare
+                              {t("Voglio iniziare")}
                               <input type="datetime-local" value={c.startAt} onChange={(e) => update("startAt", e.target.value)} />
                             </label>
                             <label className="field">
-                              Voglio mangiare
+                              {t("Voglio mangiare")}
                               <input type="datetime-local" value={c.bakeAt} onChange={(e) => update("bakeAt", e.target.value)} />
                             </label>
                           </div>
                           {automaticPlan.ok ? (
                             <>
                               <div className="automatic-phase-grid">
-                                <div><span>PUNTATA</span><strong>{durationLabel(c.bulkHours)}</strong><small>fuori frigo</small></div>
-                                <div className="cold"><span>FRIGO</span><strong>{c.coldHours > 0 ? durationLabel(c.coldHours) : "—"}</strong><small>{c.coldHours > 0 ? "massa coperta" : "non necessario"}</small></div>
-                                <div><span>APPRETTO</span><strong>{durationLabel(c.proofHours)}</strong><small>prima del forno</small></div>
-                                <div className="yeast"><span>LIEVITO CALCOLATO</span><strong>{result.ok ? formatWeight(result.yeast, 2) : "—"}</strong><small>{c.yeast === "fresh" ? "fresco" : c.yeast === "instant" ? "secco" : "coltura naturale"}</small></div>
+                                <div><span>{t("PUNTATA")}</span><strong>{durationLabel(c.bulkHours)}</strong><small>{t("fuori frigo")}</small></div>
+                                <div className="cold"><span>{t("FRIGO")}</span><strong>{c.coldHours > 0 ? durationLabel(c.coldHours) : "—"}</strong><small>{c.coldHours > 0 ? t("massa coperta") : t("non necessario")}</small></div>
+                                <div><span>{t("APPRETTO")}</span><strong>{durationLabel(c.proofHours)}</strong><small>{t("prima del forno")}</small></div>
+                                <div className="yeast"><span>{t("LIEVITO CALCOLATO")}</span><strong>{result.ok ? formatWeight(result.yeast, 2) : "—"}</strong><small>{c.yeast === "fresh" ? t("fresco") : c.yeast === "instant" ? t("secco") : t("coltura naturale")}</small></div>
                               </div>
-                              <p className="automatic-plan-note"><Sparkle /> {(["sourdough", "licoli"] as DoughConfig["yeast"][]).includes(c.yeast) ? "Orari e dose della coltura si aggiornano insieme; la vitalità reale del lievito madre va sempre verificata dalla crescita." : "Orari e lievito si aggiornano insieme in base a stile, temperature, pieghe e lavorazioni."}</p>
+                              <p className="automatic-plan-note"><Sparkle /> {(["sourdough", "licoli"] as DoughConfig["yeast"][]).includes(c.yeast) ? t("Orari e dose della coltura si aggiornano insieme; la vitalità reale del lievito madre va sempre verificata dalla crescita.") : t("Orari e lievito si aggiornano insieme in base a stile, temperature, pieghe e lavorazioni.")}</p>
                             </>
                           ) : (
-                            <div className="notice warning"><Warning /><div><strong>Finestra non compatibile</strong><p>{automaticPlan.error}</p></div></div>
+                            <div className="notice warning"><Warning /><div><strong>{t("Finestra non compatibile")}</strong><p>{automaticPlan.error}</p></div></div>
                           )}
                         </div>
                       )}
@@ -1581,7 +1589,7 @@ export default function App() {
                         <>
                       <div
                         className="method-toggle"
-                        aria-label="Metodo di maturazione"
+                        aria-label={t("Metodo di maturazione")}
                       >
                         <button
                           className={c.coldHours > 0 ? "selected" : ""}
@@ -1593,19 +1601,19 @@ export default function App() {
                             )
                           }
                         >
-                          <Snowflake /> Con passaggio in frigo
+                          <Snowflake /> {t("Con passaggio in frigo")}
                         </button>
                         <button
                           className={c.coldHours === 0 ? "selected" : ""}
                           aria-pressed={c.coldHours === 0}
                           onClick={() => update("coldHours", 0)}
                         >
-                          <Leaf /> Tutto fuori frigo
+                          <Leaf /> {t("Tutto fuori frigo")}
                         </button>
                       </div>
                       <div className="time-fields slider-time-fields">
                         <SliderField
-                          label="Puntata fuori frigo"
+                          label={t("Puntata fuori frigo")}
                           help="puntata"
                           value={c.bulkHours}
                           onChange={(v) =>
@@ -1624,13 +1632,13 @@ export default function App() {
                           unit="ore"
                           hint={
                             c.foldCount > 0
-                              ? `Minimo ${durationLabel((c.foldCount * c.foldIntervalMinutes) / 60)} per completare le pieghe`
-                              : "Primo riposo dell’impasto intero, prima di dividerlo in panetti"
+                              ? t("Minimo {durationLabel} per completare le pieghe", { durationLabel: durationLabel((c.foldCount * c.foldIntervalMinutes) / 60) })
+                              : t("Primo riposo dell’impasto intero, prima di dividerlo in panetti")
                           }
                         />
                         {c.coldHours > 0 && (
                           <SliderField
-                            label="Riposo in frigo"
+                            label={t("Riposo in frigo")}
                             help="frigo"
                             value={c.coldHours}
                             onChange={(v) => update("coldHours", v)}
@@ -1639,11 +1647,11 @@ export default function App() {
                             sliderMax={Math.max(72, c.coldHours)}
                             step={0.5}
                             unit="ore"
-                            hint={`Almeno ${MIN_COLD_HOURS} ore: con meno l’impasto fa appena in tempo a raffreddarsi. Se hai poco tempo scegli «Tutto fuori frigo».`}
+                            hint={t("Almeno {MIN_COLD_HOURS} ore: con meno l’impasto fa appena in tempo a raffreddarsi. Se hai poco tempo scegli «Tutto fuori frigo».", { MIN_COLD_HOURS })}
                           />
                         )}
                         <SliderField
-                          label="Appretto fuori frigo"
+                          label={t("Appretto fuori frigo")}
                           help="appretto"
                           value={c.proofHours}
                           onChange={(v) => update("proofHours", v)}
@@ -1652,7 +1660,7 @@ export default function App() {
                           sliderMax={Math.max(12, c.proofHours)}
                           step={0.5}
                           unit="ore"
-                          hint="Ultimo riposo dei panetti già formati, prima di stendere"
+                          hint={t("Ultimo riposo dei panetti già formati, prima di stendere")}
                         />
                       </div>
                       <div className="time-breakdown">
@@ -1667,32 +1675,32 @@ export default function App() {
                         <span style={{ flex: Math.max(0.1, c.proofHours) }} />
                       </div>
                       <div className="time-legend" aria-hidden="true">
-                        <span>Puntata {durationLabel(c.bulkHours)}</span>
-                        {c.coldHours > 0 && <span className="cold">Frigo {durationLabel(c.coldHours)}</span>}
-                        <span className="proof">Appretto {durationLabel(c.proofHours)}</span>
+                        <span>{t("Puntata")} {durationLabel(c.bulkHours)}</span>
+                        {c.coldHours > 0 && <span className="cold">{t("Frigo")} {durationLabel(c.coldHours)}</span>}
+                        <span className="proof">{t("Appretto")} {durationLabel(c.proofHours)}</span>
                       </div>
                       <div className="time-total">
-                        <span>Tempo di fermentazione</span>
+                        <span>{t("Tempo di fermentazione")}</span>
                         <strong>
                           {result.ok ? durationLabel(result.hours) : "—"}{" "}
-                          <small>+ 20 min di impasto</small>
+                          <small>{t("+ 20 min di impasto")}</small>
                         </strong>
                       </div>
                         </>
                       )}
                       <div className="field-grid temperature-fields slider-temperature-fields">
                         <SliderField
-                          label="Temperatura ambiente"
+                          label={t("Temperatura ambiente")}
                           value={c.roomTemp}
                           onChange={(v) => update("roomTemp", v)}
                           min={10}
                           max={35}
                           quantity="temp"
-                          hint="Dove lievita l’impasto"
+                          hint={t("Dove lievita l’impasto")}
                         />
                         {c.coldHours > 0 && (
                           <SliderField
-                            label="Temperatura del frigo"
+                            label={t("Temperatura del frigo")}
                             value={c.fridgeTemp}
                             onChange={(v) => update("fridgeTemp", v)}
                             min={1}
@@ -1701,14 +1709,14 @@ export default function App() {
                           />
                         )}
                         <SelectSheet
-                          label="Lievito"
+                          label={t("Lievito")}
                           help="lievito"
                           value={c.yeast}
                           options={[
-                            { value: "fresh", label: "Di birra fresco", description: "Il panetto del banco frigo" },
-                            { value: "instant", label: "Secco istantaneo", description: "In bustina, circa 3 volte più concentrato" },
-                            { value: "sourdough", label: "Pasta madre solida", description: "Lievito naturale, idratazione circa 50%" },
-                            { value: "licoli", label: "Licoli", description: "Lievito naturale liquido, idratazione 100%" },
+                            { value: "fresh", label: t("Di birra fresco"), description: t("Il panetto del banco frigo") },
+                            { value: "instant", label: t("Secco istantaneo"), description: t("In bustina, circa 3 volte più concentrato") },
+                            { value: "sourdough", label: t("Pasta madre solida"), description: t("Lievito naturale, idratazione circa 50%") },
+                            { value: "licoli", label: t("Licoli"), description: t("Lievito naturale liquido, idratazione 100%") },
                           ]}
                           onChange={(yeast) =>
                             updateMany({
@@ -1764,13 +1772,13 @@ export default function App() {
                           <Fire />
                         </span>
                         <div>
-                          <h2>Quando si mangia?</h2>
-                          <p>Da qui costruiamo la tua tabella di marcia.</p>
+                          <h2>{t("Quando si mangia?")}</h2>
+                          <p>{t("Da qui costruiamo la tua tabella di marcia.")}</p>
                         </div>
                       </div>
                       {c.planMode !== "automatic" ? (
                         <label className="field">
-                          Giorno e ora della prima infornata
+                          {t("Giorno e ora della prima infornata")}
                           <input
                             type="datetime-local"
                             value={c.bakeAt}
@@ -1781,7 +1789,7 @@ export default function App() {
                         <div className="duration-result">
                           <Sparkle />
                           <div>
-                            <span>PIANO AUTOMATICO</span>
+                            <span>{t("PIANO AUTOMATICO")}</span>
                             <strong>{dateLabel(c.startAt)} → {dateLabel(c.bakeAt)}</strong>
                           </div>
                         </div>
@@ -1790,9 +1798,9 @@ export default function App() {
                         <div className={`plan-window ${startPast ? "is-late" : ""}`}>
                           <Clock />
                           <div>
-                            <span>Inizi a impastare</span>
+                            <span>{t("Inizi a impastare")}</span>
                             <strong>{dateLabel(timeline[0].at)}</strong>
-                            <small>La tabella di marcia completa è nel riepilogo (passaggio 4).</small>
+                            <small>{t("La tabella di marcia completa è nel riepilogo (passaggio 4).")}</small>
                           </div>
                         </div>
                       )}
@@ -1800,10 +1808,9 @@ export default function App() {
                         <div className="notice warning">
                           <Warning />
                           <div>
-                            <strong>L’inizio del piano è già passato</strong>
+                            <strong>{t("L’inizio del piano è già passato")}</strong>
                             <p>
-                              Sposta la cottura in avanti o riduci i tempi per
-                              poter seguire tutte le fasi.
+                              {t("Sposta la cottura in avanti o riduci i tempi per poter seguire tutte le fasi.")}
                             </p>
                           </div>
                         </div>
@@ -1817,35 +1824,35 @@ export default function App() {
                           <ListChecks />
                         </span>
                         <div>
-                          <h2>Il tuo programma</h2>
-                          <p>Controlla tempi e dosi. Poi scegli: inizi subito con i promemoria o lo salvi per un altro giorno.</p>
+                          <h2>{t("Il tuo programma")}</h2>
+                          <p>{t("Controlla tempi e dosi. Poi scegli: inizi subito con i promemoria o lo salvi per un altro giorno.")}</p>
                         </div>
                       </div>
                       {editingRecipe && (
                         <div className="notice editing-notice">
                           <PencilSimple />
                           <div>
-                            <strong>Stai modificando «{editingRecipe.name}»</strong>
-                            <p>Salvando aggiorni la pizza già presente nel diario, senza crearne una nuova.</p>
+                            <strong>{t("Stai modificando «{name}»", { name: editingRecipe.name })}</strong>
+                            <p>{t("Salvando aggiorni la pizza già presente nel diario, senza crearne una nuova.")}</p>
                           </div>
                         </div>
                       )}
                       <div className="summary-facts">
-                        <div><span>Inizi</span><strong>{timeline[0] ? dateLabel(timeline[0].at) : "—"}</strong></div>
-                        <div><span>Inforni</span><strong>{dateLabel(c.bakeAt)}</strong></div>
-                        <div><span>Lievitazione</span><strong>{result.ok ? durationLabel(result.hours) : "—"}</strong></div>
-                        <div><span>{isPan ? "Teglie" : "Pizze"}</span><strong>{c.count} · {currentStyle.name}</strong></div>
+                        <div><span>{t("Inizi")}</span><strong>{timeline[0] ? dateLabel(timeline[0].at) : "—"}</strong></div>
+                        <div><span>{t("Inforni")}</span><strong>{dateLabel(c.bakeAt)}</strong></div>
+                        <div><span>{t("Lievitazione")}</span><strong>{result.ok ? durationLabel(result.hours) : "—"}</strong></div>
+                        <div><span>{isPan ? t("Teglie") : t("Pizze")}</span><strong>{c.count} · {t(currentStyle.name)}</strong></div>
                       </div>
                       {startPast && (
                         <div className="notice warning">
                           <Warning />
                           <div>
-                            <strong>L’inizio del piano è già passato</strong>
-                            <p>Per iniziare adesso torna al passaggio 2 e sposta la cottura più avanti. Puoi comunque salvarla per dopo.</p>
+                            <strong>{t("L’inizio del piano è già passato")}</strong>
+                            <p>{t("Per iniziare adesso torna al passaggio 2 e sposta la cottura più avanti. Puoi comunque salvarla per dopo.")}</p>
                           </div>
                         </div>
                       )}
-                      <h3 className="summary-subtitle">Tabella di marcia</h3>
+                      <h3 className="summary-subtitle">{t("Tabella di marcia")}</h3>
                       <div className="timeline">
                         {timeline.map((stage) => (
                           <div
@@ -1875,18 +1882,16 @@ export default function App() {
                     <div className="advice-section">
                       <div className="section-title">
                         <h3>
-                          <ChefHat /> Il consiglio di PizzaLab
+                          <ChefHat /> {t("Il consiglio di PizzaLab")}
                         </h3>
                       </div>
                       {result.advice.length === 0 ? (
                         <div className="advice info">
                           <CheckCircle />
                           <div>
-                            <strong>Un buon punto di partenza</strong>
+                            <strong>{t("Un buon punto di partenza")}</strong>
                             <p>
-                              I parametri rientrano nei riferimenti del
-                              calcolatore. Osserva comunque l’impasto durante la
-                              lievitazione.
+                              {t("I parametri rientrano nei riferimenti del calcolatore. Osserva comunque l’impasto durante la lievitazione.")}
                             </p>
                           </div>
                         </div>
@@ -1903,11 +1908,10 @@ export default function App() {
                       )}
                       <div className="style-tip">
                         <Leaf />
-                        <p>{result.style.tip}</p>
+                        <p>{t(result.style.tip)}</p>
                       </div>
                       <small className="bake-note">
-                        {result.style.bake} I tempi dipendono da forno, supporto
-                        e condimento.
+                        {t(result.style.bake)} {t("I tempi dipendono da forno, supporto e condimento.")}
                       </small>
                     </div>
                   )}
@@ -1915,24 +1919,24 @@ export default function App() {
                     <div className="step-footer">
                       {plannerStage !== "dough" && (
                         <button className="button secondary step-back" onClick={() => goToPlannerStage(plannerStage === "baking" ? "fermentation" : "dough")}>
-                          <ArrowLeft /> Indietro
+                          <ArrowLeft /> {t("Indietro")}
                         </button>
                       )}
                       {plannerStage === "dough" && (
                         <button className="journey-next" onClick={() => goToPlannerStage("fermentation")}>
-                          <span><small>Passaggio 2 di 4</small><strong>Passa a lievitazione</strong></span>
+                          <span><small>{t("Passaggio 2 di 4")}</small><strong>{t("Passa a lievitazione")}</strong></span>
                           <ArrowRight weight="bold" />
                         </button>
                       )}
                       {plannerStage === "fermentation" && (
                         <button className="journey-next" onClick={() => goToPlannerStage("baking")}>
-                          <span><small>Passaggio 3 di 4</small><strong>Passa a cottura</strong></span>
+                          <span><small>{t("Passaggio 3 di 4")}</small><strong>{t("Passa a cottura")}</strong></span>
                           <ArrowRight weight="bold" />
                         </button>
                       )}
                       {plannerStage === "baking" && (
                         <button className="journey-next" onClick={() => goToPlannerStage("summary")}>
-                          <span><small>Passaggio 4 di 4</small><strong>Vai al riepilogo</strong></span>
+                          <span><small>{t("Passaggio 4 di 4")}</small><strong>{t("Vai al riepilogo")}</strong></span>
                           <ArrowRight weight="bold" />
                         </button>
                       )}
@@ -1942,15 +1946,15 @@ export default function App() {
                 {plannerStage === "summary" && (
                 <aside className="recipe-sidebar" id="recipe-summary">
                   <div className="recipe-sheet">
-                    <span className="eyebrow">IL TUO IMPASTO</span>
+                    <span className="eyebrow">{t("IL TUO IMPASTO")}</span>
                     <div className="recipe-title">
-                      <h2>{styles.find((s) => s.id === c.styleId)?.name}</h2>
+                      <h2>{t(styles.find((s) => s.id === c.styleId)?.name ?? "")}</h2>
                       <Pizza size={35} weight="duotone" />
                     </div>
                     <p>
                       {result.ok
-                        ? `${c.count} ${isPan ? "teglie" : "panetti"} da ${formatWeight(result.unitWeight)}`
-                        : "Completa i valori del piano"}
+                        ? t("{count} {kind} da {weight}", { count: c.count, kind: isPan ? t("teglie") : t("panetti"), weight: formatWeight(result.unitWeight) })
+                        : t("Completa i valori del piano")}
                     </p>
                     {result.ok ? (
                       <>
@@ -1969,7 +1973,7 @@ export default function App() {
                           </span>
                         </div>
                         <div className="flour-total">
-                          <span>FARINA TOTALE</span>
+                          <span>{t("FARINA TOTALE")}</span>
                           <strong>
                             <WeightValue grams={result.flour} tag="small" />
                           </strong>
@@ -1986,32 +1990,28 @@ export default function App() {
                           </div>
                           {result.flourBreakdown.length > 1 && (
                             <small className="w-average">
-                              W medio indicativo:{" "}
+                              {t("W medio indicativo:")}{" "}
                               {result.w === null ? "n.d." : fmt(result.w)}
                             </small>
                           )}
                         </div>
                         <div className="ingredients">
                           {[
-                            ["Acqua totale", result.water, 0],
-                            ["Sale", result.salt, 1],
+                            [t("Acqua totale"), result.water, 0],
+                            [t("Sale"), result.salt, 1],
                             [
-                              c.yeast === "sourdough"
-                                ? "Pasta madre"
-                                : c.yeast === "licoli"
-                                  ? "Licoli"
-                                  : `Lievito ${c.yeast === "fresh" ? "fresco" : "secco"}`,
+                              yeastLabel(c.yeast),
                               result.yeast,
                               ["sourdough", "licoli"].includes(c.yeast) ? 0 : 2,
                             ],
                             ...(result.oil > 0
-                              ? [["Olio", result.oil, 1]]
+                              ? [[t("Olio"), result.oil, 1]]
                               : []),
                             ...(result.sugar > 0
-                              ? [["Zucchero", result.sugar, 1]]
+                              ? [[t("Zucchero"), result.sugar, 1]]
                               : []),
                             ...(result.malt > 0
-                              ? [["Malto", result.malt, 1]]
+                              ? [[t("Malto"), result.malt, 1]]
                               : []),
                           ].map(([label, value, digits]) => (
                             <div key={label}>
@@ -2025,29 +2025,27 @@ export default function App() {
                         {result.starter.active && (
                           <div className="phase-note">
                             <strong>
-                              {c.yeast === "licoli" ? "Licoli" : "Pasta madre"}{" "}
+                              {c.yeast === "licoli" ? t("Licoli") : t("Pasta madre")}{" "}
                               · {formatWeight(result.starter.grams)}
                             </strong>
                             <span>
-                              Contiene {formatWeight(result.starter.flour)} farina +{" "}
-                              {formatWeight(result.starter.water)} acqua
+                              {t("Contiene")} {formatWeight(result.starter.flour)} {t("farina +")}{" "}
+                              {formatWeight(result.starter.water)} {t("acqua")}
                             </span>
                             <small>
-                              Le quantità di farina e acqua da pesare sono già
-                              state ridotte correttamente.
+                              {t("Le quantità di farina e acqua da pesare sono già state ridotte correttamente.")}
                             </small>
                           </div>
                         )}
                         {c.autolyse && (
                           <div className="phase-note">
-                            <strong>Autolisi · {c.autolyseMinutes} min</strong>
+                            <strong>{t("Autolisi ·")} {c.autolyseMinutes} {t("min")}</strong>
                             <span>
-                              {formatWeight(result.autolyse.flour)} farina +{" "}
-                              {formatWeight(result.autolyse.water)} acqua
+                              {formatWeight(result.autolyse.flour)} {t("farina +")}{" "}
+                              {formatWeight(result.autolyse.water)} {t("acqua")}
                             </span>
                             <small>
-                              {formatWeight(result.autolyse.reservedWater)} d’acqua
-                              restano per lievito e inserimento graduale.
+                              {formatWeight(result.autolyse.reservedWater)} {t("d’acqua restano per lievito e inserimento graduale.")}
                             </small>
                           </div>
                         )}
@@ -2057,48 +2055,47 @@ export default function App() {
                               {c.preferment} · {result.preferment.maturity}
                             </strong>
                             <span>
-                              {formatWeight(result.preferment.flour)} farina +{" "}
-                              {formatWeight(result.preferment.water)} acqua
+                              {formatWeight(result.preferment.flour)} {t("farina +")}{" "}
+                              {formatWeight(result.preferment.water)} {t("acqua")}
                             </span>
                             <small>
-                              {formatWeight(result.preferment.yeast, 2)} lievito nel
-                              prefermento.
+                              {formatWeight(result.preferment.yeast, 2)} {t("lievito nel prefermento.")}
                             </small>
                           </div>
                         )}
                         <div className="phase-note baking-note">
                           <strong>
-                            Cottura · {c.bakeMinutes} min a {formatTemp(c.ovenTemp)}
+                            {t("Cottura ·")} {c.bakeMinutes} {t("min a")} {formatTemp(c.ovenTemp)}
                           </strong>
                           <span>
-                            Crosta {result.bakeOutcome.crustLabel.toLowerCase()} · mollica {result.bakeOutcome.crumbLabel.toLowerCase()} · fondo {result.bakeOutcome.baseLabel.toLowerCase()}
+                            {t("Crosta")} {result.bakeOutcome.crustLabel.toLowerCase()} {t("· mollica")} {result.bakeOutcome.crumbLabel.toLowerCase()} {t("· fondo")} {result.bakeOutcome.baseLabel.toLowerCase()}
                           </span>
                           <small>
                             {ovenById(c.ovenType).fixedRack
-                              ? ovenById(c.ovenType).name
-                              : `Posizione nel forno: ${
-                                  c.ovenRack === "bottom"
-                                    ? "bassa"
-                                    : c.ovenRack === "lower-middle"
-                                      ? "medio-bassa"
-                                      : c.ovenRack === "middle"
-                                        ? "centrale"
-                                        : c.ovenRack === "upper-middle"
-                                          ? "medio-alta"
-                                          : "alta"
-                                }`}
+                              ? t(ovenById(c.ovenType).name)
+                              : t("Posizione nel forno: {rack}", {
+                                  rack:
+                                    c.ovenRack === "bottom"
+                                      ? t("bassa")
+                                      : c.ovenRack === "lower-middle"
+                                        ? t("medio-bassa")
+                                        : c.ovenRack === "middle"
+                                          ? t("centrale")
+                                          : c.ovenRack === "upper-middle"
+                                            ? t("medio-alta")
+                                            : t("alta"),
+                                })}
                             {" "}· {bakeSurfaceLabels[c.bakeSurface]}.
                           </small>
                         </div>
                         <div className="total-weight">
-                          <span>Impasto totale</span>
+                          <span>{t("Impasto totale")}</span>
                           <strong>{formatWeight(result.total)}</strong>
                         </div>
                         <div className="yeast-note">
                           <Info />
                           <span>
-                            Lievito stimato: verifica la crescita reale. Le
-                            quantità mostrate sono arrotondate.
+                            {t("Lievito stimato: verifica la crescita reale. Le quantità mostrate sono arrotondate.")}
                           </span>
                         </div>
                       </>
@@ -2106,7 +2103,7 @@ export default function App() {
                       <div className="notice warning" role="alert">
                         <Warning />
                         <div>
-                          <strong>Controlla questi valori</strong>
+                          <strong>{t("Controlla questi valori")}</strong>
                           <ul>
                             {result.errors.map((e) => (
                               <li key={e}>{e}</li>
@@ -2118,11 +2115,11 @@ export default function App() {
                   </div>
                   {plannerStage === "summary" && (
                     <section className="panel final-save-panel" aria-labelledby="final-save-title">
-                      <span className="eyebrow">Passaggio 4 di 4 · Tutto pronto?</span>
-                      <h2 id="final-save-title">Partiamo o lo salvi per dopo?</h2>
+                      <span className="eyebrow">{t("Passaggio 4 di 4 · Tutto pronto?")}</span>
+                      <h2 id="final-save-title">{t("Partiamo o lo salvi per dopo?")}</h2>
                       <label className="field recipe-name">
-                        Nome del piano
-                        <input maxLength={80} value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder="Es. La pizza del sabato" />
+                        {t("Nome del piano")}
+                        <input maxLength={80} value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder={t("Es. La pizza del sabato")} />
                       </label>
                       <div className="final-choice">
                         <button
@@ -2130,31 +2127,34 @@ export default function App() {
                           disabled={loadError || !result.ok || timing === "expired" || busy}
                           onClick={() => (timing === "late" ? setLateStart({ source: "planner" }) : void saveRecipe("start"))}
                         >
-                          {timing === "future" ? <><CalendarCheck /> Programma</> : timing === "late" ? <><Clock /> Parti adesso</> : <><Bell /> Inizia ora</>}
+                          {timing === "future" ? <><CalendarCheck /> {t("Programma")}</> : timing === "late" ? <><Clock /> {t("Parti adesso")}</> : <><Bell /> {t("Inizia ora")}</>}
                         </button>
                         <p>
                           {timing === "future"
                             ? usesCalendarReminders()
-                              ? `Partirà da sola ${timeline[0] ? dateLabel(timeline[0].at) : ""}. Nel diario, tra quelle «In corso», potrai aggiungere le fasi al Calendario per ricevere gli avvisi.`
-                              : `Partirà da sola ${timeline[0] ? dateLabel(timeline[0].at) : ""}: riceverai una notifica a ogni fase${leadMinutes ? `, ${leadMinutes} minuti prima` : ""}. La trovi nel diario tra quelle «In corso».`
+                              ? t("Partirà da sola {v}. Nel diario, tra quelle «In corso», potrai aggiungere le fasi al Calendario per ricevere gli avvisi.", { v: timeline[0] ? dateLabel(timeline[0].at) : "" })
+                              : t("Partirà da sola {when}: riceverai una notifica a ogni fase{lead}. La trovi nel diario tra quelle «In corso».", {
+                                  when: timeline[0] ? dateLabel(timeline[0].at) : "",
+                                  lead: leadMinutes ? t(", {minutes} minuti prima", { minutes: leadMinutes }) : "",
+                                })
                             : timing === "now"
-                              ? "È l’ora giusta: si parte subito e ricevi una notifica a ogni fase. Bilancia e guida passo passo ti aspettano nel diario."
+                              ? t("È l’ora giusta: si parte subito e ricevi una notifica a ogni fase. Bilancia e guida passo passo ti aspettano nel diario.")
                               : timing === "late"
-                                ? "L’orario di inizio è già passato: puoi partire adesso spostando la cena, oppure mantenerla e ricalcolare lievito e tempi."
-                                : "Anche l’orario di cottura è passato: scegli una nuova data al passaggio 2, oppure salvala per dopo."}
+                                ? t("L’orario di inizio è già passato: puoi partire adesso spostando la cena, oppure mantenerla e ricalcolare lievito e tempi.")
+                                : t("Anche l’orario di cottura è passato: scegli una nuova data al passaggio 2, oppure salvala per dopo.")}
                         </p>
                         {timing !== "expired" && activeRecipe && activeRecipe.id !== editingId && (
-                          <p className="replace-note"><Warning /> Hai già «{activeRecipe.name}» in corso: {timing === "future" ? "programmando" : "iniziando"} questa, l’altra tornerà tra le salvate.</p>
+                          <p className="replace-note"><Warning /> {t("Hai già «{name}» in corso: {action} questa, l’altra tornerà tra le salvate.", { name: activeRecipe.name, action: timing === "future" ? t("programmando") : t("iniziando") })}</p>
                         )}
                       </div>
                       <div className="final-choice">
                         <button className="button secondary full final-save-button" disabled={loadError || !result.ok || busy} onClick={() => void saveRecipe("later")}>
-                          <BookmarkSimple /> {editingRecipe ? "Salva le modifiche" : "Salva per dopo"}
+                          <BookmarkSimple /> {editingRecipe ? t("Salva le modifiche") : t("Salva per dopo")}
                         </button>
-                        <p>Nessun promemoria per ora: la ritrovi nel diario, tra le «Salvate», e la avvii quando vuoi.</p>
+                        <p>{t("Nessun promemoria per ora: la ritrovi nel diario, tra le «Salvate», e la avvii quando vuoi.")}</p>
                       </div>
                       <button className="text-button step-back-link" onClick={() => goToPlannerStage("baking")}>
-                        <ArrowLeft /> Torna alla cottura
+                        <ArrowLeft /> {t("Torna alla cottura")}
                       </button>
                     </section>
                   )}
@@ -2173,7 +2173,7 @@ export default function App() {
                   ...s,
                   customFlours: [...s.customFlours, f],
                 }));
-                setMessage("Farina personale aggiunta.");
+                setMessage(t("Farina personale aggiunta."));
               }}
             />
           )}
@@ -2181,18 +2181,17 @@ export default function App() {
             <>
               <div className="page-heading toppings-heading">
                 <div>
-                  <span className="eyebrow">DOPO L’IMPASTO, IL GUSTO</span>
-                  <h1>Condimenti.</h1>
+                  <span className="eyebrow">{t("DOPO L’IMPASTO, IL GUSTO")}</span>
+                  <h1>{t("Condimenti.")}</h1>
                   <p>
-                    Quantità, bilanciamento e ordine di aggiunta in uno spazio
-                    dedicato.
+                    {t("Quantità, bilanciamento e ordine di aggiunta in uno spazio dedicato.")}
                   </p>
                 </div>
                 <div className="heading-illustration" aria-hidden="true">
                   <Pizza weight="duotone" />
                   <span>
-                    Parti dal tuo stile
-                    <br />e completa la pizza.
+                    {t("Parti dal tuo stile")}
+                    <br />{t("e completa la pizza.")}
                   </span>
                 </div>
               </div>
@@ -2204,10 +2203,9 @@ export default function App() {
                 <div className="notice warning">
                   <Warning />
                   <div>
-                    <strong>Prima completa l’impasto</strong>
+                    <strong>{t("Prima completa l’impasto")}</strong>
                     <p>
-                      Le quantità dei condimenti dipendono dal numero e dalla
-                      dimensione delle pizze.
+                      {t("Le quantità dei condimenti dipendono dal numero e dalla dimensione delle pizze.")}
                     </p>
                   </div>
                 </div>
@@ -2239,7 +2237,7 @@ export default function App() {
               onNameChange={(profileName) => setState((s) => ({ ...s, profileName }))}
               onAddOven={(oven) => {
                 setState((s) => ({ ...s, userOvens: [...(s.userOvens ?? []), oven] }));
-                setMessage(`Forno «${oven.name}» salvato: lo trovi anche nel passaggio Cottura.`);
+                setMessage(t("Forno «{name}» salvato: lo trovi anche nel passaggio Cottura.", { name: oven.name }));
               }}
               onDeleteOven={(id) => setState((s) => ({ ...s, userOvens: (s.userOvens ?? []).filter((item) => item.id !== id) }))}
               onUseOven={(oven) => {
@@ -2250,11 +2248,11 @@ export default function App() {
                   ...(ovenById(oven.ovenType).fixedRack ? { ovenRack: "middle" as const } : {}),
                 };
                 updateMany({ ...patch, bakeMinutes: recommendedBakeMinutes({ ...c, ...patch }) });
-                setMessage(`Userai «${oven.name}» per i prossimi impasti.`);
+                setMessage(t("Userai «{name}» per i prossimi impasti.", { name: oven.name }));
               }}
               onAddPan={(pan) => {
                 setState((s) => ({ ...s, userPans: [...(s.userPans ?? []), pan] }));
-                setMessage(`Teglia «${pan.name}» salvata: la ritrovi negli stili in teglia.`);
+                setMessage(t("Teglia «{name}» salvata: la ritrovi negli stili in teglia.", { name: pan.name }));
               }}
               onDeletePan={(id) => setState((s) => ({ ...s, userPans: (s.userPans ?? []).filter((item) => item.id !== id) }))}
               onUsePan={usePan}
@@ -2263,6 +2261,8 @@ export default function App() {
               onImport={(file) => void importArchive(file)}
               onShowTutorial={() => setTutorialOpen(true)}
               onLeadChange={(minutes) => void changeLeadMinutes(minutes)}
+              onLanguageChange={(next: Language) => setState((s) => ({ ...s, language: next }))}
+              language={language}
               onUnitsChange={(patch: Partial<Units>) => setState((s) => ({ ...s, units: { ...normalizeUnits(s.units), ...patch } }))}
             />
           )}
@@ -2298,7 +2298,7 @@ export default function App() {
             />
           )}
           <footer className="page-footer">
-            <span>PizzaLab</span> Fatto per chi ama mettere le mani in pasta.
+            <span>PizzaLab</span> {t("Fatto per chi ama mettere le mani in pasta.")}
           </footer>
         </main>
       </div>
@@ -2310,10 +2310,9 @@ export default function App() {
             aria-modal="true"
             aria-labelledby="delete-title"
           >
-            <h2 id="delete-title">Eliminare questo piano?</h2>
+            <h2 id="delete-title">{t("Eliminare questo piano?")}</h2>
             <p>
-              Verranno rimossi ricetta, appunti e gli eventuali promemoria
-              attivi.
+              {t("Verranno rimossi ricetta, appunti e gli eventuali promemoria attivi.")}
             </p>
             <div>
               <button
@@ -2321,14 +2320,14 @@ export default function App() {
                 className="button secondary"
                 onClick={() => setDeleteId(null)}
               >
-                Conserva
+                {t("Conserva")}
               </button>
               <button
                 className="button danger"
                 disabled={busy}
                 onClick={() => void deleteRecipe(deleteId)}
               >
-                Elimina piano
+                {t("Elimina piano")}
               </button>
             </div>
           </div>

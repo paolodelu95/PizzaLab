@@ -1,3 +1,4 @@
+import { locale, t, msg } from "../i18n";
 import { CheckCircle, Target } from "@phosphor-icons/react";
 import { useState } from "react";
 import type { BakeCalibration, Recipe } from "../domain/types";
@@ -23,18 +24,18 @@ export function OvenCalibration({
   return (
     <details className="oven-calibration" open={!calibration}>
       <summary>
-        <span>Taratura del forno <HelpTip topic="taratura" /></span>
-        {calibration && <em className="optional-badge saved-badge"><CheckCircle weight="fill" /> Registrata</em>}
+        <span>{t("Taratura del forno")} <HelpTip topic="taratura" /></span>
+        {calibration && <em className="optional-badge saved-badge"><CheckCircle weight="fill" /> {t("Registrata")}</em>}
       </summary>
       <div className="oven-calibration-body">
         <p className="calibration-intro">
-          <Target /> <span>Com’è andata davvero la cottura? PizzaLab usa queste risposte per correggere le previsioni di questo forno ({formatTemp(c.ovenTemp)}, {c.bakeMinutes.toLocaleString("it-IT", { maximumFractionDigits: 2 })} min previsti).</span>
+          <Target /> <span>{t("Com’è andata davvero la cottura? PizzaLab usa queste risposte per correggere le previsioni di questo forno (")}{formatTemp(c.ovenTemp)}, {c.bakeMinutes.toLocaleString(locale(), { maximumFractionDigits: 2 })} {t("min previsti).")}</span>
         </p>
         <div className="calibration-form">
-          <NumberField label="Tempo realmente usato" value={actualMinutes} onChange={setActualMinutes} min={0.5} max={60} step={c.ovenTemp >= 350 ? 0.25 : 1} unit="min" />
-          <CalibrationChoice label="Crosta" value={crust} options={[["pale", "Pallida"], ["good", "Giusta"], ["dark", "Scura"]]} onChange={setCrust} />
-          <CalibrationChoice label="Mollica" value={crumb} options={[["raw", "Umida"], ["good", "Giusta"], ["dry", "Asciutta"]]} onChange={setCrumb} />
-          <CalibrationChoice label="Fondo" value={base} options={[["pale", "Pallido"], ["good", "Giusto"], ["dark", "Scuro"]]} onChange={setBase} />
+          <NumberField label={t("Tempo realmente usato")} value={actualMinutes} onChange={setActualMinutes} min={0.5} max={60} step={c.ovenTemp >= 350 ? 0.25 : 1} unit="min" />
+          <CalibrationChoice label={t("Crosta")} value={crust} options={[["pale", msg("Pallida")], ["good", msg("Giusta")], ["dark", msg("Scura")]]} onChange={setCrust} />
+          <CalibrationChoice label={t("Mollica")} value={crumb} options={[["raw", msg("Umida")], ["good", msg("Giusta")], ["dry", msg("Asciutta")]]} onChange={setCrumb} />
+          <CalibrationChoice label={t("Fondo")} value={base} options={[["pale", msg("Pallido")], ["good", msg("Giusto")], ["dark", msg("Scuro")]]} onChange={setBase} />
         </div>
         <button
           className="button primary full"
@@ -52,7 +53,7 @@ export function OvenCalibration({
             })
           }
         >
-          {calibration ? "Aggiorna la taratura" : "Salva risultato reale"}
+          {calibration ? t("Aggiorna la taratura") : t("Salva risultato reale")}
         </button>
       </div>
     </details>

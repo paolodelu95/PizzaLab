@@ -243,4 +243,6 @@ export interface StoredState {
   reminderLeadMinutes?: number;
   /** Unità mostrate all’utente: i dati restano sempre salvati in grammi e °C. */
   units?: { weight: "g" | "oz"; temp: "C" | "F" };
+  /** Lingua scelta dall’utente; se manca si usa quella del dispositivo. */
+  language?: "it" | "en";
 }

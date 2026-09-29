@@ -3,6 +3,7 @@ import { defaultConfig } from "../domain/styles";
 import { validateConfig } from "../domain/calculator";
 import type { StoredState } from "../domain/types";
 import { defaultUnits, normalizeUnits } from "./units";
+import { normalizeLanguage } from "../i18n";
 const KEY = "pizzalab-state-v1";
 export const emptyState = (): StoredState => ({
   version: 1,
@@ -58,6 +59,7 @@ export async function readState(): Promise<StoredState> {
           createdAt: profile.createdAt,
         }));
   parsed.units = normalizeUnits(parsed.units);
+  parsed.language = normalizeLanguage(parsed.language);
   parsed.reminderLeadMinutes = [0, 5, 10, 15, 30].includes(parsed.reminderLeadMinutes ?? 0) ? parsed.reminderLeadMinutes ?? 0 : 0;
   const legacyStarter = (parsed as StoredState & { sourdoughProfile?: StoredState["sourdoughProfiles"][number] }).sourdoughProfile;
   parsed.sourdoughProfiles = Array.isArray(parsed.sourdoughProfiles)

@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import type { DoughConfig, PizzaStyle } from "./types";
 export const styles: PizzaStyle[] = [
   {
@@ -263,16 +264,16 @@ export function recommendedExtras(styleId: string) {
  */
 export function recommendedFolds(styleId: string): { count: number; interval: number; reason: string } {
   const table: Record<string, [number, string]> = {
-    contemporanea: [3, "l’alta idratazione ha bisogno di struttura per un cornicione arioso"],
-    teglia: [4, "l’impasto molto idratato prende forza solo con le pieghe"],
-    pala: [4, "con idratazioni così alte le pieghe sostituiscono buona parte dell’impastamento"],
-    pinsa: [4, "l’impasto è molto fluido e va rinforzato più volte"],
-    detroit: [2, "due pieghe aiutano a ottenere una mollica alta e regolare"],
-    focaccia: [2, "due pieghe danno sviluppo e alveoli più uniformi"],
-    "focaccia-barese": [2, "con tanta acqua e semola, due pieghe rendono la massa più facile da allargare in teglia"],
-    sfincione: [2, "un paio di pieghe rendono l’impasto più facile da stendere in teglia"],
+    contemporanea: [3, msg("l’alta idratazione ha bisogno di struttura per un cornicione arioso")],
+    teglia: [4, msg("l’impasto molto idratato prende forza solo con le pieghe")],
+    pala: [4, msg("con idratazioni così alte le pieghe sostituiscono buona parte dell’impastamento")],
+    pinsa: [4, msg("l’impasto è molto fluido e va rinforzato più volte")],
+    detroit: [2, msg("due pieghe aiutano a ottenere una mollica alta e regolare")],
+    focaccia: [2, msg("due pieghe danno sviluppo e alveoli più uniformi")],
+    "focaccia-barese": [2, msg("con tanta acqua e semola, due pieghe rendono la massa più facile da allargare in teglia")],
+    sfincione: [2, msg("un paio di pieghe rendono l’impasto più facile da stendere in teglia")],
   };
-  const [count, reason] = table[styleId] ?? [0, "l’impasto è abbastanza sostenuto: basta impastarlo bene"];
+  const [count, reason] = table[styleId] ?? [0, msg("l’impasto è abbastanza sostenuto: basta impastarlo bene")];
   return { count, interval: 30, reason };
 }
 

@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import type { Stage } from "../domain/types";
 
 export interface CalendarEvent {
@@ -65,7 +66,7 @@ export function stagesToEvents(recipeId: string, recipeName: string, stages: Sta
       const until = new Date(stage.until).getTime();
       return {
         uid: `${recipeId}-${stage.id}@pizzalab`,
-        title: `PizzaLab · ${stage.title}`,
+        title: t("PizzaLab · {title}", { title: stage.title }),
         description: `${recipeName}\n${stage.detail}`,
         start,
         end: new Date(Math.max(start.getTime() + 5 * 60000, Number.isFinite(until) ? Math.min(until, start.getTime() + 60 * 60000) : 0)),

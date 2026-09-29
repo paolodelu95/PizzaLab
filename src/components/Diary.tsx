@@ -1,3 +1,4 @@
+import { locale, t, tn, msg } from "../i18n";
 import { useState } from "react";
 import {
   ArrowRight,
@@ -33,35 +34,35 @@ import { SupportCard } from "./SupportCard";
 
 export type DiaryView = RecipeStatus;
 
-const fmt = (n: number, digits = 0) => n.toLocaleString("it-IT", { maximumFractionDigits: digits });
+const fmt = (n: number, digits = 0) => n.toLocaleString(locale(), { maximumFractionDigits: digits });
 const dateLabel = (s: string) =>
-  new Date(s).toLocaleString("it-IT", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  new Date(s).toLocaleString(locale(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const dayLabel = (s: string) =>
-  new Date(s).toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" });
+  new Date(s).toLocaleDateString(locale(), { day: "numeric", month: "short", year: "numeric" });
 
 const views: { id: DiaryView; label: string; empty: [string, string] }[] = [
   {
     id: "active",
-    label: "In corso",
+    label: msg("In corso"),
     empty: [
-      "Nessun impasto in corso",
-      "Dal riepilogo o da una pizza salvata premi «Programma» (o «Inizia ora» se è già l’ora): qui troverai fasi, notifiche, bilancia e guida passo passo.",
+      msg("Nessun impasto in corso"),
+      msg("Dal riepilogo o da una pizza salvata premi «Programma» (o «Inizia ora» se è già l’ora): qui troverai fasi, notifiche, bilancia e guida passo passo."),
     ],
   },
   {
     id: "saved",
-    label: "Salvate",
+    label: msg("Salvate"),
     empty: [
-      "Nessuna pizza salvata",
-      "Nel quarto passaggio del tuo impasto scegli «Salva per dopo»: la ritrovi qui, pronta da iniziare quando vuoi.",
+      msg("Nessuna pizza salvata"),
+      msg("Nel quarto passaggio del tuo impasto scegli «Salva per dopo»: la ritrovi qui, pronta da iniziare quando vuoi."),
     ],
   },
   {
     id: "past",
-    label: "Passate",
+    label: msg("Passate"),
     empty: [
-      "Ancora nessuna pizza sfornata",
-      "Quando concludi un impasto in corso finisce qui: potrai dare un voto, annotare cosa cambiare e tarare il forno.",
+      msg("Ancora nessuna pizza sfornata"),
+      msg("Quando concludi un impasto in corso finisce qui: potrai dare un voto, annotare cosa cambiare e tarare il forno."),
     ],
   },
 ];
@@ -104,9 +105,9 @@ export function Diary(props: Props) {
     <>
       <div className="page-heading diary-heading">
         <div>
-          <span className="eyebrow">Ogni impasto insegna qualcosa</span>
-          <h1>Il tuo diario di pizza.</h1>
-          <p>Le pizze in lavorazione, quelle salvate per dopo e quelle già sfornate, ognuna al suo posto.</p>
+          <span className="eyebrow">{t("Ogni impasto insegna qualcosa")}</span>
+          <h1>{t("Il tuo diario di pizza.")}</h1>
+          <p>{t("Le pizze in lavorazione, quelle salvate per dopo e quelle già sfornate, ognuna al suo posto.")}</p>
         </div>
         <div className="heading-illustration" aria-hidden="true">
           <Notebook weight="duotone" />
@@ -114,11 +115,11 @@ export function Diary(props: Props) {
       </div>
       <div className="heading-actions page-tools-row diary-tools">
         <button className="button primary" onClick={props.onNew}>
-          Nuovo impasto <ArrowRight />
+          {t("Nuovo impasto")} <ArrowRight />
         </button>
       </div>
 
-      <div className="diary-tabs" role="tablist" aria-label="Sezioni del diario">
+      <div className="diary-tabs" role="tablist" aria-label={t("Sezioni del diario")}>
         {views.map((item) => (
           <button
             key={item.id}
@@ -130,7 +131,7 @@ export function Diary(props: Props) {
             onClick={() => onViewChange(item.id)}
           >
             {item.id === "active" && grouped.active.length > 0 && <span className="live-dot" aria-hidden="true" />}
-            {item.label}
+            {t(item.label)}
             <span className="tab-count">{grouped[item.id].length}</span>
           </button>
         ))}
@@ -140,10 +141,10 @@ export function Diary(props: Props) {
         {grouped[view].length === 0 ? (
           <div className="empty-state">
             {view === "past" ? <FlagCheckered size={48} weight="duotone" /> : view === "saved" ? <CalendarBlank size={48} weight="duotone" /> : <Notebook size={48} weight="duotone" />}
-            <h2>{recipes.length === 0 ? "La prima pagina è tutta tua." : current.empty[0]}</h2>
-            <p>{recipes.length === 0 ? "Progetta un impasto, poi nel riepilogo scegli se iniziarlo subito o salvarlo per dopo." : current.empty[1]}</p>
+            <h2>{recipes.length === 0 ? t("La prima pagina è tutta tua.") : t(current.empty[0])}</h2>
+            <p>{recipes.length === 0 ? t("Progetta un impasto, poi nel riepilogo scegli se iniziarlo subito o salvarlo per dopo.") : t(current.empty[1])}</p>
             <button className="button primary" onClick={props.onNew}>
-              {recipes.length === 0 ? "Prepara il primo impasto" : "Progetta un nuovo impasto"} <ArrowRight />
+              {recipes.length === 0 ? t("Prepara il primo impasto") : t("Progetta un nuovo impasto")} <ArrowRight />
             </button>
           </div>
         ) : view === "active" ? (
@@ -179,13 +180,13 @@ function CardHeader({ recipe, eyebrow, meta, onEdit, onDelete }: { recipe: Recip
       </div>
       <button
         className={`icon-button favorite-button ${recipe.favorite ? "selected" : ""}`}
-        aria-label={`${recipe.favorite ? "Rimuovi dai" : "Aggiungi ai"} preferiti ${recipe.name}`}
+        aria-label={recipe.favorite ? t("Rimuovi dai preferiti {name}", { name: recipe.name }) : t("Aggiungi ai preferiti {name}", { name: recipe.name })}
         aria-pressed={Boolean(recipe.favorite)}
         onClick={() => onEdit(recipe.id, { favorite: !recipe.favorite })}
       >
         <Star weight={recipe.favorite ? "fill" : "regular"} />
       </button>
-      <button className="icon-button" aria-label={`Elimina ${recipe.name}`} onClick={() => onDelete(recipe.id)}>
+      <button className="icon-button" aria-label={t("Elimina {name}", { name: recipe.name })} onClick={() => onDelete(recipe.id)}>
         <Trash />
       </button>
     </div>
@@ -198,19 +199,20 @@ function Ingredients({ recipe, flours }: { recipe: Recipe; flours: Flour[] }) {
   const natural = ["sourdough", "licoli"].includes(recipe.config.yeast);
   return (
     <div className="journal-ingredients">
-      <strong>Farina totale {formatWeight(r.flour)}</strong>
+      <strong>{t("Farina totale")} {formatWeight(r.flour)}</strong>
       <br />
       <small>{r.flourBreakdown.map((item) => `${item.name}: ${formatWeight(item.grams)} (${fmt(item.percent, 1)}%)`).join(" · ")}</small>
       <br />
-      Acqua {formatWeight(r.water)} · Sale {formatWeight(r.salt, 1)} · {yeastLabel(recipe.config.yeast)} {formatWeight(r.yeast, natural ? 0 : 2)}
-      {r.oil > 0 ? ` · Olio ${formatWeight(r.oil, 1)}` : ""}
+      {t("Acqua")} {formatWeight(r.water)} {t("· Sale")} {formatWeight(r.salt, 1)} · {yeastLabel(recipe.config.yeast)} {formatWeight(r.yeast, natural ? 0 : 2)}
+      {r.oil > 0 ? t(" · Olio {formatWeight}", { formatWeight: formatWeight(r.oil, 1) }) : ""}
     </div>
   );
 }
 
 const describe = (recipe: Recipe) => {
   const style = styles.find((item) => item.id === recipe.config.styleId);
-  return `${style?.name ?? "Pizza"} · ${recipe.config.count} ${style?.pan ? "teglie" : "pizze"} · ${recipe.config.hydration}% di acqua`;
+  const count = style?.pan ? tn(recipe.config.count, "{count} teglia", "{count} teglie") : tn(recipe.config.count, "{count} pizza", "{count} pizze");
+  return `${t(style?.name ?? "Pizza")} · ${count} · ${t("{hydration}% di acqua", { hydration: recipe.config.hydration })}`;
 };
 
 function StagesList({ stages, completed }: { stages: Stage[]; completed: string[] }) {
@@ -239,8 +241,8 @@ function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFin
     <article className="journal-card active-recipe">
       <CardHeader
         recipe={recipe}
-        eyebrow={scheduled ? `Programmata · parte ${stages[0] ? dateLabel(stages[0].at) : ""}` : "In corso"}
-        meta={`Infornata ${dateLabel(recipe.config.bakeAt)} · ${describe(recipe)}`}
+        eyebrow={scheduled ? t("Programmata · parte {v}", { v: stages[0] ? dateLabel(stages[0].at) : "" }) : t("In corso")}
+        meta={t("Infornata {dateLabel} · {describe}", { dateLabel: dateLabel(recipe.config.bakeAt), describe: describe(recipe) })}
         onEdit={onEdit}
         onDelete={onDelete}
       />
@@ -248,11 +250,11 @@ function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFin
         <div className="calendar-card">
           <CalendarPlus weight="duotone" />
           <div>
-            <strong>Avvisi a ogni fase</strong>
-            <p>Su iPhone e nel browser gli avvisi arrivano dal Calendario del telefono, anche ad app chiusa: aggiungi le fasi una volta sola.</p>
+            <strong>{t("Avvisi a ogni fase")}</strong>
+            <p>{t("Su iPhone e nel browser gli avvisi arrivano dal Calendario del telefono, anche ad app chiusa: aggiungi le fasi una volta sola.")}</p>
           </div>
           <button className="button primary" onClick={() => onCalendar(recipe)}>
-            <CalendarPlus /> Aggiungi al calendario
+            <CalendarPlus /> {t("Aggiungi al calendario")}
           </button>
         </div>
       )}
@@ -262,42 +264,42 @@ function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFin
         onEdit={(patch) => onEdit(recipe.id, patch)}
         onMessage={onMessage}
         tools={
-          <div className="recipe-tools" aria-label="Strumenti per preparare l’impasto">
+          <div className="recipe-tools" aria-label={t("Strumenti per preparare l’impasto")}>
             <button className="tool-button" onClick={() => onTool("scale")}>
               <Scale weight="duotone" />
-              <span><strong>Pesa</strong><small>Un ingrediente alla volta</small></span>
+              <span><strong>{t("Pesa")}</strong><small>{t("Un ingrediente alla volta")}</small></span>
             </button>
             <button className="tool-button" onClick={() => onTool("guide")}>
               <Play weight="duotone" />
-              <span><strong>Guida</strong><small>Fase per fase, con timer</small></span>
+              <span><strong>{t("Guida")}</strong><small>{t("Fase per fase, con timer")}</small></span>
             </button>
           </div>
         }
       />
       <details>
-        <summary><span>Dosi della ricetta</span></summary>
+        <summary><span>{t("Dosi della ricetta")}</span></summary>
         <Ingredients recipe={recipe} flours={flours} />
       </details>
       {baked && (
         <div className="notice finish-notice">
           <FlagCheckered />
           <div>
-            <strong>È il momento di infornare</strong>
-            <p>Quando la pizza è sfornata, concludi l’impasto: potrai dare un voto e tarare il forno.</p>
+            <strong>{t("È il momento di infornare")}</strong>
+            <p>{t("Quando la pizza è sfornata, concludi l’impasto: potrai dare un voto e tarare il forno.")}</p>
           </div>
         </div>
       )}
       <div className="journal-actions">
         {!scheduled && (
           <button className="button primary" onClick={() => onFinish(recipe)}>
-            <FlagCheckered /> Pizza sfornata: concludi
+            <FlagCheckered /> {t("Pizza sfornata: concludi")}
           </button>
         )}
         <button className="button secondary" disabled={busy} onClick={() => onStop()}>
-          <BellSlash /> {scheduled ? "Annulla la programmazione" : "Interrompi e salva per dopo"}
+          <BellSlash /> {scheduled ? t("Annulla la programmazione") : t("Interrompi e salva per dopo")}
         </button>
         <button className="button secondary" onClick={() => onShare(recipe)}>
-          <ShareNetwork /> Condividi
+          <ShareNetwork /> {t("Condividi")}
         </button>
       </div>
     </article>
@@ -309,67 +311,67 @@ function SavedCard({ recipe, activeRecipe, flours, now, busy, onEdit, onDelete, 
   const timing = startTiming(stages, recipe.config.bakeAt, now);
   const eyebrow =
     timing === "expired"
-      ? "Da riprogrammare"
+      ? t("Da riprogrammare")
       : timing === "late"
-        ? "Orario di inizio passato"
+        ? t("Orario di inizio passato")
         : recipe.startedAt
-          ? "Interrotta"
-          : "Salvata";
+          ? t("Interrotta")
+          : t("Salvata");
   return (
     <article className={`journal-card saved-recipe ${timing === "expired" || timing === "late" ? "needs-reschedule" : ""}`}>
-      <CardHeader recipe={recipe} eyebrow={eyebrow} meta={`Infornata ${dateLabel(recipe.config.bakeAt)} · ${describe(recipe)}`} onEdit={onEdit} onDelete={onDelete} />
+      <CardHeader recipe={recipe} eyebrow={eyebrow} meta={t("Infornata {dateLabel} · {describe}", { dateLabel: dateLabel(recipe.config.bakeAt), describe: describe(recipe) })} onEdit={onEdit} onDelete={onDelete} />
       {stages[0] && (
         <div className={`plan-window ${timing === "expired" || timing === "late" ? "is-late" : ""}`}>
           <CalendarBlank />
           <div>
             <span>
-              {timing === "future" ? "Si comincia" : timing === "now" ? "Si comincia adesso" : "Doveva cominciare"}
+              {timing === "future" ? t("Si comincia") : timing === "now" ? t("Si comincia adesso") : t("Doveva cominciare")}
             </span>
             <strong>{dateLabel(stages[0].at)}</strong>
-            {timing === "late" && <small>Puoi partire adesso spostando la cena, oppure mantenerla e ricalcolare lievito e tempi.</small>}
-            {timing === "expired" && <small>Anche l’orario di cottura è passato: scegli una nuova data per riprendere questa pizza.</small>}
+            {timing === "late" && <small>{t("Puoi partire adesso spostando la cena, oppure mantenerla e ricalcolare lievito e tempi.")}</small>}
+            {timing === "expired" && <small>{t("Anche l’orario di cottura è passato: scegli una nuova data per riprendere questa pizza.")}</small>}
           </div>
         </div>
       )}
       <Ingredients recipe={recipe} flours={flours} />
       {timing !== "expired" && activeRecipe && (
         <p className="small-muted replace-note">
-          <Warning /> Hai già «{activeRecipe.name}» in corso: {timing === "future" ? "programmando" : "iniziando"} questa, l’altra tornerà tra le salvate.
+          <Warning /> {t("Hai già «{name}» in corso: {action} questa, l’altra tornerà tra le salvate.", { name: activeRecipe.name, action: timing === "future" ? t("programmando") : t("iniziando") })}
         </p>
       )}
       <div className="journal-actions">
         {timing === "future" && (
           <button className="button primary" disabled={busy} onClick={() => onStart(recipe)}>
-            <CalendarCheck /> Programma
+            <CalendarCheck /> {t("Programma")}
           </button>
         )}
         {timing === "now" && (
           <button className="button primary" disabled={busy} onClick={() => onStart(recipe)}>
-            <Bell /> Inizia ora
+            <Bell /> {t("Inizia ora")}
           </button>
         )}
         {timing === "late" && (
           <button className="button primary" disabled={busy} onClick={() => onLateStart(recipe)}>
-            <Clock /> Parti adesso
+            <Clock /> {t("Parti adesso")}
           </button>
         )}
         {timing === "expired" && (
           <button className="button primary" onClick={() => onOpenInPlanner(recipe, "reschedule")}>
-            <CalendarBlank /> Riprogramma
+            <CalendarBlank /> {t("Riprogramma")}
           </button>
         )}
         <button className="button secondary" onClick={() => onOpenInPlanner(recipe, "edit")}>
-          <PencilSimple /> Modifica
+          <PencilSimple /> {t("Modifica")}
         </button>
         <button className="button secondary" onClick={() => onShare(recipe)}>
-          <ShareNetwork /> Condividi
+          <ShareNetwork /> {t("Condividi")}
         </button>
       </div>
       {timing === "future" && (
-        <p className="small-muted schedule-note">«Programma» attiva le notifiche: la pizza partirà da sola all’orario impostato.</p>
+        <p className="small-muted schedule-note">{t("«Programma» attiva le notifiche: la pizza partirà da sola all’orario impostato.")}</p>
       )}
       <details>
-        <summary><span>Consulta le fasi pianificate</span></summary>
+        <summary><span>{t("Consulta le fasi pianificate")}</span></summary>
         <StagesList stages={stages} completed={recipe.completedStages} />
       </details>
     </article>
@@ -380,19 +382,19 @@ function PastCard({ recipe, flours, calibrations, onEdit, onDelete, onOpenInPlan
   const calibration = calibrations.find((item) => item.id === recipe.calibrationId);
   return (
     <article className="journal-card past-recipe">
-      <CardHeader recipe={recipe} eyebrow={`Sfornata il ${dayLabel(recipe.finishedAt ?? recipe.config.bakeAt)}`} meta={describe(recipe)} onEdit={onEdit} onDelete={onDelete} />
+      <CardHeader recipe={recipe} eyebrow={t("Sfornata il {dayLabel}", { dayLabel: dayLabel(recipe.finishedAt ?? recipe.config.bakeAt) })} meta={describe(recipe)} onEdit={onEdit} onDelete={onDelete} />
       <RecipeOutcome recipe={recipe} onEdit={(patch) => onEdit(recipe.id, patch)} />
       <OvenCalibration recipe={recipe} calibration={calibration} onSave={(item) => onSaveCalibration(recipe, item)} />
       <details>
-        <summary><span>Dosi usate</span></summary>
+        <summary><span>{t("Dosi usate")}</span></summary>
         <Ingredients recipe={recipe} flours={flours} />
       </details>
       <div className="journal-actions">
         <button className="button secondary" onClick={() => onOpenInPlanner(recipe, "copy")}>
-          <ClockCounterClockwise /> Rifai questa pizza
+          <ClockCounterClockwise /> {t("Rifai questa pizza")}
         </button>
         <button className="button secondary" onClick={() => onShare(recipe)}>
-          <ShareNetwork /> Condividi
+          <ShareNetwork /> {t("Condividi")}
         </button>
       </div>
     </article>
@@ -403,18 +405,18 @@ function RecipeOutcome({ recipe, onEdit }: { recipe: Recipe; onEdit: (patch: Par
   return (
     <div className="recipe-outcome-fields">
       <div className="recipe-review">
-        <span>Com’è venuta?</span>
+        <span>{t("Com’è venuta?")}</span>
         <div className="stars">
           {[1, 2, 3, 4, 5].map((n) => (
-            <button key={n} aria-label={`${n} stelle per ${recipe.name}`} aria-pressed={recipe.rating === n} onClick={() => onEdit({ rating: recipe.rating === n ? 0 : n })}>
+            <button key={n} aria-label={t("{n} stelle per {name}", { n, name: recipe.name })} aria-pressed={recipe.rating === n} onClick={() => onEdit({ rating: recipe.rating === n ? 0 : n })}>
               <Star weight={recipe.rating >= n ? "fill" : "regular"} />
             </button>
           ))}
         </div>
       </div>
       <label className="field">
-        Appunti per la prossima volta
-        <textarea rows={3} maxLength={4000} placeholder="Com’era l’impasto? Cosa cambieresti?" value={recipe.notes} onChange={(event) => onEdit({ notes: event.target.value })} />
+        {t("Appunti per la prossima volta")}
+        <textarea rows={3} maxLength={4000} placeholder={t("Com’era l’impasto? Cosa cambieresti?")} value={recipe.notes} onChange={(event) => onEdit({ notes: event.target.value })} />
       </label>
     </div>
   );
