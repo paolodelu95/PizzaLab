@@ -806,3 +806,25 @@ h3 {
   content: none;
   display: none;
 }
+
+/* ---------- Bersagli comodi: l’area toccabile è più grande del segno ---------- */
+.help-tip,
+.flour-main h3 .text-button,
+.text-button.inline-link {
+  position: relative;
+}
+.help-tip::before,
+.text-button.inline-link::before {
+  content: "";
+  position: absolute;
+  inset: -11px;
+}
+.flour-main h3 .text-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  text-align: left;
+}
+.flour-main h3 {
+  margin-block: -8px;
+}
