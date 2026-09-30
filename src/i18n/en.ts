@@ -490,7 +490,6 @@ export const en: Record<string, string> = {
   "Acqua": "Water",
   "Madre": "Starter",
   "Sale": "Salt",
-  "Vai al riepilogo della ricetta": "Go to the recipe summary",
   "Fasi di progettazione": "Design steps",
   "Controlla questi valori": "Check these values",
   "La base giusta": "The right base",
@@ -1675,4 +1674,7 @@ export const en: Record<string, string> = {
   "{count} pizza salvata": "{count} saved pizza",
   "{count} pizze salvate": "{count} saved pizzas",
   "Pronte da programmare quando vuoi.": "Ready to schedule whenever you like.",
+  "Regolazioni avanzate": "Advanced settings",
+  "Metodo, autolisi, pieghe, temperatura dell’acqua e profilo dell’impasto": "Method, autolyse, folds, water temperature and dough profile",
+  "Dose del lievito: automatica, in grammi interi o in percentuale": "Yeast amount: automatic, whole grams or percentage",
 };

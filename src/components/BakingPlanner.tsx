@@ -52,6 +52,25 @@ export function BakingPlanner({
   const commitTimer = useRef<number | undefined>(undefined);
   useEffect(() => setMinutes(c.bakeMinutes), [c.bakeMinutes]);
   useEffect(() => () => window.clearTimeout(commitTimer.current), []);
+  // Il fondo scala del cursore resta fermo mentre il dito trascina: se seguisse il valore, si allargherebbe a ogni passo fino a 60 minuti.
+  const [scaleAnchor, setScaleAnchor] = useState(c.bakeMinutes);
+  const dragging = useRef(false);
+  const latestMinutes = useRef(minutes);
+  latestMinutes.current = minutes;
+  useEffect(() => {
+    if (!dragging.current) setScaleAnchor(minutes);
+  }, [minutes]);
+  const startDrag = () => {
+    dragging.current = true;
+    const end = () => {
+      dragging.current = false;
+      setScaleAnchor(latestMinutes.current);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+    };
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+  };
   const changeMinutes = (value: number) => {
     const next = Math.max(0.5, Math.min(60, value));
     setMinutes(next);
@@ -81,7 +100,7 @@ export function BakingPlanner({
   // Il grafico si concentra attorno alla finestra utile, così le curve non restano schiacciate a sinistra.
   const chartMax =
     Math.ceil(
-      Math.max(fast ? 4 : c.ovenTemp >= 280 ? 8 : 16, outcome.recommendedMax * 1.7, minutes * 1.25) / step,
+      Math.max(fast ? 4 : c.ovenTemp >= 280 ? 8 : 16, outcome.recommendedMax * 1.7, scaleAnchor * 1.25) / step,
     ) * step;
   const W = 320;
   const H = 190;
@@ -188,7 +207,7 @@ export function BakingPlanner({
             <small className="window-legend"><i /> {t("tempi consigliati")}</small>
           </div>
         </div>
-        <div className="prediction-time-control">
+        <div className="prediction-time-control" onPointerDown={startDrag}>
           <SliderField label={t("Tempo di cottura")} value={minutes} onChange={changeMinutes} min={0.5} max={60} sliderMax={chartMax} step={step} unit="min" />
         </div>
         <div className="prediction-results">

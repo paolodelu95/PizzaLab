@@ -25,14 +25,14 @@ async function startNowFromSummary(page: import("@playwright/test").Page) {
 test.beforeEach(async ({ page }, testInfo) => {
   if (testInfo.title.includes("tutorial")) return;
   await page.addInitScript(() =>
-    localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"),
+    (localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"), localStorage.setItem("pizzalab-adjustments-open", "1")),
   );
 });
 test("first launch shows a short tutorial that can be skipped and replayed", async ({ page }) => {
   await page.goto("/#nuova");
   const dialog = page.getByRole("dialog", { name: "Il tuo laboratorio della pizza" });
   await expect(dialog).toBeVisible();
-  await page.getByRole("button", { name: "Avanti" }).click();
+  await dialog.getByRole("button", { name: "Avanti" }).click();
   await expect(page.getByRole("heading", { name: "Scegli lo stile, poi 4 passaggi" })).toBeVisible();
   await page.getByRole("button", { name: "Salta" }).click();
   await expect(page.locator(".onboarding")).toHaveCount(0);
@@ -310,9 +310,26 @@ test("searches generic flours and compensates an integer yeast dose", async ({
   await expect(page.getByText("STIMA AUTOMATICA")).toBeVisible();
   await expect(page.getByText(/userai 2 g/)).toBeVisible();
   await page.getByRole("button", { name: "Applica tempi compensati" }).click();
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
   await expect(
     page.getByText("Dose realmente pesabile", { exact: true }),
   ).toBeVisible();
+});
+test("dragging the baking time to the end of the slider does not run away to 60 minutes", async ({ page }) => {
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: /^3 Cottura/ }).click();
+  const slider = page.getByLabel("Tempo di cottura: cursore");
+  await slider.scrollIntoViewIfNeeded();
+  const box = (await slider.boundingBox())!;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + box.width / 2, y);
+  await page.mouse.down();
+  for (let i = 0; i < 12; i++) {
+    await page.mouse.move(box.x + box.width - 2, y + (i % 2));
+    await page.waitForTimeout(180);
+  }
+  await page.mouse.up();
+  expect(Number(await page.getByLabel("Tempo di cottura", { exact: true }).inputValue())).toBeLessThan(40);
 });
 test("predicts crust, crumb and base from the baking setup", async ({ page }) => {
   await page.goto("/#nuova");
@@ -698,7 +715,7 @@ test("on iPhone the web app explains how to add it to the home screen", async ({
     hasTouch: true,
     isMobile: true,
   });
-  await context.addInitScript(() => localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"));
+  await context.addInitScript(() => (localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"), localStorage.setItem("pizzalab-adjustments-open", "1")));
   const page = await context.newPage();
   await page.goto("/");
   const prompt = page.getByRole("region", { name: "Installa PizzaLab sul telefono" });
@@ -858,7 +875,7 @@ test("narrow phones never scroll sideways, even with a dough in progress", async
   ] as const) {
     for (const width of [320, 360]) {
       const context = await browser.newContext({ viewport: { width, height: 760 }, locale });
-      await context.addInitScript(() => localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"));
+      await context.addInitScript(() => (localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"), localStorage.setItem("pizzalab-adjustments-open", "1")));
       const page = await context.newPage();
       await page.goto("/#nuova");
       await page.getByRole("button", { name: plan }).click();

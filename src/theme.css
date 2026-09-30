@@ -181,12 +181,14 @@ h3 {
 .app-nav {
   background: color-mix(in srgb, var(--surface) 94%, transparent);
 }
-.nav-guida {
-  display: grid !important;
-}
-.app-nav-items {
-  grid-template-columns: 1fr 1fr 72px 1fr 1fr;
-  align-items: start;
+@media (max-width: 599px) {
+  .nav-guida {
+    display: grid !important;
+  }
+  .app-nav-items {
+    grid-template-columns: 1fr 1fr 72px 1fr 1fr;
+    align-items: start;
+  }
 }
 .nav-item.active .nav-icon {
   background: transparent;
@@ -596,4 +598,211 @@ h3 {
 .journal-card.active-recipe {
   border: 0;
   box-shadow: none;
+}
+
+/* ==========================================================================
+   Tappa 2 · gerarchia dentro i passaggi
+   ========================================================================== */
+
+/* Stili con foto anche su tablet e desktop: schede, non righe con icona. */
+@media (min-width: 600px) {
+  .style-options {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .style-option {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    align-content: end;
+    min-height: 150px;
+    padding: 0 12px 12px;
+  }
+  .style-option strong,
+  .style-option small {
+    align-self: auto;
+  }
+  .style-option .style-check {
+    top: 10px;
+    transform: none;
+  }
+}
+/* Barra laterale larga: il «+» mostra solo l’etichetta estesa. */
+@media (min-width: 1280px) {
+  .nav-item.nav-impasto .nav-label-short {
+    display: none !important;
+  }
+}
+
+/* Regolazioni avanzate: chiuse finché non servono. */
+.adjustments {
+  border-radius: var(--r-xl);
+  background: var(--surface);
+}
+.adjustments > summary {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+.adjustments > summary::-webkit-details-marker {
+  display: none;
+}
+.adjustments-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.adjustments summary strong {
+  display: block;
+  font-size: 16px;
+}
+.adjustments summary small {
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.35;
+  display: block;
+}
+.adjustments-caret {
+  color: var(--ink-3);
+  transition: transform 0.2s var(--ease);
+}
+.adjustments[open] .adjustments-caret {
+  transform: rotate(180deg);
+}
+.adjustments-body {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+}
+.adjustments-body > .panel {
+  background: transparent;
+  border-radius: 0;
+}
+
+/* Nei passaggi restano solo gli avvisi veri; consigli di stile e note vanno nel riepilogo. */
+.advice-section.compact .section-title,
+.advice-section.compact .style-tip,
+.advice-section.compact .bake-note {
+  display: none;
+}
+
+/* Barra in basso: dosi a sinistra, l’azione principale a destra. */
+.mobile-dose button {
+  min-width: 108px;
+  justify-content: center;
+}
+
+/* Riepilogo: prima i numeri da pesare e il pulsante per partire, poi il resto. */
+@media (max-width: 1023px) {
+  .planner-grid.is-summary .recipe-sidebar {
+    order: -1;
+  }
+}
+.recipe-sheet {
+  border: 0;
+  box-shadow: none;
+}
+.recipe-title h2 {
+  font-size: 30px;
+}
+.flour-total > strong {
+  font-size: 40px;
+  line-height: 1;
+}
+.ingredients > div {
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  border-radius: 0;
+}
+.ingredients > div:last-child {
+  border-bottom: 0;
+}
+.ingredients span {
+  font-size: 15.5px;
+  color: var(--ink-2);
+}
+.final-save-panel .final-start-button {
+  min-height: 56px;
+  font-size: 17px;
+}
+
+/* ---------- Tappa 2: gerarchia delle pagine secondarie ----------
+   Il titolo orienta, non vende: resta piccolo e lascia la prima schermata
+   all’azione principale della pagina (cercare, leggere, compilare). */
+.page-heading:not(.create-heading) {
+  margin-bottom: 14px;
+  align-items: center;
+}
+.page-heading:not(.create-heading) .eyebrow,
+.page-heading:not(.create-heading) .heading-illustration {
+  display: none;
+}
+.page-heading:not(.create-heading) h1 {
+  font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.1rem);
+  line-height: 1.1;
+}
+.page-heading:not(.create-heading) p {
+  margin-top: 4px;
+  font-size: 0.95rem;
+}
+.results-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+  margin: 10px 0 14px;
+}
+.results-bar .results-count {
+  margin: 0;
+}
+.button.small {
+  min-height: 44px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+}
+/* La scelta è l’azione della scheda: piena, non di contorno. */
+.flour-row .use-flour:not(.selected):not(:disabled) {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.flour-list + .catalog-intro,
+.empty-state + .catalog-intro {
+  margin-top: 20px;
+  background: transparent;
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.1));
+}
+.journal-list > .empty-state {
+  max-width: none;
+}
+.page-heading:not(.create-heading) {
+  min-height: 0;
+  padding-bottom: 0;
+}
+/* «Nuova pizza» resta piena anche quando è la pagina aperta: è sempre l’azione principale. */
+@media (min-width: 1280px) {
+  .nav-item.nav-impasto.active {
+    background: var(--brand-strong);
+    color: var(--on-brand);
+  }
+  .nav-item.nav-impasto.active .nav-icon {
+    background: transparent;
+    color: var(--on-brand);
+  }
+}
+/* Le regolazioni hanno già la loro freccia: niente secondo indicatore. */
+.adjustments > summary::after {
+  content: none;
+  display: none;
 }

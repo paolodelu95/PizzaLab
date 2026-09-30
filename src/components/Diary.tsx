@@ -113,11 +113,13 @@ export function Diary(props: Props) {
           <Notebook weight="duotone" />
         </div>
       </div>
-      <div className="heading-actions page-tools-row diary-tools">
-        <button className="button secondary" onClick={props.onNew}>
-          {t("Nuovo impasto")} <ArrowRight />
-        </button>
-      </div>
+      {recipes.length > 0 && (
+        <div className="heading-actions page-tools-row diary-tools">
+          <button className="button secondary" onClick={props.onNew}>
+            {t("Nuovo impasto")} <ArrowRight />
+          </button>
+        </div>
+      )}
 
       <div className="diary-tabs" role="tablist" aria-label={t("Sezioni del diario")}>
         {views.map((item) => (
@@ -143,7 +145,7 @@ export function Diary(props: Props) {
             {view === "past" ? <FlagCheckered size={48} weight="duotone" /> : view === "saved" ? <CalendarBlank size={48} weight="duotone" /> : <Notebook size={48} weight="duotone" />}
             <h2>{recipes.length === 0 ? t("La prima pagina è tutta tua.") : t(current.empty[0])}</h2>
             <p>{recipes.length === 0 ? t("Progetta un impasto, poi nel riepilogo scegli se iniziarlo subito o salvarlo per dopo.") : t(current.empty[1])}</p>
-            <button className="button secondary" onClick={props.onNew}>
+            <button className={`button ${recipes.length === 0 ? "primary" : "secondary"}`} onClick={props.onNew}>
               {recipes.length === 0 ? t("Prepara il primo impasto") : t("Progetta un nuovo impasto")} <ArrowRight />
             </button>
           </div>

@@ -97,6 +97,7 @@ import { formatTemp, formatWeight, normalizeUnits, setUnits, type Units } from "
 import { WeightValue } from "./components/WeightValue";
 import { FlourSuggestions } from "./components/FlourSuggestions";
 import { Home } from "./components/Home";
+import { Adjustments } from "./components/Adjustments";
 import { stylePhoto } from "./data/photos";
 import { normalizeLanguage } from "./i18n";
 import { markTutorialSeen, tutorialSeen } from "./services/tutorial";
@@ -107,7 +108,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.24.0";
+const APP_VERSION = "0.24.1";
 type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [
@@ -1070,6 +1071,8 @@ export default function App() {
           )}
           {tab === "impasto" && (
             <>
+              {plannerStage === "dough" && (
+                <>
               <div className="page-heading create-heading">
                 <div>
                   <span className="eyebrow">{editingId ? t("Modifica") : t("Nuova pizza")}</span>
@@ -1097,6 +1100,8 @@ export default function App() {
                   ))}
                 </div>
               </section>
+                </>
+              )}
               {result.ok && plannerStage !== "summary" && (
                 <div
                   className="mobile-dose"
@@ -1127,10 +1132,9 @@ export default function App() {
                     </strong>
                   </div>
                   <button
-                    aria-label={t("Vai al riepilogo della ricetta")}
-                    onClick={() => goToPlannerStage("summary")}
+                    onClick={() => goToPlannerStage(plannerStage === "dough" ? "fermentation" : plannerStage === "fermentation" ? "baking" : "summary")}
                   >
-                    <span>{t("Riepilogo")}</span>
+                    <span>{t("Avanti")}</span>
                     <ArrowRight weight="bold" />
                   </button>
                 </div>
@@ -1179,6 +1183,132 @@ export default function App() {
                           <p>{t("Farina e quantità, come piacciono a te.")}</p>
                         </div>
                       </div>
+                      <div className="field-grid quantity-fields">
+                        <Stepper
+                          label={isPan ? t("Numero di teglie") : t("Numero di pizze")}
+                          value={c.count}
+                          onChange={(v) => update("count", v)}
+                          min={1}
+                          max={30}
+                        />
+                        <div className="lead-options" role="group" aria-label={t("Per quante persone?")}>
+                          <span>{t("Per quante persone?")}</span>
+                          <div>
+                            {[2, 4, 6, 8, 10].map((people, index, all) => {
+                              // Nelle teglie più valori danno lo stesso numero (2 e 4 persone = 1 teglia): si accende solo il più alto.
+                              const chosen = c.count === countForPeople(people, isPan) && !all.slice(index + 1).some((other) => countForPeople(other, isPan) === c.count);
+                              return (
+                              <button
+                                key={people}
+                                className={chosen ? "selected" : ""}
+                                aria-pressed={chosen}
+                                onClick={() => update("count", countForPeople(people, isPan))}
+                              >
+                                {people}
+                              </button>
+                              );
+                            })}
+                          </div>
+                          <small>{isPan ? t("Circa 4 porzioni per teglia.") : t("Una pizza a testa.")}</small>
+                        </div>
+                        {!isPan && (
+                          <NumberField
+                            label={t("Peso del panetto")}
+                            value={c.ballWeight}
+                            onChange={(v) => update("ballWeight", v)}
+                            min={100}
+                            max={2000}
+                            step={10}
+                            quantity="weight"
+                            hint={t("Il peso di ogni pallina di impasto.")}
+                          />
+                        )}
+                      </div>
+                      {isPan && (state.userPans ?? []).length > 0 && (
+                        <div className="my-ovens-picker pan-picker">
+                          <span>{t("Le tue teglie")}</span>
+                          <div>
+                            {(state.userPans ?? []).map((pan) => (
+                              <button
+                                key={pan.id}
+                                className={isPanInUse(pan, c) ? "selected" : ""}
+                                aria-pressed={isPanInUse(pan, c)}
+                                onClick={() => usePan(pan)}
+                              >
+                                {pan.name} · {panSize(pan)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {isPan && (state.userPans ?? []).length === 0 && (
+                        <p className="small-muted pan-tip">
+                          {t("Hai più teglie? Salvale nel")} <button className="text-button inline-link" aria-label={t("Apri il profilo")} onClick={() => openTab("profilo")}>{t("Profilo")}</button> {t("e le sceglierai con un tocco.")}
+                        </p>
+                      )}
+                      {isPan && (
+                        <div className="method-toggle pan-shape-toggle" role="group" aria-label={t("Forma della teglia")}>
+                          <button
+                            className={c.panShape !== "round" ? "selected" : ""}
+                            aria-pressed={c.panShape !== "round"}
+                            onClick={() => update("panShape", "rect")}
+                          >
+                            <span className="shape-icon rect" aria-hidden="true" /> {t("Rettangolare")}
+                          </button>
+                          <button
+                            className={c.panShape === "round" ? "selected" : ""}
+                            aria-pressed={c.panShape === "round"}
+                            onClick={() => updateMany({ panShape: "round", pizzaDiameter: c.panDiameter })}
+                          >
+                            <span className="shape-icon round" aria-hidden="true" /> {t("Tonda")}
+                          </button>
+                        </div>
+                      )}
+                      {isPan && (
+                        <div className="field-grid">
+                          {c.panShape === "round" ? (
+                            <NumberField
+                              label={t("Diametro teglia")}
+                              value={c.panDiameter}
+                              onChange={(v) => update("panDiameter", v)}
+                              min={14}
+                              max={60}
+                              unit="cm"
+                              hint={t("Misurato sul fondo, da bordo interno a bordo interno.")}
+                            />
+                          ) : (
+                            <>
+                              <NumberField
+                                label={t("Larghezza teglia")}
+                                value={c.panWidth}
+                                onChange={(v) => update("panWidth", v)}
+                                min={10}
+                                max={80}
+                                unit="cm"
+                              />
+                              <NumberField
+                                label={t("Lunghezza teglia")}
+                                value={c.panLength}
+                                onChange={(v) => update("panLength", v)}
+                                min={10}
+                                max={100}
+                                unit="cm"
+                              />
+                            </>
+                          )}
+                          <NumberField
+                            label={t("Impasto per superficie")}
+                            help="superficie"
+                            value={c.panDensity}
+                            onChange={(v) => update("panDensity", v)}
+                            min={0.3}
+                            max={1}
+                            step={0.05}
+                            unit="g/cm²"
+                            hint={t("0,6 è un punto di partenza; aumenta per una pizza più alta.")}
+                          />
+                        </div>
+                      )}
                       <FlourPicker
                         label={t("La tua farina")}
                         value={c.flourId}
@@ -1338,132 +1468,6 @@ export default function App() {
                         />
                       </div>
                       </details>
-                      <div className="field-grid quantity-fields">
-                        <Stepper
-                          label={isPan ? t("Numero di teglie") : t("Numero di pizze")}
-                          value={c.count}
-                          onChange={(v) => update("count", v)}
-                          min={1}
-                          max={30}
-                        />
-                        <div className="lead-options" role="group" aria-label={t("Per quante persone?")}>
-                          <span>{t("Per quante persone?")}</span>
-                          <div>
-                            {[2, 4, 6, 8, 10].map((people, index, all) => {
-                              // Nelle teglie più valori danno lo stesso numero (2 e 4 persone = 1 teglia): si accende solo il più alto.
-                              const chosen = c.count === countForPeople(people, isPan) && !all.slice(index + 1).some((other) => countForPeople(other, isPan) === c.count);
-                              return (
-                              <button
-                                key={people}
-                                className={chosen ? "selected" : ""}
-                                aria-pressed={chosen}
-                                onClick={() => update("count", countForPeople(people, isPan))}
-                              >
-                                {people}
-                              </button>
-                              );
-                            })}
-                          </div>
-                          <small>{isPan ? t("Circa 4 porzioni per teglia.") : t("Una pizza a testa.")}</small>
-                        </div>
-                        {!isPan && (
-                          <NumberField
-                            label={t("Peso del panetto")}
-                            value={c.ballWeight}
-                            onChange={(v) => update("ballWeight", v)}
-                            min={100}
-                            max={2000}
-                            step={10}
-                            quantity="weight"
-                            hint={t("Il peso di ogni pallina di impasto.")}
-                          />
-                        )}
-                      </div>
-                      {isPan && (state.userPans ?? []).length > 0 && (
-                        <div className="my-ovens-picker pan-picker">
-                          <span>{t("Le tue teglie")}</span>
-                          <div>
-                            {(state.userPans ?? []).map((pan) => (
-                              <button
-                                key={pan.id}
-                                className={isPanInUse(pan, c) ? "selected" : ""}
-                                aria-pressed={isPanInUse(pan, c)}
-                                onClick={() => usePan(pan)}
-                              >
-                                {pan.name} · {panSize(pan)}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {isPan && (state.userPans ?? []).length === 0 && (
-                        <p className="small-muted pan-tip">
-                          {t("Hai più teglie? Salvale nel")} <button className="text-button inline-link" aria-label={t("Apri il profilo")} onClick={() => openTab("profilo")}>{t("Profilo")}</button> {t("e le sceglierai con un tocco.")}
-                        </p>
-                      )}
-                      {isPan && (
-                        <div className="method-toggle pan-shape-toggle" role="group" aria-label={t("Forma della teglia")}>
-                          <button
-                            className={c.panShape !== "round" ? "selected" : ""}
-                            aria-pressed={c.panShape !== "round"}
-                            onClick={() => update("panShape", "rect")}
-                          >
-                            <span className="shape-icon rect" aria-hidden="true" /> {t("Rettangolare")}
-                          </button>
-                          <button
-                            className={c.panShape === "round" ? "selected" : ""}
-                            aria-pressed={c.panShape === "round"}
-                            onClick={() => updateMany({ panShape: "round", pizzaDiameter: c.panDiameter })}
-                          >
-                            <span className="shape-icon round" aria-hidden="true" /> {t("Tonda")}
-                          </button>
-                        </div>
-                      )}
-                      {isPan && (
-                        <div className="field-grid">
-                          {c.panShape === "round" ? (
-                            <NumberField
-                              label={t("Diametro teglia")}
-                              value={c.panDiameter}
-                              onChange={(v) => update("panDiameter", v)}
-                              min={14}
-                              max={60}
-                              unit="cm"
-                              hint={t("Misurato sul fondo, da bordo interno a bordo interno.")}
-                            />
-                          ) : (
-                            <>
-                              <NumberField
-                                label={t("Larghezza teglia")}
-                                value={c.panWidth}
-                                onChange={(v) => update("panWidth", v)}
-                                min={10}
-                                max={80}
-                                unit="cm"
-                              />
-                              <NumberField
-                                label={t("Lunghezza teglia")}
-                                value={c.panLength}
-                                onChange={(v) => update("panLength", v)}
-                                min={10}
-                                max={100}
-                                unit="cm"
-                              />
-                            </>
-                          )}
-                          <NumberField
-                            label={t("Impasto per superficie")}
-                            help="superficie"
-                            value={c.panDensity}
-                            onChange={(v) => update("panDensity", v)}
-                            min={0.3}
-                            max={1}
-                            step={0.05}
-                            unit="g/cm²"
-                            hint={t("0,6 è un punto di partenza; aumenta per una pizza più alta.")}
-                          />
-                        </div>
-                      )}
                       <div className="hydration-field">
                         <SliderField
                           label={t("Idratazione")}
@@ -1580,6 +1584,58 @@ export default function App() {
                           )}
                         </div>
                       </details>
+                    </section>
+                  )}
+                  {plannerStage === "fermentation" && (
+                    <section className="panel">
+                      <div className="panel-title">
+                        <span className="section-icon">
+                          <Fire />
+                        </span>
+                        <div>
+                          <h2>{t("Quando si mangia?")}</h2>
+                          <p>{t("Da qui costruiamo la tua tabella di marcia.")}</p>
+                        </div>
+                      </div>
+                      {c.planMode !== "automatic" ? (
+                        <label className="field">
+                          {t("Giorno e ora della prima infornata")}
+                          <input
+                            type="datetime-local"
+                            value={c.bakeAt}
+                            onChange={(e) => update("bakeAt", e.target.value)}
+                          />
+                        </label>
+                      ) : (
+                        <div className="duration-result">
+                          <Sparkle />
+                          <div>
+                            <span>{t("PIANO AUTOMATICO")}</span>
+                            <strong>{dateLabel(c.startAt)} → {dateLabel(c.bakeAt)}</strong>
+                          </div>
+                        </div>
+                      )}
+                      {timeline[0] && (
+                        <div className={`plan-window ${startPast ? "is-late" : ""}`}>
+                          <Clock />
+                          <div>
+                            <span>{t("Inizi a impastare")}</span>
+                            <strong>{dateLabel(timeline[0].at)}</strong>
+                            <small>{t("La tabella di marcia completa è nel riepilogo (passaggio 4).")}</small>
+                          </div>
+                        </div>
+                      )}
+                      {startPast && (
+                        <div className="notice warning">
+                          <Warning />
+                          <div>
+                            <strong>{t("L’inizio del piano è già passato")}</strong>
+                            <p>
+                              {t("Sposta la cottura in avanti o riduci i tempi per poter seguire tutte le fasi.")}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </section>
                   )}
                   {plannerStage === "fermentation" && (
@@ -1803,18 +1859,19 @@ export default function App() {
                       )}
                     </section>
                   )}
-                  {result.ok && plannerStage !== "summary" && (
-                    <AdvancedPlanner
-                      config={c}
-                      flours={flours}
-                      result={result}
-                      section={plannerStage}
-                      onUpdate={updateMany}
-                      userOvens={state.userOvens}
-                    />
-                  )}
                   {result.ok && plannerStage === "dough" && (
-                    <DoughAnalysis config={c} result={result} />
+                    <Adjustments title={t("Regolazioni avanzate")} hint={t("Metodo, autolisi, pieghe, temperatura dell’acqua e profilo dell’impasto")}>
+                      <AdvancedPlanner config={c} flours={flours} result={result} section="dough" onUpdate={updateMany} userOvens={state.userOvens} />
+                      <DoughAnalysis config={c} result={result} />
+                    </Adjustments>
+                  )}
+                  {result.ok && plannerStage === "fermentation" && (
+                    <Adjustments title={t("Regolazioni avanzate")} hint={t("Dose del lievito: automatica, in grammi interi o in percentuale")}>
+                      <AdvancedPlanner config={c} flours={flours} result={result} section="fermentation" onUpdate={updateMany} userOvens={state.userOvens} />
+                    </Adjustments>
+                  )}
+                  {result.ok && plannerStage === "baking" && (
+                    <AdvancedPlanner config={c} flours={flours} result={result} section="baking" onUpdate={updateMany} userOvens={state.userOvens} />
                   )}
                   {plannerStage === "baking" && (
                     <BakingPlanner
@@ -1825,58 +1882,6 @@ export default function App() {
                       onUsePan={usePan}
                       onOpenProfile={() => openTab("profilo")}
                     />
-                  )}
-                  {plannerStage === "fermentation" && (
-                    <section className="panel">
-                      <div className="panel-title">
-                        <span className="section-icon">
-                          <Fire />
-                        </span>
-                        <div>
-                          <h2>{t("Quando si mangia?")}</h2>
-                          <p>{t("Da qui costruiamo la tua tabella di marcia.")}</p>
-                        </div>
-                      </div>
-                      {c.planMode !== "automatic" ? (
-                        <label className="field">
-                          {t("Giorno e ora della prima infornata")}
-                          <input
-                            type="datetime-local"
-                            value={c.bakeAt}
-                            onChange={(e) => update("bakeAt", e.target.value)}
-                          />
-                        </label>
-                      ) : (
-                        <div className="duration-result">
-                          <Sparkle />
-                          <div>
-                            <span>{t("PIANO AUTOMATICO")}</span>
-                            <strong>{dateLabel(c.startAt)} → {dateLabel(c.bakeAt)}</strong>
-                          </div>
-                        </div>
-                      )}
-                      {timeline[0] && (
-                        <div className={`plan-window ${startPast ? "is-late" : ""}`}>
-                          <Clock />
-                          <div>
-                            <span>{t("Inizi a impastare")}</span>
-                            <strong>{dateLabel(timeline[0].at)}</strong>
-                            <small>{t("La tabella di marcia completa è nel riepilogo (passaggio 4).")}</small>
-                          </div>
-                        </div>
-                      )}
-                      {startPast && (
-                        <div className="notice warning">
-                          <Warning />
-                          <div>
-                            <strong>{t("L’inizio del piano è già passato")}</strong>
-                            <p>
-                              {t("Sposta la cottura in avanti o riduci i tempi per poter seguire tutte le fasi.")}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </section>
                   )}
                   {plannerStage === "summary" && (
                     <section className="panel summary-panel">
@@ -1939,8 +1944,8 @@ export default function App() {
                       </div>
                     </section>
                   )}
-                  {result.ok && (
-                    <div className="advice-section">
+                  {result.ok && (plannerStage === "summary" || result.advice.some((a) => a.level !== "info")) && (
+                    <div className={`advice-section ${plannerStage === "summary" ? "" : "compact"}`}>
                       <div className="section-title">
                         <h3>
                           <ChefHat /> {t("Il consiglio di PizzaLab")}
@@ -1957,7 +1962,7 @@ export default function App() {
                           </div>
                         </div>
                       ) : (
-                        result.advice.map((a) => (
+                        (plannerStage === "summary" ? result.advice : result.advice.filter((a) => a.level !== "info")).map((a) => (
                           <div key={a.id} className={`advice ${a.level}`}>
                             {a.level === "info" ? <Info /> : <Warning />}
                             <div>

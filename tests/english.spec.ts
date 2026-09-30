@@ -25,7 +25,7 @@ async function visit(page: Page, name: string, found: Record<string, string[]>) 
 
 test("english mode shows no Italian text across the app", async ({ page }) => {
   const found: Record<string, string[]> = {};
-  await page.addInitScript(() => localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"));
+  await page.addInitScript(() => (localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"), localStorage.setItem("pizzalab-adjustments-open", "1")));
   await page.goto("/#nuova");
   await expect(page.getByRole("heading", { name: /What pizza shall we make/ })).toBeVisible();
   await visit(page, "home", found);
@@ -50,7 +50,7 @@ test("english mode shows no Italian text across the app", async ({ page }) => {
 test("english mode also covers dialogs, pickers, the running plan and the tools", async ({ page }) => {
   test.setTimeout(60000);
   const found: Record<string, string[]> = {};
-  await page.addInitScript(() => localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"));
+  await page.addInitScript(() => (localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"), localStorage.setItem("pizzalab-adjustments-open", "1")));
   await page.goto("/#nuova");
   await expect(page.getByRole("heading", { name: /What pizza shall we make/ })).toBeVisible();
 
