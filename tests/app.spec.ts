@@ -831,3 +831,25 @@ test("the planner suggests flours, a start time, people, a hydration fix and kee
   await page.locator(".user-ovens", { has: templates }).getByRole("button", { name: "Usa" }).click();
   await expect(page.getByRole("heading", { name: "Il tuo impasto" }).or(page.getByText("Modello «Il mio sabato» caricato"))).toBeVisible();
 });
+
+test("narrow phones never scroll sideways, even with a dough in progress", async ({ browser }) => {
+  for (const [locale, plan, schedule, tabs] of [
+    ["it-IT", /^4 Riepilogo/, "Programma", ["Il tuo impasto", "Farine", "Condimenti", "Lievito", "Profilo"]],
+    ["en-US", /^4 Summary/, "Schedule", ["Your dough", "Flours", "Toppings", "Yeast", "Profile"]],
+  ] as const) {
+    for (const width of [320, 360]) {
+      const context = await browser.newContext({ viewport: { width, height: 760 }, locale });
+      await context.addInitScript(() => localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"));
+      const page = await context.newPage();
+      await page.goto("/");
+      await page.getByRole("button", { name: plan }).click();
+      await page.getByRole("button", { name: schedule, exact: true }).click();
+      for (const tab of tabs) {
+        await page.getByRole("button", { name: tab, exact: true }).first().click();
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        expect(overflow, `${locale} ${width}px ${tab}`).toBeLessThanOrEqual(1);
+      }
+      await context.close();
+    }
+  }
+});

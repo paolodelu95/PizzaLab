@@ -1506,3 +1506,26 @@ details[open] > summary::after {
     scroll-behavior: auto !important;
   }
 }
+
+/* Sui telefoni stretti, con un impasto in corso, la barra in alto non ci stava: «Impara» resta solo icona. */
+@media (max-width: 430px) {
+  .learn-button {
+    padding: 0;
+    width: 40px;
+    justify-content: center;
+  }
+  .learn-button > span {
+    display: none;
+  }
+  .topbar-actions {
+    gap: 6px;
+  }
+}
+@media (max-width: 359px) {
+  .live-chip {
+    padding: 0 12px;
+  }
+  .live-chip > span:not(.live-dot) {
+    display: none;
+  }
+}

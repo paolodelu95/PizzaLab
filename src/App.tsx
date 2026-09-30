@@ -1011,6 +1011,7 @@ export default function App() {
             </button>
             <button
               className={`learn-button ${tab === "guida" ? "active" : ""}`}
+              aria-label={t("Impara")}
               onClick={() => openTab("guida")}
             >
               <BookOpen size={20} weight={tab === "guida" ? "fill" : "regular"} />
@@ -1392,16 +1393,20 @@ export default function App() {
                         <div className="lead-options" role="group" aria-label={t("Per quante persone?")}>
                           <span>{t("Per quante persone?")}</span>
                           <div>
-                            {[2, 4, 6, 8, 10].map((people) => (
+                            {[2, 4, 6, 8, 10].map((people, index, all) => {
+                              // Nelle teglie più valori danno lo stesso numero (2 e 4 persone = 1 teglia): si accende solo il più alto.
+                              const chosen = c.count === countForPeople(people, isPan) && !all.slice(index + 1).some((other) => countForPeople(other, isPan) === c.count);
+                              return (
                               <button
                                 key={people}
-                                className={c.count === countForPeople(people, isPan) ? "selected" : ""}
-                                aria-pressed={c.count === countForPeople(people, isPan)}
+                                className={chosen ? "selected" : ""}
+                                aria-pressed={chosen}
                                 onClick={() => update("count", countForPeople(people, isPan))}
                               >
                                 {people}
                               </button>
-                            ))}
+                              );
+                            })}
                           </div>
                           <small>{isPan ? t("Circa 4 porzioni per teglia.") : t("Una pizza a testa.")}</small>
                         </div>
