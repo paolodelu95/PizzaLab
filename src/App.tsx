@@ -1,5 +1,5 @@
 import { detectLanguage, locale, setLocaleState, t, tn, type Language, msg } from "./i18n";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -66,7 +66,8 @@ import { DoughAnalysis } from "./components/DoughAnalysis";
 import { BlendManager } from "./components/BlendManager";
 import { ovenById, ovenProfiles } from "./data/ovens";
 import { ToppingPlanner } from "./components/ToppingPlanner";
-import { DoughRescue } from "./components/DoughRescue";
+import { DoughRescue, RescueButton, RescueSheet } from "./components/DoughRescue";
+import { bugReportUrl } from "./services/feedback";
 import { ProfilePage } from "./components/ProfilePage";
 import { isPanInUse, panSize } from "./components/UserPans";
 import { BakingPlanner } from "./components/BakingPlanner";
@@ -108,7 +109,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.24.1";
+const APP_VERSION = "0.25.0";
 type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [
@@ -174,6 +175,8 @@ export default function App() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [rescueOpen, setRescueOpen] = useState(false);
+  const closeRescue = useCallback(() => setRescueOpen(false), []);
   const [lateStart, setLateStart] = useState<{ source: "planner" } | { source: "recipe"; recipe: Recipe } | null>(null);
   const [diaryView, setDiaryView] = useState<DiaryView>("active");
   useEffect(() => {
@@ -1005,6 +1008,7 @@ export default function App() {
                 <span>{t("In corso")}</span>
               </button>
             )}
+            <RescueButton onClick={() => setRescueOpen(true)} />
             <button
               className={`profile-button ${tab === "profilo" ? "active" : ""}`}
               aria-label={t("Profilo")}
@@ -1054,6 +1058,7 @@ export default function App() {
               templates={state.templates ?? []}
               onNew={startNewDough}
               onOpenProfile={() => openTab("profilo")}
+              onOpenRescue={() => setRescueOpen(true)}
               onOpenDiary={openDiary}
               onStageDone={(stageId) => active && editRecipe(active.id, { completedStages: [...new Set([...active.completedStages, stageId])] })}
               onUseTemplate={useTemplate}
@@ -2309,6 +2314,7 @@ export default function App() {
               now={now}
               config={c}
               version={APP_VERSION}
+              reportUrl={bugReportUrl(APP_VERSION, tab)}
               onNameChange={(profileName) => setState((s) => ({ ...s, profileName }))}
               onAddOven={(oven) => {
                 setState((s) => ({ ...s, userOvens: [...(s.userOvens ?? []), oven] }));
@@ -2343,8 +2349,11 @@ export default function App() {
           )}
           {tab === "guida" && (
             <>
-              <Guide onShowTutorial={() => setTutorialOpen(true)} />
-              <DoughRescue />
+              <Guide
+                onShowTutorial={() => setTutorialOpen(true)}
+                reportUrl={bugReportUrl(APP_VERSION, tab)}
+                rescue={<DoughRescue reportUrl={bugReportUrl(APP_VERSION, tab)} />}
+              />
               <SupportCard />
             </>
           )}
@@ -2426,6 +2435,7 @@ export default function App() {
         />
       )}
       {tutorialOpen && ready && <Onboarding onClose={closeTutorial} />}
+      <RescueSheet open={rescueOpen} onClose={closeRescue} reportUrl={bugReportUrl(APP_VERSION, tab)} />
     </div>
   );
 }

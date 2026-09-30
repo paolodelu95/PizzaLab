@@ -1,5 +1,6 @@
 import { t, msg } from "../i18n";
-import { ArrowUpRight, BookOpen, Play, Drop, Snowflake, Thermometer, Grains as Wheat } from '@phosphor-icons/react';
+import { ArrowUpRight, BookOpen, Bug, Calculator, CaretDown, Play, Drop, Snowflake, Thermometer, Grains as Wheat } from '@phosphor-icons/react';
+import type { ReactNode } from 'react';
 import {formatTemp} from '../services/units';
 const entries = [
   {icon:Wheat,title:msg('W, proteine e tipo: tre cose diverse'),text:msg('Il tipo (00, 0, 1, 2, integrale) descrive la raffinazione; W esprime la forza misurata con l’alveografo. Le proteine aiutano a leggere una farina, ma non permettono di calcolarne W. Le proteine su sostanza secca non sono direttamente confrontabili con i grammi per 100 g riportati in etichetta.')},
@@ -19,4 +20,51 @@ const glossary = [
   [msg('Autolisi'),msg('Riposo di farina e acqua senza lievito e sale, utile con impasti molto idratati.')],
   [msg('Pasta madre e Li.Co.Li.'),msg('Lieviti naturali fatti di farina e acqua: la pasta madre è solida, il Li.Co.Li. è liquido.')],
 ];
-export function Guide({onShowTutorial}:{onShowTutorial:()=>void}){return <><div className="page-heading guide-heading"><div><span className="eyebrow">{t("UN PASSO ALLA VOLTA")}</span><h1>{t("Mani in pasta, idee chiare.")}</h1><p>{t("Pochi riferimenti per imparare a leggere il tuo impasto.")}</p></div><div className="heading-illustration" aria-hidden="true"><BookOpen weight="duotone"/><span>{t("Osserva, capisci,")}<br/>{t("migliora.")}</span></div></div><section className="tutorial-replay"><div><strong>{t("Prima volta su PizzaLab?")}</strong><span>{t("Rivedi in un minuto come funziona l’app.")}</span></div><button className="button secondary" onClick={onShowTutorial}><Play/> {t("Rivedi il tutorial")}</button></section><section className="panel glossary" aria-labelledby="glossary-title"><div className="panel-title"><span className="section-icon"><BookOpen/></span><div><h2 id="glossary-title">{t("Le parole da conoscere")}</h2><p>{t("Nove termini che incontrerai nell’app, spiegati in una riga.")}</p></div></div><dl>{glossary.map(([term,text])=><div key={term}><dt>{t(term)}</dt><dd>{t(text)}</dd></div>)}</dl></section><div className="guide-list">{entries.map(e=><article className="guide-entry" key={e.title}><e.icon size={30}/><div><h2>{t(e.title)}</h2><p>{t(e.text)}</p></div></article>)}</div><section className="panel model-note"><span className="eyebrow">{t("COME FACCIAMO I CONTI")}</span><h2>{t("Un punto di partenza, da affinare.")}</h2><p>{t("Le quantità usano le percentuali del panificatore. Il peso finale comprende tutti gli ingredienti. La dose di lievito usa un riferimento euristico di 0,18% di lievito fresco a 8 ore equivalenti e")} {formatTemp(22)}{t("; il secco istantaneo usa un rapporto indicativo 1:3. Poolish e biga dividono gli ingredienti della stessa formula e aggiungono una stima di maturità Q10.")}</p><p>{t("La temperatura dell’acqua usa il metodo del fattore 3 con temperatura ambiente, farina, obiettivo dell’impasto e calore della lavorazione. Non misura attrito o temperatura reali: verifica sempre con un termometro.")}</p><p>{t("Raffreddamento, attività del lievito e caratteristiche del lotto non sono misurati automaticamente. Gli avvisi sono indicazioni pratiche, non certificazioni del risultato. Registra ogni prova nel diario e adatta i tempi alla crescita reale.")}</p><p>{t("Il catalogo raccoglie farine di marchi e molini italiani; questo non significa che tutti i grani siano coltivati in Italia. I valori mancanti restano non disponibili. Non sono presenti dati verificati sulle vendite.")}</p><div className="source-links"><a href="https://www.mulinopadano.it/blog/approfondimenti/migliori-farine-per-pizza/" target="_blank" rel="noreferrer">{t("Leggere una farina · Mulino Padano")} <ArrowUpRight/></a><a href="https://molinovigevano.com/guide/la-pizza-in-teglia-romana/" target="_blank" rel="noreferrer">{t("Tecnica della teglia · Molino Vigevano")} <ArrowUpRight/></a></div></section></>}
+export function Guide({ onShowTutorial, reportUrl, rescue }: { onShowTutorial: () => void; reportUrl: string; rescue: ReactNode }) {
+  return (
+    <>
+      <div className="page-heading guide-heading">
+        <div>
+          <h1>{t("Mani in pasta, idee chiare.")}</h1>
+          <p>{t("Pochi riferimenti per imparare a leggere il tuo impasto.")}</p>
+        </div>
+      </div>
+      {rescue}
+      <section className="panel glossary" aria-labelledby="glossary-title">
+        <div className="panel-title">
+          <span className="section-icon"><BookOpen /></span>
+          <div>
+            <h2 id="glossary-title">{t("Le parole da conoscere")}</h2>
+            <p>{t("Nove termini che incontrerai nell’app, spiegati in una riga.")}</p>
+          </div>
+        </div>
+        <dl>{glossary.map(([term, text]) => <div key={term}><dt>{t(term)}</dt><dd>{t(text)}</dd></div>)}</dl>
+      </section>
+      <section className="guide-topics" aria-labelledby="topics-title">
+        <h2 id="topics-title" className="guide-section-title">{t("Da approfondire")}</h2>
+        {entries.map((e) => (
+          <details className="guide-entry" key={e.title}>
+            <summary><e.icon size={26} /><span>{t(e.title)}</span><CaretDown className="guide-caret" aria-hidden="true" /></summary>
+            <p>{t(e.text)}</p>
+          </details>
+        ))}
+        <details className="guide-entry model-note">
+          <summary><Calculator size={26} /><span>{t("Come facciamo i conti")}</span><CaretDown className="guide-caret" aria-hidden="true" /></summary>
+          <p>{t("Le quantità usano le percentuali del panificatore. Il peso finale comprende tutti gli ingredienti. La dose di lievito usa un riferimento euristico di 0,18% di lievito fresco a 8 ore equivalenti e")} {formatTemp(22)}{t("; il secco istantaneo usa un rapporto indicativo 1:3. Poolish e biga dividono gli ingredienti della stessa formula e aggiungono una stima di maturità Q10.")}</p>
+          <p>{t("La temperatura dell’acqua usa il metodo del fattore 3 con temperatura ambiente, farina, obiettivo dell’impasto e calore della lavorazione. Non misura attrito o temperatura reali: verifica sempre con un termometro.")}</p>
+          <p>{t("Raffreddamento, attività del lievito e caratteristiche del lotto non sono misurati automaticamente. Gli avvisi sono indicazioni pratiche, non certificazioni del risultato. Registra ogni prova nel diario e adatta i tempi alla crescita reale.")}</p>
+          <p>{t("Il catalogo raccoglie farine di marchi e molini italiani; questo non significa che tutti i grani siano coltivati in Italia. I valori mancanti restano non disponibili. Non sono presenti dati verificati sulle vendite.")}</p>
+          <div className="source-links"><a href="https://www.mulinopadano.it/blog/approfondimenti/migliori-farine-per-pizza/" target="_blank" rel="noreferrer">{t("Leggere una farina · Mulino Padano")} <ArrowUpRight /></a><a href="https://molinovigevano.com/guide/la-pizza-in-teglia-romana/" target="_blank" rel="noreferrer">{t("Tecnica della teglia · Molino Vigevano")} <ArrowUpRight /></a></div>
+        </details>
+      </section>
+      <section className="help-actions" aria-label={t("Aiuto")}>
+        <button className="help-action" onClick={onShowTutorial}>
+          <Play /><span><strong>{t("Rivedi il tutorial")}</strong><small>{t("Rivedi in un minuto come funziona l’app.")}</small></span>
+        </button>
+        <a className="help-action" href={reportUrl}>
+          <Bug /><span><strong>{t("Segnala un problema")}</strong><small>{t("Si apre una mail già pronta: scrivi solo cosa è successo.")}</small></span>
+        </a>
+      </section>
+    </>
+  );
+}

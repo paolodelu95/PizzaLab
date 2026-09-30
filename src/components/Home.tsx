@@ -5,6 +5,7 @@ import type { Recipe, RecipeTemplate, Stage } from "../domain/types";
 import { photos, stylePhoto } from "../data/photos";
 import { locale, t, tn } from "../i18n";
 import { InstallPrompt } from "./InstallPrompt";
+import { RescueButton } from "./DoughRescue";
 
 const clock = (iso: string) => new Date(iso).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
 const day = (iso: string, now: number) => {
@@ -23,6 +24,7 @@ type Props = {
   templates: RecipeTemplate[];
   onNew: () => void;
   onOpenProfile: () => void;
+  onOpenRescue: () => void;
   onOpenDiary: () => void;
   onStageDone: (stageId: string) => void;
   onUseTemplate: (id: string) => void;
@@ -30,7 +32,7 @@ type Props = {
 };
 
 /** «Oggi»: la cosa da fare adesso. Con un impasto in corso mostra la prossima fase, altrimenti invita a crearne uno. */
-export function Home({ name, now, active, stages, savedCount, templates, onNew, onOpenProfile, onOpenDiary, onStageDone, onUseTemplate, onDeleteTemplate }: Props) {
+export function Home({ name, now, active, stages, savedCount, templates, onNew, onOpenProfile, onOpenRescue, onOpenDiary, onStageDone, onUseTemplate, onDeleteTemplate }: Props) {
   const hour = new Date(now).getHours();
   const greeting = hour < 12 ? t("Buongiorno") : hour < 18 ? t("Buon pomeriggio") : t("Buonasera");
   const firstName = name.trim().split(/\s+/)[0];
@@ -48,9 +50,12 @@ export function Home({ name, now, active, stages, savedCount, templates, onNew, 
       >
         <div className="today-top">
           <span className="today-greeting">{firstName ? `${greeting}, ${firstName}` : greeting}</span>
-          <button className="today-avatar" aria-label={t("Profilo")} onClick={onOpenProfile}>
-            {firstName ? firstName[0].toUpperCase() : <UserCircle size={22} />}
-          </button>
+          <div className="today-actions">
+            <RescueButton className="on-photo" onClick={onOpenRescue} />
+            <button className="today-avatar" aria-label={t("Profilo")} onClick={onOpenProfile}>
+              {firstName ? firstName[0].toUpperCase() : <UserCircle size={22} />}
+            </button>
+          </div>
         </div>
         <div className="today-body">
           {active ? (

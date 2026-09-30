@@ -828,3 +828,273 @@ h3 {
 .flour-main h3 {
   margin-block: -8px;
 }
+
+/* ---------- Pronto soccorso: sempre a un tocco ---------- */
+.rescue-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-weight: 700;
+  font-size: 14px;
+}
+.rescue-button svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.rescue-button:hover {
+  background: color-mix(in srgb, var(--brand-soft) 70%, var(--brand) 30%);
+}
+.rescue-button.on-photo {
+  color: #fff;
+  background: rgb(255 255 255 / 0.18);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+@media (max-width: 599px) {
+  .rescue-button:not(.on-photo) span {
+    display: none;
+  }
+  .rescue-button:not(.on-photo) {
+    padding: 0;
+    width: 44px;
+  }
+  /* In alto a destra resta sempre visibile, anche dove il profilo è nel menu. */
+  .topbar-actions .rescue-button {
+    display: inline-flex !important;
+  }
+}
+.today-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rescue-issues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.rescue-issues button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.rescue-issues button.selected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+.rescue-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--brand-ink);
+}
+.rescue-sheet-body {
+  padding: 4px 20px calc(20px + var(--safe-b, 0px));
+  overflow: auto;
+}
+
+/* ---------- Impara: soccorso in cima, approfondimenti a fisarmonica ---------- */
+.guide-topics {
+  display: grid;
+  gap: 10px;
+}
+.guide-section-title {
+  font-size: 20px;
+  margin: 10px 0 2px;
+}
+details.guide-entry {
+  display: block;
+  padding: 0;
+}
+details.guide-entry > summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 10px 16px;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
+details.guide-entry > summary::-webkit-details-marker,
+details.guide-entry > summary::after {
+  display: none;
+  content: none;
+}
+details.guide-entry > summary > svg:first-child {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  padding: 9px;
+  border-radius: 13px;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+details.guide-entry > summary > span {
+  flex: 1;
+}
+.guide-caret {
+  flex: none;
+  transition: transform 0.2s;
+  color: var(--ink-3);
+}
+details.guide-entry[open] .guide-caret {
+  transform: rotate(180deg);
+}
+details.guide-entry > p,
+details.guide-entry > .source-links {
+  padding: 0 16px 14px 72px;
+  font-size: 14.5px;
+}
+@media (max-width: 599px) {
+  details.guide-entry > p,
+  details.guide-entry > .source-links {
+    padding-left: 16px;
+  }
+}
+.help-actions {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+.help-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+}
+.help-action:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.help-action:disabled {
+  opacity: 0.5;
+}
+.help-action > svg:first-child {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--brand);
+}
+.help-action > span {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+}
+.help-action strong {
+  font-size: 15px;
+}
+.help-action small {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.help-action-out {
+  color: var(--ink-3);
+}
+.app-version {
+  display: block;
+  text-align: center;
+  color: var(--ink-3);
+}
+.profile-group-title {
+  margin-top: 14px;
+}
+
+/* ---------- Condimenti: prima la pizza, poi le misure ---------- */
+.topping-size-card.compact {
+  grid-template-columns: 1fr;
+  grid-template-areas: none;
+  gap: 10px;
+  padding: 14px;
+  margin: 4px 0 12px;
+}
+.topping-size-card.compact > * {
+  grid-area: auto;
+}
+.topping-size-card.compact h4 {
+  font-size: 15px;
+  font-weight: 700;
+}
+.topping-size-card.compact .topping-size-copy p {
+  font-size: 13px;
+}
+.topping-size-card.compact .topping-area {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 8px 12px;
+}
+.topping-size-card.compact .topping-area strong {
+  font-size: 17px;
+}
+
+/* ---------- Lievito: prima la scelta, le impostazioni a parte ---------- */
+.starter-name-card {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.starter-name-card h2 {
+  font-size: 20px;
+}
+.starter-hero-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+@media (min-width: 720px) {
+  .starter-hero-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  .starter-hero-actions .button.full {
+    width: auto;
+  }
+}
+.feed-how > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 650;
+  color: var(--brand-ink);
+}
+.starter-side-column > .adjustments {
+  margin: 0;
+}
+main .help-actions {
+  padding: 0;
+}

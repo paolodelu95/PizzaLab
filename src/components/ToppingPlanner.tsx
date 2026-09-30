@@ -86,15 +86,6 @@ export function ToppingPlanner({ config, result, onUpdate }: { config: DoughConf
   return (
     <section className="panel topping-planner">
       <div className="panel-title"><span className="section-icon"><CookingPot /></span><div><h2>{t("Condimenti classici")}</h2><p>{t("Ricette ordinate, grammature adattate e momento giusto per ogni ingrediente.")}</p></div></div>
-      <section className="topping-size-card">
-        <div className="topping-size-copy"><span className="eyebrow">{t("DIMENSIONE REALE ·")} {t(result.style.name).toUpperCase()}</span><h3>{trays ? t("Quanto misura ogni teglia?") : t("Quanto è grande ogni pizza?")}</h3><p>{t("Le quantità cambiano in proporzione alla superficie, non soltanto al peso del panetto.")}</p></div>
-        <div className={`topping-size-fields ${rectangular ? "rectangular" : "round"}`}>
-          {rectangular ? <><NumberField label={t("Larghezza")} value={width} onChange={(toppingWidth) => onUpdate({ toppingWidth })} min={10} max={100} step={1} unit="cm" clampToRange /><NumberField label={t("Lunghezza")} value={length} onChange={(toppingLength) => onUpdate({ toppingLength })} min={10} max={150} step={1} unit="cm" clampToRange /></> : <NumberField label={trays ? t("Diametro teglia") : t("Diametro")} value={diameter} onChange={(pizzaDiameter) => onUpdate({ pizzaDiameter })} min={15} max={60} step={1} unit="cm" clampToRange />}
-          <Stepper label={trays ? t("Numero di teglie") : t("Numero di pizze")} value={pieces} onChange={(toppingCount) => onUpdate({ toppingCount })} min={1} max={30} />
-        </div>
-        <div className={`topping-shape ${rectangular ? "rectangle" : "circle"}`} aria-hidden="true"><span>{rectangular ? `${width} × ${length}` : `Ø ${diameter}`}<small>{t("cm")}</small></span></div>
-        <div className="topping-area"><span>{t("Superficie totale")}</span><strong>{Math.round(totalArea).toLocaleString(locale())} {t("cm²")}</strong><small>{pieces > 1 ? t("{toLocaleString} cm² ciascuna", { toLocaleString: Math.round(areaPerPiece).toLocaleString(locale()) }) : t("una pizza o teglia")}</small></div>
-      </section>
       <div className="topping-toolbar">
         <label className="topping-search"><MagnifyingGlass /><input aria-label={t("Cerca pizza o ingrediente")} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Cerca Diavola, funghi, bufala…")} /></label>
         <div className="topping-categories">{[msg("Tutte"), msg("Classiche"), msg("Rosse"), msg("Bianche"), msg("Vegetariane")].map((item) => <button key={item} className={category === item ? "selected" : ""} onClick={() => setCategory(item)}>{t(item)}</button>)}</div>
@@ -103,6 +94,14 @@ export function ToppingPlanner({ config, result, onUpdate }: { config: DoughConf
       {filtered.length === 0 && <p className="small-muted">{t("Nessuna pizza trovata con questi filtri.")}</p>}
       <div className="selected-topping-plan">
         <div className="selected-topping-heading"><div><span className="eyebrow">{t("PIANO CONDIMENTO")}</span><h3>{t(selected.name)}</h3><p>{t(selected.description)}</p></div><span>{rectangular ? `${width}×${length} cm · ${tn(pieces, "{count} teglia", "{count} teglie")}` : `Ø ${diameter} cm · ${trays ? tn(pieces, "{count} teglia", "{count} teglie") : tn(pieces, "{count} pizza", "{count} pizze")}`}</span></div>
+        <section className="topping-size-card compact">
+          <div className="topping-size-copy"><h4>{trays ? t("Quanto misura ogni teglia?") : t("Quanto è grande ogni pizza?")}</h4><p>{t("Le quantità cambiano in proporzione alla superficie, non soltanto al peso del panetto.")}</p></div>
+          <div className={`topping-size-fields ${rectangular ? "rectangular" : "round"}`}>
+            {rectangular ? <><NumberField label={t("Larghezza")} value={width} onChange={(toppingWidth) => onUpdate({ toppingWidth })} min={10} max={100} step={1} unit="cm" clampToRange /><NumberField label={t("Lunghezza")} value={length} onChange={(toppingLength) => onUpdate({ toppingLength })} min={10} max={150} step={1} unit="cm" clampToRange /></> : <NumberField label={trays ? t("Diametro teglia") : t("Diametro")} value={diameter} onChange={(pizzaDiameter) => onUpdate({ pizzaDiameter })} min={15} max={60} step={1} unit="cm" clampToRange />}
+            <Stepper label={trays ? t("Numero di teglie") : t("Numero di pizze")} value={pieces} onChange={(toppingCount) => onUpdate({ toppingCount })} min={1} max={30} />
+          </div>
+          <div className="topping-area"><span>{t("Superficie totale")}</span><strong>{Math.round(totalArea).toLocaleString(locale())} {t("cm²")}</strong><small>{pieces > 1 ? t("{toLocaleString} cm² ciascuna", { toLocaleString: Math.round(areaPerPiece).toLocaleString(locale()) }) : t("una pizza o teglia")}</small></div>
+        </section>
         <div className="topping-ingredients">{selected.ingredients.map((ingredient) => { const totalGrams = Math.max(1, Math.round(ingredient.grams * scale)); const eachGrams = Math.max(1, Math.round(totalGrams / pieces)); return <div key={ingredient.name}><span>{t(ingredient.name)}{ingredient.stage === "fine" ? <small>{t("fine cottura")}</small> : ingredient.stage === "fuori" ? <small>{t("in uscita")}</small> : null}</span><span className="topping-grams"><strong>{formatWeight(totalGrams)}</strong>{pieces > 1 && <small>{formatWeight(eachGrams)} {t("cad.")}</small>}</span></div>; })}</div>
         <div className="topping-order"><Sparkle /><div><strong>{t("Ordine consigliato")}</strong><p>{t(selected.order)}</p></div></div>
       </div>

@@ -2,6 +2,7 @@ import { t, msg } from "../i18n";
 import { useRef, useState } from "react";
 import {
   ArrowSquareOut,
+  Bug,
   BellRinging,
   CheckCircle,
   Export,
@@ -40,6 +41,7 @@ type Props = {
   now: number;
   config: DoughConfig;
   version: string;
+  reportUrl: string;
   onNameChange: (name: string) => void;
   onAddOven: (oven: UserOven) => void;
   onDeleteOven: (id: string) => void;
@@ -101,11 +103,6 @@ export function ProfilePage(props: Props) {
             <input value={name} maxLength={40} placeholder={t("Il tuo nome")} onChange={(event) => props.onNameChange(event.target.value)} />
           </label>
         </div>
-        <div className="profile-summary" aria-label={t("Le tue pizze")}>
-          <div><strong>{counts.past}</strong><span>{t("sfornate")}</span></div>
-          <div><strong>{counts.active}</strong><span>{t("in corso")}</span></div>
-          <div><strong>{counts.saved}</strong><span>{t("salvate")}</span></div>
-        </div>
       </section>
 
       <div className="profile-group-title">
@@ -143,6 +140,11 @@ export function ProfilePage(props: Props) {
           )}
         </div>
       </section>
+
+      <div className="profile-group-title">
+        <h2>{t("Preferenze")}</h2>
+        <span>{t("Lingua, unità e avvisi valgono per tutta l’app.")}</span>
+      </div>
 
       <section className="panel units-panel" aria-labelledby="language-title">
         <div className="panel-title">
@@ -242,6 +244,12 @@ export function ProfilePage(props: Props) {
           <span>{state.recipes.length} {state.recipes.length === 1 ? t("pizza nel diario") : t("pizze nel diario")}</span>
         </div>
         <div className="stat-grid">
+          {([[msg("sfornate"), counts.past], [msg("in corso"), counts.active], [msg("salvate"), counts.saved]] as const).map(([label, value]) => (
+            <div key={label}>
+              <strong>{value}</strong>
+              <span>{t(label)}</span>
+            </div>
+          ))}
           {stats.map(([label, value]) => (
             <div key={label}>
               <strong>{value}</strong>
@@ -258,45 +266,43 @@ export function ProfilePage(props: Props) {
 
       <InstallPrompt always />
 
-      <section className="panel settings-panel">
-        <div className="panel-title">
-          <span className="section-icon"><Gear /></span>
-          <div>
-            <h2>{t("Backup e impostazioni")}</h2>
-            <p>
-              {usesCalendarReminders()
-                ? t("Nel browser i dati restano su questo telefono: esporta ogni tanto una copia del diario, così non la perdi se svuoti i dati di Safari.")
-                : t("Salva una copia del diario o spostalo su un altro telefono.")}
-            </p>
-          </div>
-        </div>
-        <input
-          ref={importRef}
-          hidden
-          type="file"
-          accept="application/json,.json"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) props.onImport(file);
-            event.target.value = "";
-          }}
-        />
-        <div className="settings-actions">
-          <button className="button secondary" disabled={!state.recipes.length} onClick={props.onExport}>
-            <Export /> {t("Esporta il diario")}
-          </button>
-          <button className="button secondary" onClick={() => importRef.current?.click()}>
-            <UploadSimple /> {t("Importa un backup")}
-          </button>
-          <button className="button secondary" onClick={props.onShowTutorial}>
-            <Play /> {t("Rivedi il tutorial")}
-          </button>
-          <a className="button secondary" href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
-            <ShieldCheck /> {t("Informativa sulla privacy")} <ArrowSquareOut />
-          </a>
-        </div>
-        <small className="app-version">PizzaLab {props.version} {t("· nessun account, dati solo sul dispositivo")}</small>
+      <div className="profile-group-title">
+        <h2>{t("Aiuto e dati")}</h2>
+        <span>
+          {usesCalendarReminders()
+            ? t("Nel browser i dati restano su questo telefono: esporta ogni tanto una copia del diario, così non la perdi se svuoti i dati di Safari.")
+            : t("Salva una copia del diario o spostalo su un altro telefono.")}
+        </span>
+      </div>
+      <input
+        ref={importRef}
+        hidden
+        type="file"
+        accept="application/json,.json"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) props.onImport(file);
+          event.target.value = "";
+        }}
+      />
+      <section className="help-actions settings-panel" aria-label={t("Aiuto e dati")}>
+        <a className="help-action" href={props.reportUrl}>
+          <Bug /><span><strong>{t("Segnala un problema")}</strong><small>{t("Si apre una mail già pronta: scrivi solo cosa è successo.")}</small></span>
+        </a>
+        <button className="help-action" onClick={props.onShowTutorial}>
+          <Play /><span><strong>{t("Rivedi il tutorial")}</strong><small>{t("Rivedi in un minuto come funziona l’app.")}</small></span>
+        </button>
+        <button className="help-action" disabled={!state.recipes.length} onClick={props.onExport}>
+          <Export /><span><strong>{t("Esporta il diario")}</strong><small>{t("Un file con ricette, note e tarature.")}</small></span>
+        </button>
+        <button className="help-action" onClick={() => importRef.current?.click()}>
+          <UploadSimple /><span><strong>{t("Importa un backup")}</strong><small>{t("Riprendi un diario esportato in precedenza.")}</small></span>
+        </button>
+        <a className="help-action" href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+          <ShieldCheck /><span><strong>{t("Informativa sulla privacy")}</strong><small>{t("Nessun account, dati solo sul dispositivo")}</small></span><ArrowSquareOut className="help-action-out" />
+        </a>
       </section>
+      <small className="app-version">PizzaLab {props.version} {t("· nessun account, dati solo sul dispositivo")}</small>
 
       <SupportCard />
     </>
@@ -316,7 +322,7 @@ function UserOvens({
   onDelete: (id: string) => void;
   onUse: (oven: UserOven) => void;
 }) {
-  const [adding, setAdding] = useState(ovens.length === 0);
+  const [adding, setAdding] = useState(false);
   const [model, setModel] = useState(config.ovenType);
   const modelInfo = ovenById(model);
   const [name, setName] = useState("");
@@ -409,14 +415,17 @@ function UserOvens({
           </div>
           <p className="oven-form-note">{localizeTemperatures(t(modelInfo.note))}</p>
           <div className="oven-form-actions">
-            {ovens.length > 0 && <button type="button" className="button secondary" onClick={() => setAdding(false)}>{t("Annulla")}</button>}
+            <button type="button" className="button secondary" onClick={() => setAdding(false)}>{t("Annulla")}</button>
             <button type="submit" className="button primary"><Plus /> {t("Salva il forno")}</button>
           </div>
         </form>
       ) : (
-        <button className="button secondary" onClick={() => setAdding(true)}>
-          <Plus /> {t("Aggiungi un forno")}
-        </button>
+        <>
+          {ovens.length === 0 && <p className="small-muted">{t("Nessun forno salvato: aggiungilo una volta e lo ritrovi pronto in Cottura.")}</p>}
+          <button className={`button ${ovens.length ? "secondary" : "primary"}`} onClick={() => setAdding(true)}>
+            <Plus /> {t("Aggiungi un forno")}
+          </button>
+        </>
       )}
     </section>
   );

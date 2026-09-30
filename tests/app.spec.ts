@@ -583,6 +583,7 @@ test("profile keeps the name, saved ovens and settings in one place", async ({ p
   await page.getByLabel("Come ti chiami?").fill("Paolo");
   await expect(page.getByRole("heading", { name: "Ciao, Paolo." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Le tue statistiche" })).toBeVisible();
+  await page.getByRole("button", { name: "Aggiungi un forno" }).click();
   await pick(page, page.getByLabel("Modello o tipo di forno"), /^Ariete 909/);
   await expect(page.getByLabel("Temperatura massima reale")).toHaveValue("400");
   const ovens = page.locator(".user-ovens");
@@ -907,4 +908,26 @@ test("the home shows what to do now and lets a phase be ticked off", async ({ pa
   await expect(hero.getByRole("heading")).toContainText("Riposo in massa");
   await hero.getByRole("button", { name: "Apri la guida" }).click();
   await expect(page.getByText("IMPASTO IN CORSO", { exact: true })).toBeVisible();
+});
+
+test("dough first aid is one tap away on every screen and problems can be reported by email", async ({ page }) => {
+  await page.goto("/");
+  for (const open of [
+    async () => {},
+    async () => page.getByRole("button", { name: "Nuova pizza", exact: true }).first().click(),
+    async () => page.getByRole("button", { name: "Dispensa", exact: true }).first().click(),
+  ]) {
+    await open();
+    await page.getByRole("button", { name: "Pronto soccorso impasto" }).first().click();
+    const sheet = page.getByRole("dialog", { name: "Pronto soccorso impasto" });
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole("radio", { name: "Non sta crescendo" }).click();
+    await expect(sheet.getByText(/Porta l’impasto in un punto più tiepido/)).toBeVisible();
+    await expect(sheet.getByRole("link", { name: /Scrivimi/ })).toHaveAttribute("href", /^mailto:paolo\.deluca\.1995@gmail\.com\?subject=/);
+    await page.keyboard.press("Escape");
+    await expect(sheet).toHaveCount(0);
+  }
+  await page.getByRole("button", { name: "Profilo", exact: true }).first().click();
+  const report = page.getByRole("link", { name: /Segnala un problema/ });
+  await expect(report).toHaveAttribute("href", /^mailto:paolo\.deluca\.1995@gmail\.com\?subject=PizzaLab%20.*&body=.*Schermata%3A%20profilo/);
 });

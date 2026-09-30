@@ -27,6 +27,7 @@ import { NumberField } from "./Fields";
 import { usesCalendarReminders } from "../services/platform";
 import { formatTemp, formatWeight } from "../services/units";
 import { HelpTip } from "./HelpTip";
+import { Adjustments } from "./Adjustments";
 
 const phaseCopy = {
   creating: [msg("Avvio della coltura"), msg("La regolarità conta più della velocità.")],
@@ -97,16 +98,10 @@ export function SourdoughCare({
           </div>
           <div className="heading-illustration" aria-hidden="true"><Jar weight="duotone" /></div>
         </div>
-        <section className="panel starter-name-card">
-          <div className="panel-title">
-            <span className="section-icon"><Jar /></span>
-            <div>
-              <h2>{profiles.length ? t("Aggiungi un altro lievito.") : t("Coltiva il tuo lievito madre.")}</h2>
-              <p>{t("Un percorso guidato dai primi rinfreschi fino a una coltura stabile, con dosi, osservazioni e promemoria personali.")}</p>
-            </div>
-          </div>
+        <section className="starter-name-card">
+          <h2>{profiles.length ? t("Aggiungi un altro lievito.") : t("Coltiva il tuo lievito madre.")}</h2>
+          <p>{t("Un percorso guidato dai primi rinfreschi fino a una coltura stabile, con dosi, osservazioni e promemoria personali.")}</p>
           <label className="field">{t("Come vuoi chiamarlo?")}<input value={draftName} maxLength={40} onChange={(event) => setDraftName(event.target.value)} placeholder={t("Es. Gino, Madre 2026, Li.Co.Li. pizza")} /></label>
-          <p>{t("Potrai cambiare il nome in qualsiasi momento.")}</p>
         </section>
         <div className="starter-kind-grid">
           {(["licoli", "solid"] as const).map((kind) => (
@@ -178,6 +173,12 @@ export function SourdoughCare({
           <div><Clock /><span>{t("Tra circa")}</span><strong>{remainingHours === 0 ? t("ora") : t("{remainingHours} ore", { remainingHours })}</strong></div>
           <div><Sparkle /><span>{t("Serie efficace")}</span><strong>{profile.readyStreak}/3</strong></div>
         </div>
+        <div className="starter-hero-actions">
+          <div className="routine-summary"><Clock /><div><strong>{t("Ogni")} {interval === 168 ? t("7 giorni") : t("{interval} ore", { interval })}</strong><span>{profile.phase === "mature" && profile.storage === "fridge" ? t("Mantenimento settimanale") : t("Rinfresco a temperatura ambiente")}</span></div></div>
+          {usesCalendarReminders() ? (
+            <button className="button primary full" onClick={() => onCalendar(profile)}><CalendarPlus /> {t("Aggiungi i rinfreschi al calendario")}</button>
+          ) : profile.remindersEnabled ? <button className="button secondary full" onClick={onDisableReminders}>{t("Disattiva promemoria")}</button> : <button className="button primary full" onClick={onSchedule}><BellRinging /> {t("Attiva promemoria")}</button>}
+        </div>
         <p className="starter-phase-copy">{t(phase[1])} {profile.phase !== "mature" && t("La maturità viene riconosciuta dopo tre rinfreschi consecutivi con almeno raddoppio in 3–8 ore.")}</p>
       </section>
 
@@ -194,12 +195,15 @@ export function SourdoughCare({
               <div><span>{t("Acqua")}</span><strong>{formatWeight(amounts.water)}</strong></div>
               <div className="feed-total"><span>{t("Totale dopo il rinfresco")}</span><strong>{formatWeight(amounts.total)}</strong></div>
             </div>
+            <details className="feed-how">
+              <summary>{t("Come si fa, passo per passo")}</summary>
             <ol className="feed-steps">
               <li><span>1</span><p><strong>{t("Tieni la quantità indicata")}</strong>{t("Elimina o usa l’esubero solo in ricette che verranno cotte.")}</p></li>
               <li><span>2</span><p><strong>{t("Aggiungi acqua e farina")}</strong>{profile.kind === "solid" ? t("Impasta fino a una massa compatta e liscia.") : t("Mescola fino a non vedere grumi asciutti.")}</p></li>
               <li><span>3</span><p><strong>{t("Segna il livello iniziale")}</strong>{t("Usa un contenitore pulito, trasparente e abbastanza capiente.")}</p></li>
               <li><span>4</span><p><strong>{t("Osserva, non inseguire l’orologio")}</strong>{t("Registra quando raggiunge il picco e se almeno raddoppia.")}</p></li>
             </ol>
+            </details>
           </section>
 
           <section className="panel starter-log-card">
@@ -217,21 +221,18 @@ export function SourdoughCare({
         </div>
 
         <aside className="starter-side-column">
+          <Adjustments title={t("Impostazioni del lievito")} hint={t("Nome, orario dei rinfreschi, quantità, temperatura e farina")}>
           <section className="panel starter-settings">
-            <div className="panel-title"><span className="section-icon"><BellRinging /></span><div><h2>{t("Routine e notifiche")}</h2><p>{t("Scegli l’orario che si adatta alla tua giornata.")}</p></div></div>
             <label className="field">{t("Nome del lievito")}<input value={profile.name} maxLength={40} onChange={(event) => onChange({ ...profile, name: event.target.value })} /></label>
             <label className="field">{t("Ora preferita")}<input type="time" value={profile.preferredTime} onChange={(event) => onChange({ ...profile, preferredTime: event.target.value })} /></label>
             <NumberField label={t("Lievito da mantenere")} value={profile.starterGrams} onChange={(starterGrams) => onChange({ ...profile, starterGrams })} min={10} max={300} step={5} quantity="weight" />
             <NumberField label={t("Temperatura obiettivo")} value={profile.temperature} onChange={(temperature) => onChange({ ...profile, temperature })} min={10} max={35} step={0.5} quantity="temp" />
             <label className="field">{t("Farina abituale")}<input value={profile.flourName} maxLength={60} onChange={(event) => onChange({ ...profile, flourName: event.target.value })} /></label>
             {profile.phase === "mature" && <div className="storage-choice"><span>{t("Dove lo conservi?")}</span><button className={profile.storage === "room" ? "selected" : ""} onClick={() => onChange({ ...profile, storage: "room" })}><Thermometer /> {t("Ambiente")}</button><button className={profile.storage === "fridge" ? "selected" : ""} onClick={() => onChange({ ...profile, storage: "fridge" })}><Snowflake /> {t("Frigo")}</button></div>}
-            <div className="routine-summary"><Clock /><div><strong>{t("Ogni")} {interval === 168 ? t("7 giorni") : t("{interval} ore", { interval })}</strong><span>{profile.phase === "mature" && profile.storage === "fridge" ? t("Mantenimento settimanale") : t("Rinfresco a temperatura ambiente")}</span></div></div>
-            {usesCalendarReminders() ? (
-              <button className="button primary full" onClick={() => onCalendar(profile)}><CalendarPlus /> {t("Aggiungi i rinfreschi al calendario")}</button>
-            ) : profile.remindersEnabled ? <button className="button secondary full" onClick={onDisableReminders}>{t("Disattiva promemoria")}</button> : <button className="button primary full" onClick={onSchedule}><BellRinging /> {t("Attiva promemoria")}</button>}
             <small>{t("Gli orari sono promemoria: se il lievito è ancora in piena crescita, osserva il picco prima di intervenire.")}</small>
             {!deleteConfirm ? <button className="starter-delete" onClick={() => setDeleteConfirm(true)}><Trash /> {t("Elimina questo lievito")}</button> : <div className="starter-delete-confirm"><strong>{t("Eliminare “")}{profile.name}”?</strong><p>{t("Il diario e i promemoria di questa coltura verranno rimossi.")}</p><div><button className="button secondary" onClick={() => setDeleteConfirm(false)}>{t("Annulla")}</button><button className="button danger" onClick={() => { onDelete(profile.id); setDeleteConfirm(false); }}>{t("Elimina definitivamente")}</button></div></div>}
           </section>
+          </Adjustments>
 
           <section className="panel starter-roadmap">
             <h2>{t("Percorso di maturazione")}</h2>
