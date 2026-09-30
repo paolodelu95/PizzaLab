@@ -1,0 +1,599 @@
+/* ==========================================================================
+   PizzaLab · identità «Fuoco e farina»
+   Caricato per ultimo: ridefinisce colori, caratteri e gerarchia sopra il design system.
+   - Fraunces per titoli e numeri da pesare, Figtree per il resto.
+   - Un solo pulsante pieno per schermata; meno bordi e ombre, più spazio.
+   ========================================================================== */
+@import "@fontsource-variable/fraunces/opsz.css";
+@import "@fontsource-variable/figtree";
+
+:root {
+  --font: "Figtree Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+
+  --bg: #f5efe6;
+  --surface: #fffcf7;
+  --surface-2: #efe7da;
+  --surface-3: #e6dccd;
+  --ink: #1d1813;
+  --ink-2: #574e44;
+  --ink-3: #786d62;
+  --line: #e6dccd;
+  --line-strong: #d3c6b2;
+
+  --brand: #c4391d;
+  --brand-strong: #a82e15;
+  --on-brand: #ffffff;
+  --brand-soft: #f9e3da;
+  --brand-ink: #9c2c13;
+
+  --amber: #c9791a;
+  --amber-soft: #fbf0d9;
+  --amber-ink: #7d4a08;
+  --basil: #3f7a4a;
+  --basil-soft: #e4efe3;
+  --basil-ink: #2a5a34;
+  --cold: #3a6ea5;
+  --cold-soft: #e4edf6;
+  --cold-ink: #27507c;
+
+  --night: #191512;
+  --night-2: #2a2420;
+  --on-night: #f5efe6;
+  --on-night-2: #b9ad9e;
+  --night-accent: #ffb454;
+
+  --shadow-sm: none;
+  --shadow-md: 0 12px 28px -16px rgb(45 28 14 / 0.3);
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 22px;
+  --nav-h: 66px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141110;
+    --surface: #1e1a17;
+    --surface-2: #28231f;
+    --surface-3: #352e29;
+    --ink: #f5efe6;
+    --ink-2: #cdc2b5;
+    --ink-3: #a1968a;
+    --line: #2f2925;
+    --line-strong: #463d36;
+    --brand: #ee6a47;
+    --brand-strong: #f58563;
+    --on-brand: #1c0904;
+    --brand-soft: #3a1f16;
+    --brand-ink: #ffb49c;
+    --amber: #e9a94a;
+    --amber-soft: #33270f;
+    --amber-ink: #f6d38e;
+    --basil: #6cc488;
+    --basil-soft: #173021;
+    --basil-ink: #9fe0b3;
+    --cold: #74ace6;
+    --cold-soft: #15283e;
+    --cold-ink: #b1d2f4;
+    --night: #0c0a09;
+    --night-2: #1f1b18;
+  }
+}
+
+/* ---------- Tipografia ---------- */
+h1,
+h2,
+h3,
+.brand-name {
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+h1 {
+  font-size: clamp(30px, 8vw, 40px);
+  line-height: 1.06;
+}
+h2 {
+  font-size: 22px;
+}
+h3 {
+  font-size: 18px;
+}
+.eyebrow {
+  color: var(--ink-3);
+  font-weight: 700;
+}
+/* I numeri che contano (dosi, tempi, totali) hanno il carattere dei titoli. */
+.ingredients strong,
+.flour-total > strong,
+.total-weight strong,
+.scale-value,
+.automatic-phase-grid strong,
+.profile-summary strong,
+.stat-grid strong,
+.feed-weights strong,
+.summary-facts strong,
+.time-total strong {
+  font-family: var(--display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.ingredients strong,
+.flour-total > strong {
+  font-size: 26px;
+}
+
+/* ---------- Superfici: meno riquadri ---------- */
+.panel {
+  border: 0;
+  box-shadow: none;
+  padding: 20px 18px;
+}
+.section-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* ---------- Pulsanti: uno pieno, gli altri a contorno ---------- */
+.button {
+  border-radius: 15px;
+  min-height: 50px;
+  font-weight: 650;
+}
+.button.primary {
+  box-shadow: none;
+}
+.button.secondary {
+  background: transparent;
+  border: 1.5px solid var(--line-strong);
+}
+.button.on-photo {
+  background: rgb(255 255 255 / 0.18);
+  color: #fff;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.text-button {
+  font-weight: 650;
+}
+
+/* ---------- Barra in alto ---------- */
+.topbar {
+  border-bottom: 0;
+}
+.brand-name {
+  font-size: 21px;
+}
+.profile-button {
+  box-shadow: none;
+  background: var(--surface-2);
+  border: 0;
+}
+.live-chip {
+  box-shadow: none;
+}
+
+/* ---------- Navigazione: 4 voci e il «+» al centro ---------- */
+.app-nav {
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+}
+.nav-guida {
+  display: grid !important;
+}
+.app-nav-items {
+  grid-template-columns: 1fr 1fr 72px 1fr 1fr;
+  align-items: start;
+}
+.nav-item.active .nav-icon {
+  background: transparent;
+  color: var(--ink);
+}
+.nav-item {
+  color: var(--ink-3);
+}
+.nav-item.nav-impasto .nav-icon {
+  width: 58px;
+  height: 58px;
+  margin-top: -26px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--on-brand);
+  box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--brand) 75%, transparent), 0 0 0 5px var(--bg);
+}
+.nav-item.nav-impasto .nav-icon svg {
+  width: 26px;
+  height: 26px;
+}
+.nav-item.nav-impasto .nav-label {
+  display: none;
+}
+.nav-item.nav-impasto.active .nav-icon {
+  background: var(--brand-strong);
+  color: var(--on-brand);
+}
+@media (min-width: 600px) {
+  .app-nav-items {
+    grid-template-columns: 1fr;
+  }
+  .nav-item.nav-impasto {
+    order: -1;
+    margin-bottom: 8px;
+  }
+  .nav-item.nav-impasto .nav-icon {
+    margin-top: 0;
+    width: 52px;
+    height: 52px;
+    box-shadow: none;
+  }
+}
+@media (min-width: 1280px) {
+  .nav-item.nav-impasto {
+    background: var(--brand);
+    color: var(--on-brand);
+    justify-content: center;
+  }
+  .nav-item.nav-impasto:hover {
+    background: var(--brand-strong);
+  }
+  .nav-item.nav-impasto .nav-icon {
+    width: 28px;
+    height: 28px;
+    background: transparent;
+  }
+  .nav-item.nav-impasto .nav-label {
+    display: inline !important;
+    color: var(--on-brand);
+  }
+  .nav-item.active:not(.nav-impasto) {
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+}
+
+/* ---------- Dispensa: farine, lievito, condimenti ---------- */
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+.segmented button {
+  min-height: 42px;
+  border-radius: 12px;
+  font-weight: 650;
+  font-size: 14.5px;
+  color: var(--ink-2);
+}
+.segmented button.selected {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(45 28 14 / 0.12);
+}
+
+/* ---------- Oggi ---------- */
+.tab-oggi .topbar {
+  display: none;
+}
+.tab-oggi main {
+  padding-top: 0;
+  gap: 22px;
+}
+.today-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: min(62dvh, 520px);
+  margin: 0 calc(-1 * (var(--gutter) + var(--safe-r))) 0 calc(-1 * (var(--gutter) + var(--safe-l)));
+  padding: calc(var(--safe-t) + 18px) calc(var(--gutter) + 6px) 22px;
+  color: #fff;
+  background: #191512 center / cover no-repeat;
+  isolation: isolate;
+}
+.today-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(15 11 8 / 0.6) 0%, rgb(15 11 8 / 0) 26%, rgb(15 11 8 / 0.3) 50%, rgb(15 11 8 / 0.93) 100%);
+}
+.today-greeting {
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 0.92;
+}
+.today-body {
+  display: grid;
+  gap: 8px;
+}
+.today-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.today-live i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffb454;
+  box-shadow: 0 0 0 4px rgb(255 180 84 / 0.3);
+}
+.today-live.plain {
+  opacity: 0.85;
+}
+.today-hero h1 {
+  color: #fff;
+  font-size: clamp(32px, 9vw, 44px);
+  line-height: 1.04;
+}
+.today-hero h1 small {
+  display: block;
+  font: 600 16px var(--font);
+  letter-spacing: 0;
+  color: #ffb454;
+  margin-bottom: 4px;
+}
+.today-hero p {
+  color: rgb(255 255 255 / 0.86);
+  font-size: 15px;
+}
+.today-progress {
+  display: flex;
+  gap: 5px;
+  margin: 8px 0 6px;
+}
+.today-progress i {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.28);
+}
+.today-progress i.done {
+  background: #fff;
+}
+.today-progress i.current {
+  background: #ffb454;
+}
+.today-actions {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 10px;
+}
+.today-actions.single,
+.today-actions:has(> :only-child) {
+  grid-template-columns: 1fr;
+}
+.today-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.today-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.today-list li {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15.5px;
+  font-weight: 500;
+}
+.today-list li:last-child {
+  border-bottom: 0;
+}
+.today-list time {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.today-list small {
+  display: block;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.today-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  text-align: left;
+  color: var(--ink);
+}
+.today-row-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.today-row strong {
+  display: block;
+  font-size: 15.5px;
+}
+.today-row small {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.template-cards {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 168px;
+  gap: 10px;
+  margin: 0 calc(-1 * var(--gutter));
+  padding: 4px var(--gutter);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.template-cards article {
+  position: relative;
+  height: 130px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: #191512 center / cover;
+  isolation: isolate;
+}
+.template-cards article::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(12 9 7 / 0.1) 20%, rgb(12 9 7 / 0.9));
+}
+.template-use {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: end;
+  padding: 12px;
+  text-align: left;
+  color: #fff;
+}
+.template-use strong {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.template-use small {
+  opacity: 0.85;
+}
+.template-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #fff;
+  background: rgb(0 0 0 / 0.35);
+}
+
+/* ---------- Nuova pizza: stili con foto ---------- */
+.create-heading {
+  padding-top: 4px;
+}
+.style-hint {
+  font-size: 14px;
+  color: var(--ink-3);
+  margin: -12px 0 10px;
+}
+.style-options {
+  grid-auto-columns: 156px;
+}
+.style-option {
+  min-height: 190px;
+  padding: 0 12px 12px;
+  align-content: end;
+  border: 0;
+  box-shadow: none;
+  overflow: hidden;
+  color: #fff;
+  background: #191512;
+  isolation: isolate;
+}
+.style-photo {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.style-option::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(12 9 7 / 0) 30%, rgb(12 9 7 / 0.9));
+}
+.style-option strong {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: #fff;
+}
+.style-option small {
+  color: rgb(255 255 255 / 0.85);
+}
+.style-option.is-selected {
+  background: #191512;
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+.style-option .style-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #fff;
+  background: var(--brand);
+  border-radius: 50%;
+}
+
+/* ---------- Passaggi del piano ---------- */
+.planner-steps {
+  border: 0;
+  border-radius: 18px;
+}
+
+.today-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.today-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  background: rgb(255 255 255 / 0.18);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+@media (min-width: 600px) {
+  .today-avatar {
+    display: none;
+  }
+  .today-hero {
+    margin: 0;
+    border-radius: var(--r-xl);
+    min-height: 440px;
+  }
+  .tab-oggi main {
+    padding-top: 24px;
+  }
+}
+
+/* ---------- Diario: il «+» crea già una pizza, qui il pulsante resta secondario ---------- */
+.journal-card {
+  box-shadow: none;
+}
+.journal-card,
+.journal-card.active-recipe {
+  border: 0;
+  box-shadow: none;
+}

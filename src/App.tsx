@@ -10,7 +10,7 @@ import {
   CheckCircle,
   ChefHat,
   Clock,
-  CookingPot,
+  Plus,
   Drop,
   Fire,
   Info,
@@ -19,7 +19,6 @@ import {
   CalendarCheck,
   ListChecks,
   Notebook,
-  Trash,
   PencilSimple,
   Pizza,
   Snowflake,
@@ -97,25 +96,34 @@ import { usesCalendarReminders } from "./services/platform";
 import { formatTemp, formatWeight, normalizeUnits, setUnits, type Units } from "./services/units";
 import { WeightValue } from "./components/WeightValue";
 import { FlourSuggestions } from "./components/FlourSuggestions";
+import { Home } from "./components/Home";
+import { stylePhoto } from "./data/photos";
 import { normalizeLanguage } from "./i18n";
 import { markTutorialSeen, tutorialSeen } from "./services/tutorial";
 import { Onboarding } from "./components/Onboarding";
-import { InstallPrompt } from "./components/InstallPrompt";
 import { LateStartDialog } from "./components/LateStartDialog";
 import { SelectSheet } from "./components/SelectSheet";
 import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.23.0";
-type Tab = "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
+const APP_VERSION = "0.24.0";
+type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
+/** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
+const pantryTabs = [
+  { id: "farine", label: msg("Farine") },
+  { id: "madre", label: msg("Lievito") },
+  { id: "condimenti", label: msg("Condimenti") },
+] as const;
+const inPantry = (tab: Tab) => pantryTabs.some((item) => item.id === tab);
+/** «#nuova» apre direttamente la creazione di una pizza (scorciatoia e test). */
+const initialTab = (): Tab => (typeof location !== "undefined" && location.hash === "#nuova" ? "impasto" : "oggi");
 type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
 const nav = [
-  { id: "impasto", label: msg("Il tuo impasto"), short: msg("Impasto"), icon: CookingPot },
-  { id: "farine", label: msg("Farine"), short: msg("Farine"), icon: Wheat },
-  { id: "condimenti", label: msg("Condimenti"), short: msg("Condimenti"), icon: Pizza },
-  { id: "madre", label: msg("Lievito"), short: msg("Lievito"), icon: Jar },
+  { id: "oggi", label: msg("Oggi"), short: msg("Oggi"), icon: Fire },
   { id: "diario", label: msg("Diario"), short: msg("Diario"), icon: Notebook },
+  { id: "impasto", label: msg("Nuova pizza"), short: msg("Nuova"), icon: Plus },
+  { id: "farine", label: msg("Dispensa"), short: msg("Dispensa"), icon: Jar },
   { id: "guida", label: msg("Impara"), short: msg("Impara"), icon: BookOpen },
   { id: "profilo", label: msg("Profilo"), short: msg("Profilo"), icon: UserCircle },
 ] as const;
@@ -154,7 +162,7 @@ const dateLabel = (s: string) =>
 export default function App() {
   const [state, setState] = useState<StoredState>(emptyState);
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState<Tab>("impasto");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [message, setMessage] = useState("");
   const [plannerStage, setPlannerStage] = useState<PlannerStage>("dough");
   const [storageError, setStorageError] = useState("");
@@ -173,7 +181,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [message]);
   useEffect(() => {
-    window.history.replaceState({ tab: "impasto" }, "");
+    window.history.replaceState({ tab: initialTab() }, "");
     const onPop = (event: PopStateEvent) => {
       const previous = (event.state as { tab?: Tab } | null)?.tab;
       if (previous) setTab(previous);
@@ -260,9 +268,6 @@ export default function App() {
   const currentStyle = styles.find((s) => s.id === c.styleId)!;
   const history = ratedHistory(state.recipes, c);
   const active = state.recipes.find((r) => r.id === state.activeId);
-  const activeNext = active
-    ? buildTimeline(active.config).find((s) => new Date(s.at).getTime() > now)
-    : undefined;
   function normalizePlanning(config: DoughConfig) {
     if (config.planMode === "automatic") return applyAutomaticPlan(config);
     if (config.planMode === "duration") {
@@ -320,7 +325,7 @@ export default function App() {
       ...s,
       templates: [{ id: crypto.randomUUID(), name, createdAt: new Date().toISOString(), config: { ...s.config } }, ...(s.templates ?? [])],
     }));
-    setMessage(t("Modello «{name}» salvato: lo trovi in cima, sotto «I tuoi modelli».", { name }));
+    setMessage(t("Modello «{name}» salvato: lo trovi in «Oggi», sotto «I tuoi modelli».", { name }));
   }
   function useTemplate(id: string) {
     const template = (state.templates ?? []).find((item) => item.id === id);
@@ -329,6 +334,7 @@ export default function App() {
     setEditingId(null);
     setRecipeName(template.name);
     setPlannerStage("fermentation");
+    openTab("impasto");
     setMessage(t("Modello «{name}» caricato: scegli quando mangiare.", { name: template.name }));
   }
   function goToPlannerStage(stage: PlannerStage) {
@@ -930,7 +936,7 @@ export default function App() {
           className="brand nav-brand"
           onClick={(e) => {
             e.preventDefault();
-            openTab("impasto");
+            openTab("oggi");
           }}
         >
           <span className="brand-icon">
@@ -944,13 +950,13 @@ export default function App() {
           {nav.map((n) => (
             <button
               key={n.id}
-              className={`nav-item nav-${n.id} ${tab === n.id ? "active" : ""}`}
+              className={`nav-item nav-${n.id} ${tab === n.id || (n.id === "farine" && inPantry(tab)) ? "active" : ""}`}
               aria-label={t(n.label)}
-              aria-current={tab === n.id ? "page" : undefined}
-              onClick={() => (n.id === "diario" ? openDiary() : openTab(n.id))}
+              aria-current={tab === n.id || (n.id === "farine" && inPantry(tab)) ? "page" : undefined}
+              onClick={() => (n.id === "diario" ? openDiary() : n.id === "impasto" ? startNewDough() : openTab(n.id))}
             >
               <span className="nav-icon">
-                <n.icon size={22} weight={tab === n.id ? "fill" : "regular"} />
+                <n.icon size={22} weight={n.id === "impasto" ? "bold" : tab === n.id || (n.id === "farine" && inPantry(tab)) ? "fill" : "regular"} />
                 {n.id === "diario" && state.recipes.length > 0 && (
                   <small className="nav-badge">{state.recipes.length}</small>
                 )}
@@ -974,7 +980,7 @@ export default function App() {
             className="brand topbar-brand"
             onClick={(e) => {
               e.preventDefault();
-              openTab("impasto");
+              openTab("oggi");
             }}
           >
             <span className="brand-icon">
@@ -985,7 +991,7 @@ export default function App() {
             </span>
           </a>
           <span className="topbar-title">
-            {t(nav.find((n) => n.id === tab)?.label ?? "")}
+            {t(inPantry(tab) ? "Dispensa" : (nav.find((n) => n.id === tab)?.label ?? ""))}
           </span>
           <div className="topbar-actions">
             {active && tab !== "diario" && (
@@ -1008,14 +1014,6 @@ export default function App() {
               ) : (
                 <UserCircle size={24} weight={tab === "profilo" ? "fill" : "regular"} />
               )}
-            </button>
-            <button
-              className={`learn-button ${tab === "guida" ? "active" : ""}`}
-              aria-label={t("Impara")}
-              onClick={() => openTab("guida")}
-            >
-              <BookOpen size={20} weight={tab === "guida" ? "fill" : "regular"} />
-              <span>{t("Impara")}</span>
             </button>
           </div>
         </header>
@@ -1045,77 +1043,41 @@ export default function App() {
               </button>
             </div>
           )}
+          {tab === "oggi" && (
+            <Home
+              name={state.profileName ?? ""}
+              now={now}
+              active={active}
+              stages={active ? buildTimeline(active.config, flours) : []}
+              savedCount={state.recipes.filter((r) => recipeStatus(r, state.activeId, now) === "saved").length}
+              templates={state.templates ?? []}
+              onNew={startNewDough}
+              onOpenProfile={() => openTab("profilo")}
+              onOpenDiary={openDiary}
+              onStageDone={(stageId) => active && editRecipe(active.id, { completedStages: [...new Set([...active.completedStages, stageId])] })}
+              onUseTemplate={useTemplate}
+              onDeleteTemplate={(id) => setState((s) => ({ ...s, templates: (s.templates ?? []).filter((item) => item.id !== id) }))}
+            />
+          )}
+          {inPantry(tab) && (
+            <div className="segmented" role="group" aria-label={t("Dispensa")}>
+              {pantryTabs.map((item) => (
+                <button key={item.id} className={tab === item.id ? "selected" : ""} aria-pressed={tab === item.id} onClick={() => openTab(item.id)}>
+                  {t(item.label)}
+                </button>
+              ))}
+            </div>
+          )}
           {tab === "impasto" && (
             <>
-              <div className="page-heading home-heading">
+              <div className="page-heading create-heading">
                 <div>
-                  <span className="eyebrow">{t("Il tuo laboratorio della pizza")}</span>
-                  <h1>
-                    {t("Progetta. Impasta.")} <span>{t("Perfeziona.")}</span>
-                  </h1>
-                  <p>
-                    {t("Scegli lo stile e segui i quattro passaggi: dosi, tempi e promemoria li calcola PizzaLab per te.")}
-                  </p>
-                </div>
-                <div className="heading-illustration" aria-hidden="true">
-                  <Pizza weight="duotone" />
+                  <span className="eyebrow">{editingId ? t("Modifica") : t("Nuova pizza")}</span>
+                  <h1>{t("Che pizza facciamo?")}</h1>
                 </div>
               </div>
-              <InstallPrompt />
-              {active && (
-                <button
-                  className="active-banner"
-                  onClick={() => openDiary()}
-                >
-                  <span className="active-banner-icon">
-                    <Clock size={22} weight="bold" />
-                  </span>
-                  <div>
-                    <small>{t("Impasto in corso ·")} {active.name}</small>
-                    <strong>
-                      {activeNext
-                        ? `${activeNext.title} · ${dateLabel(activeNext.at)}`
-                        : t("Tabella di marcia terminata. Com’è andata?")}
-                    </strong>
-                  </div>
-                  <ArrowRight />
-                </button>
-              )}
-              {(state.templates ?? []).length > 0 && (
-                <section className="panel user-ovens" aria-labelledby="templates-title">
-                  <div className="panel-title">
-                    <span className="section-icon"><BookmarkSimple /></span>
-                    <div>
-                      <h2 id="templates-title">{t("I tuoi modelli")}</h2>
-                      <p>{t("Le tue ricette da rifare: un tocco e ripartono, tu scegli solo quando mangiare.")}</p>
-                    </div>
-                  </div>
-                  <div className="oven-list">
-                    {(state.templates ?? []).map((template) => (
-                      <article key={template.id}>
-                        <span className="oven-icon" aria-hidden="true"><Pizza weight="duotone" /></span>
-                        <div>
-                          <strong>{template.name}</strong>
-                          <span>{t(styles.find((s) => s.id === template.config.styleId)?.name ?? "")} · {template.config.hydration}%</span>
-                        </div>
-                        <button className="button secondary" onClick={() => useTemplate(template.id)}>{t("Usa")}</button>
-                        <button
-                          className="icon-button"
-                          aria-label={t("Elimina modello {name}", { name: template.name })}
-                          onClick={() => setState((s) => ({ ...s, templates: (s.templates ?? []).filter((item) => item.id !== template.id) }))}
-                        >
-                          <Trash />
-                        </button>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              )}
               <section className="style-section">
-                <div className="section-title">
-                  <h2>{t("Che pizza ti va?")}</h2>
-                  <span>{t("Tocca uno stile: dosi e tempi si impostano da soli.")}</span>
-                </div>
+                <p className="style-hint">{t("Tocca uno stile: dosi e tempi si impostano da soli.")}</p>
                 <div className="style-options">
                   {styles.map((s, i) => (
                     <button
@@ -1125,13 +1087,7 @@ export default function App() {
                       onClick={() => changeStyle(s.id)}
                       style={{ "--art-hue": `${(i * 29) % 360}` } as CSSProperties}
                     >
-                      <span className={`style-art art-${i}`} aria-hidden="true">
-                        {s.pan ? (
-                          <CookingPot weight="duotone" />
-                        ) : (
-                          <Pizza weight="duotone" />
-                        )}
-                      </span>
+                      <img className="style-photo" src={stylePhoto(s.id)} alt="" loading="lazy" />
                       <strong>{t(s.name)}</strong>
                       <small>{t(styleTaglines[s.id] ?? (s.pan ? "Da condividere" : "Il grande classico"))}</small>
                       {c.styleId === s.id && (

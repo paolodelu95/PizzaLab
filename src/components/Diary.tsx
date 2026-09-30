@@ -114,7 +114,7 @@ export function Diary(props: Props) {
         </div>
       </div>
       <div className="heading-actions page-tools-row diary-tools">
-        <button className="button primary" onClick={props.onNew}>
+        <button className="button secondary" onClick={props.onNew}>
           {t("Nuovo impasto")} <ArrowRight />
         </button>
       </div>
@@ -143,7 +143,7 @@ export function Diary(props: Props) {
             {view === "past" ? <FlagCheckered size={48} weight="duotone" /> : view === "saved" ? <CalendarBlank size={48} weight="duotone" /> : <Notebook size={48} weight="duotone" />}
             <h2>{recipes.length === 0 ? t("La prima pagina è tutta tua.") : t(current.empty[0])}</h2>
             <p>{recipes.length === 0 ? t("Progetta un impasto, poi nel riepilogo scegli se iniziarlo subito o salvarlo per dopo.") : t(current.empty[1])}</p>
-            <button className="button primary" onClick={props.onNew}>
+            <button className="button secondary" onClick={props.onNew}>
               {recipes.length === 0 ? t("Prepara il primo impasto") : t("Progetta un nuovo impasto")} <ArrowRight />
             </button>
           </div>

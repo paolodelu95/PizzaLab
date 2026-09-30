@@ -17,3 +17,4 @@ android/keystore.properties
 artifacts/*.apk
 *.apk
 .DS_Store
+design/

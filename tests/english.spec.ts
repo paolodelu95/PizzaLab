@@ -26,8 +26,8 @@ async function visit(page: Page, name: string, found: Record<string, string[]>) 
 test("english mode shows no Italian text across the app", async ({ page }) => {
   const found: Record<string, string[]> = {};
   await page.addInitScript(() => localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"));
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: /Design\. Knead\./ })).toBeVisible();
+  await page.goto("/#nuova");
+  await expect(page.getByRole("heading", { name: /What pizza shall we make/ })).toBeVisible();
   await visit(page, "home", found);
 
   for (const step of [/^2 Fermentation/, /^3 Baking/, /^4 Summary/, /^1 Dough/]) {
@@ -40,7 +40,7 @@ test("english mode shows no Italian text across the app", async ({ page }) => {
   await page.getByRole("button", { name: /^3 Baking/ }).click();
   await visit(page, "baking", found);
 
-  for (const tab of ["Flours", "Toppings", "Yeast", "Diary", "Learn", "Profile"]) {
+  for (const tab of ["Today", "Pantry", "Toppings", "Yeast", "Diary", "Learn", "Profile"]) {
     await page.getByRole("button", { name: tab, exact: true }).first().click();
     await visit(page, `tab ${tab}`, found);
   }
@@ -51,8 +51,8 @@ test("english mode also covers dialogs, pickers, the running plan and the tools"
   test.setTimeout(60000);
   const found: Record<string, string[]> = {};
   await page.addInitScript(() => localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"));
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: /Design\. Knead\./ })).toBeVisible();
+  await page.goto("/#nuova");
+  await expect(page.getByRole("heading", { name: /What pizza shall we make/ })).toBeVisible();
 
   // Spiegazioni «?» e pannelli di scelta: ogni finestra si legge poi si chiude.
   await page.getByRole("button", { name: /^2 Fermentation/ }).click();
@@ -85,13 +85,16 @@ test("english mode also covers dialogs, pickers, the running plan and the tools"
   await page.getByRole("button", { name: "Close guided mode" }).click();
 
   // Condimenti, lievito, farine, profilo.
+  await page.getByRole("button", { name: "Pantry", exact: true }).first().click();
   await page.getByRole("button", { name: "Toppings", exact: true }).first().click();
   await page.getByRole("button", { name: /Diavola/ }).click();
   await visit(page, "toppings", found);
+  await page.getByRole("button", { name: "Pantry", exact: true }).first().click();
   await page.getByRole("button", { name: "Yeast", exact: true }).first().click();
   await page.getByLabel("What do you want to call it?").fill("Gino");
   await page.locator(".starter-kind-card").filter({ hasText: "Solid sourdough starter" }).getByRole("button", { name: "I already have one" }).click();
   await visit(page, "starter", found);
+  await page.getByRole("button", { name: "Pantry", exact: true }).first().click();
   await page.getByRole("button", { name: "Flours", exact: true }).first().click();
   await page.getByRole("button", { name: "Add your own flour" }).click();
   await visit(page, "flour form", found);

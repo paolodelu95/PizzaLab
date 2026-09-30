@@ -5,6 +5,7 @@ import { isNativeApp } from './services/platform';
 import './styles.css';
 import './workflow.css';
 import './pages.css';
+import './theme.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);
 
 // Versione web (iPhone, browser): funzionamento offline e dati meno esposti alla pulizia automatica.

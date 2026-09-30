@@ -29,7 +29,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   );
 });
 test("first launch shows a short tutorial that can be skipped and replayed", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   const dialog = page.getByRole("dialog", { name: "Il tuo laboratorio della pizza" });
   await expect(dialog).toBeVisible();
   await page.getByRole("button", { name: "Avanti" }).click();
@@ -37,7 +37,7 @@ test("first launch shows a short tutorial that can be skipped and replayed", asy
   await page.getByRole("button", { name: "Salta" }).click();
   await expect(page.locator(".onboarding")).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole("heading", { name: /Progetta\. Impasta/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Che pizza facciamo/ })).toBeVisible();
   await expect(page.locator(".onboarding")).toHaveCount(0);
   await page.getByRole("button", { name: "Impara", exact: true }).click();
   await page.getByRole("button", { name: "Rivedi il tutorial" }).click();
@@ -46,9 +46,9 @@ test("first launch shows a short tutorial that can be skipped and replayed", asy
 test("calculate, save, annotate, persist and delete a recipe", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await expect(
-    page.getByRole("heading", { name: /Progetta\. Impasta/ }),
+    page.getByRole("heading", { name: /Che pizza facciamo/ }),
   ).toBeVisible();
   await expect(page.getByLabel("Dosi rapide")).toBeVisible();
   await expect(page.getByText("Impasto totale", { exact: true })).toHaveCount(0);
@@ -113,8 +113,9 @@ test("calculate, save, annotate, persist and delete a recipe", async ({
 test("flour search, source details, custom flour and no overflow", async ({
   page,
 }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Farine", exact: true }).click();
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+  await page.getByRole("button", { name: "Farine", exact: true }).first().click();
   await page.getByRole("textbox", { name: "Cerca farina" }).fill("Garofalo");
   await expect(page.locator(".flour-row")).toHaveCount(5);
   await page.getByRole("button", { name: "W 260", exact: true }).click();
@@ -150,7 +151,7 @@ test("flour search, source details, custom flour and no overflow", async ({
 test("invalid fields block saving and hot/weak dough produces warnings", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await page.getByLabel("Temperatura ambiente", { exact: true }).fill("30");
   await expect(
@@ -175,7 +176,7 @@ test("invalid fields block saving and hot/weak dough produces warnings", async (
 test("mixes three flours and shows hydration and yeast charts", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await expect(page.getByRole("button", { name: "Seconda farina", exact: true })).toBeHidden();
   await page.getByText("Miscela di farine", { exact: true }).click();
   await page
@@ -208,7 +209,7 @@ test("mixes three flours and shows hydration and yeast charts", async ({
 test("preferment, water temperature, manual yeast and oven profile work together", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: "Contemporanea" }).click();
   await page.getByRole("button", { name: "Poolish" }).click();
   await expect(page.getByText("al picco", { exact: true })).toBeVisible();
@@ -228,7 +229,7 @@ test("preferment, water temperature, manual yeast and oven profile work together
 test("temperature editing stays mounted and autolyse and mixer guidance are explicit", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   const flourTemp = page.getByLabel("Temperatura farina", { exact: true });
   await flourTemp.fill("");
   await expect(flourTemp).toBeVisible();
@@ -255,7 +256,7 @@ test("temperature editing stays mounted and autolyse and mixer guidance are expl
 test("mobile workflow exposes starter, scale, guide, toppings, equipment and rescue tools", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await pick(page, page.getByRole("button", { name: /^Lievito (Di birra|Secco|Pasta|Licoli)/ }), /^Licoli/);
   await expect(page.getByLabel("Licoli sulla farina")).toBeVisible();
@@ -263,16 +264,17 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
   await expect(
     page.getByText(/Le quantità di farina e acqua da pesare/),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
   await expect(page.getByRole("heading", { name: "Condimenti classici" })).toBeVisible();
   await page
-    .getByRole("button", { name: "Il tuo impasto", exact: true })
+    .getByRole("button", { name: "Nuova pizza", exact: true })
     .click();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
   await page.getByRole("button", { name: "Profilo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Le tue teglie" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "La tua attrezzatura" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await startNowFromSummary(page);
   await page.getByRole("button", { name: "Pesa" }).click();
   await expect(page.getByText("Modalità bilancia")).toBeVisible();
@@ -289,7 +291,7 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
 test("searches generic flours and compensates an integer yeast dose", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page
     .getByRole("button", { name: "La tua farina", exact: true })
     .click();
@@ -313,7 +315,7 @@ test("searches generic flours and compensates an integer yeast dose", async ({
   ).toBeVisible();
 });
 test("predicts crust, crumb and base from the baking setup", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: /^3 Cottura/ }).click();
   await expect(
     page.getByRole("heading", { name: "Simulatore di cottura" }),
@@ -337,8 +339,9 @@ test("predicts crust, crumb and base from the baking setup", async ({ page }) =>
   await expect(page.getByText(/Finestra consigliata/)).toBeVisible();
 });
 test("offers classic toppings and guides a starter to maturity", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
   await expect(page.getByLabel("Diametro")).toHaveValue("32");
   await expect(page.locator(".topping-area")).toContainText("3217 cm²");
   await page.getByLabel("Cerca pizza o ingrediente").fill("diavola");
@@ -348,7 +351,9 @@ test("offers classic toppings and guides a starter to maturity", async ({ page }
   await page.getByRole("button", { name: /4 formaggi/ }).click();
   await expect(page.locator(".topping-ingredients").getByText("Gorgonzola", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Lievito", exact: true }).click();
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+
+  await page.getByRole("button", { name: "Lievito", exact: true }).first().click();
   await expect(page.getByRole("heading", { name: "Coltiva il tuo lievito madre." })).toBeVisible();
   const liquidCard = page.locator(".starter-kind-card").filter({ hasText: "Li.Co.Li." });
   await liquidCard.getByRole("button", { name: "Ne ho già uno" }).click();
@@ -366,16 +371,18 @@ test("offers classic toppings and guides a starter to maturity", async ({ page }
   await expect(page.getByText("Dove lo conservi?")).toBeVisible();
 });
 test("scales toppings from round and tray dimensions", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
   const tomato = page.locator(".topping-ingredients > div").filter({ hasText: "Pomodoro" });
   await expect(tomato).toContainText("300 g");
   await page.getByLabel("Diametro").fill("40");
   await expect(tomato).toContainText("469 g");
 
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await page.getByRole("button", { name: "In teglia Da condividere" }).click();
-  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
   await expect(page.getByLabel("Larghezza")).toHaveValue("30");
   await expect(page.getByLabel("Lunghezza")).toHaveValue("40");
   await page.getByRole("button", { name: "Riduci numero di teglie" }).click();
@@ -384,19 +391,22 @@ test("scales toppings from round and tray dimensions", async ({ page }) => {
   await expect(page.locator(".topping-ingredients > div").filter({ hasText: "Pomodoro" })).toContainText("225 g");
 });
 test("selects gluten-free mixes and manages multiple named starters", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Farine", exact: true }).click();
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+  await page.getByRole("button", { name: "Farine", exact: true }).first().click();
   await page.getByLabel("Senza glutine", { exact: true }).check();
   await expect(page.getByText("Mix universale per pizza", { exact: true })).toBeVisible();
   await expect(page.getByText("Farina di riso", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await page.getByRole("button", { name: "La tua farina", exact: true }).click();
   await page.getByRole("textbox", { name: "Cerca per la tua farina" }).fill("mix universale");
   await page.getByRole("button", { name: /Mix universale per pizza/ }).click();
   await expect(page.getByText("Impasto senza glutine: usa la confezione come riferimento")).toBeVisible();
 
-  await page.getByRole("button", { name: "Lievito", exact: true }).click();
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+
+  await page.getByRole("button", { name: "Lievito", exact: true }).first().click();
   await page.getByLabel("Come vuoi chiamarlo?").fill("Gino");
   await page.locator(".starter-kind-card").filter({ hasText: "Pasta madre solida" }).getByRole("button", { name: "Ne ho già uno" }).click();
   await expect(page.getByRole("heading", { name: "Gino" })).toBeVisible();
@@ -413,7 +423,7 @@ test("selects gluten-free mixes and manages multiple named starters", async ({ p
 test("reserves enough room-temperature time for every fold and keeps toppings separate", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await page.getByLabel("Puntata fuori frigo", { exact: true }).fill("1");
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
@@ -428,7 +438,8 @@ test("reserves enough room-temperature time for every fold and keeps toppings se
   await expect(bulk).toHaveValue("1.5");
   await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
   await expect(page.getByText("Piega 3 di 3", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
   await expect(
     page.getByRole("heading", { name: "Condimenti." }),
   ).toBeVisible();
@@ -436,7 +447,7 @@ test("reserves enough room-temperature time for every fold and keeps toppings se
 });
 
 test("automatic planning derives phases and yeast from start and meal time", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await page.getByRole("button", { name: /Automatica/ }).click();
   await page.getByLabel("Voglio iniziare").fill("2026-11-13T19:40");
@@ -451,8 +462,9 @@ test("automatic planning derives phases and yeast from start and meal time", asy
 });
 
 test("opening sourdough care does not focus the name field", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Lievito", exact: true }).click();
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+  await page.getByRole("button", { name: "Lievito", exact: true }).first().click();
   await expect(page.getByLabel("Come vuoi chiamarlo?")).not.toBeFocused();
 });
 
@@ -469,9 +481,9 @@ test("stays responsive across small phones, large phones and tablets", async ({ 
   ];
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
-    await page.goto("/");
-    for (const section of ["Farine", "Condimenti", "Lievito", "Diario", "Impara", "Profilo"]) {
-      await page.getByRole("button", { name: section, exact: true }).click();
+    await page.goto("/#nuova");
+    for (const section of ["Oggi", "Dispensa", "Condimenti", "Lievito", "Diario", "Impara", "Profilo"]) {
+      await page.getByRole("button", { name: section, exact: true }).first().click();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (section === "Condimenti" && [320, 768].includes(viewport.width))
         await page.screenshot({ path: `test-results/responsive-condimenti-${viewport.width}.png`, fullPage: true });
@@ -479,7 +491,7 @@ test("stays responsive across small phones, large phones and tablets", async ({ 
         await page.screenshot({ path: `test-results/fold-cover-${section.toLowerCase()}.png` });
     }
     if (viewport.width === 344) {
-      await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+      await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
       await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
       const sliderBox = await page.getByLabel("Puntata fuori frigo: cursore").boundingBox();
       expect(sliderBox).not.toBeNull();
@@ -495,25 +507,28 @@ test("stays responsive across small phones, large phones and tablets", async ({ 
 });
 
 test("links a named starter, toppings, shopping, live checks and oven calibration", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Lievito", exact: true }).click();
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+  await page.getByRole("button", { name: "Lievito", exact: true }).first().click();
   await page.getByLabel("Come vuoi chiamarlo?").fill("Levain sabato");
   await page.locator(".starter-kind-card").filter({ hasText: "Li.Co.Li." }).getByRole("button", { name: "Ne ho già uno" }).click();
 
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
   await pick(page, page.getByRole("button", { name: /^Lievito (Di birra|Secco|Pasta|Licoli)/ }), /^Licoli/);
   await page.locator(".starter-link-options").getByRole("button", { name: /Levain sabato/ }).click();
   await expect(page.getByText("Rinfresco preparatorio", { exact: true })).toBeVisible();
   await expect(page.getByText("Rinfresca indicativamente", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+
+  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
   await page.getByRole("button", { name: /Bufala/ }).click();
   await page.getByText("Lista della spesa completa", { exact: true }).click();
   await expect(page.getByText("Impasto + Bufala", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copia lista" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await page.getByRole("button", { name: /^3 Cottura/ }).click();
   await expect(page.locator(".bake-topping-impact")).toContainText("82% umidità");
   await page.getByRole("button", { name: /Passaggio 4 di 4/ }).click();
@@ -539,14 +554,14 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
   await calibration.getByRole("button", { name: "Umida", exact: true }).click();
   await calibration.getByRole("button", { name: "Salva risultato reale" }).click();
   await expect(page.getByRole("status")).toContainText("Taratura salvata");
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await page.getByRole("button", { name: /^3 Cottura/ }).click();
   await expect(page.locator(".bake-calibration").getByText("Correzione personale", { exact: false })).toBeVisible();
   await page.screenshot({ path: `test-results/active-diary-${test.info().project.name}.png`, fullPage: true });
 });
 
 test("profile keeps the name, saved ovens and settings in one place", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: "Profilo", exact: true }).click();
   await page.getByLabel("Come ti chiami?").fill("Paolo");
   await expect(page.getByRole("heading", { name: "Ciao, Paolo." })).toBeVisible();
@@ -558,7 +573,7 @@ test("profile keeps the name, saved ovens and settings in one place", async ({ p
   await ovens.getByRole("button", { name: "Salva il forno" }).click();
   await ovens.getByRole("button", { name: "Usa", exact: true }).click();
   await expect(ovens.getByText("In uso")).toBeVisible();
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await page.getByRole("button", { name: /^3 Cottura/ }).click();
   await expect(page.getByLabel("Tipo di forno")).toContainText("Ariete 909");
   await expect(page.getByRole("button", { name: "Fornetto di casa" })).toBeVisible();
@@ -569,7 +584,7 @@ test("profile keeps the name, saved ovens and settings in one place", async ({ p
 });
 
 test("profile stores several pans and the kneading tool without repeating the oven", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: "Profilo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "La tua attrezzatura" })).toHaveCount(0);
   const pans = page.locator(".user-pans");
@@ -588,7 +603,7 @@ test("profile stores several pans and the kneading tool without repeating the ov
   await pick(page, page.locator(".kneading-panel").getByLabel("Lavorazione"), /^Planetaria/);
   await pick(page, page.locator(".kneading-panel").getByLabel("La tua planetaria"), /^KitchenAid/);
 
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await expect(page.getByLabel("Lavorazione")).toContainText("Planetaria");
   await page.getByRole("button", { name: "In teglia Da condividere" }).click();
   await page.getByRole("button", { name: /Teglia Detroit · 25×35/ }).click();
@@ -607,7 +622,7 @@ test("profile stores several pans and the kneading tool without repeating the ov
 });
 
 test("a late start can keep dinner time by recalculating yeast and rise", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   const soon = await page.evaluate(() => {
     const d = new Date(Date.now() + 5 * 3600000);
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -626,21 +641,23 @@ test("a late start can keep dinner time by recalculating yeast and rise", async 
 });
 
 test("pan styles work with round pans and focaccia barese starts in a round pan", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: "In teglia Da condividere" }).click();
   await page.getByRole("button", { name: "Tonda", exact: true }).click();
   await expect(page.getByLabel("Larghezza teglia", { exact: true })).toHaveCount(0);
   await page.getByLabel("Diametro teglia").fill("28");
-  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
   await expect(page.getByRole("heading", { name: "Quanto misura ogni teglia?" })).toBeVisible();
   await expect(page.getByLabel("Diametro teglia")).toHaveValue("28");
   await expect(page.locator(".topping-area")).toContainText("2463 cm²");
 
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await page.getByRole("button", { name: /Focaccia barese/ }).click();
   await expect(page.getByRole("button", { name: "Tonda", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByLabel("Diametro teglia")).toHaveValue("28");
-  await page.getByRole("button", { name: "Condimenti", exact: true }).click();
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
   await expect(page.locator(".selected-topping-heading")).toContainText("Focaccia barese");
   await expect(page.locator(".topping-ingredients")).toContainText("Pomodorini");
 
@@ -651,13 +668,13 @@ test("pan styles work with round pans and focaccia barese starts in a round pan"
   await pans.getByLabel("Diametro interno").fill("32");
   await pans.getByRole("button", { name: "Salva la teglia" }).click();
   await expect(pans.getByText("Tonda · Ø 32 cm")).toBeVisible();
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await page.getByRole("button", { name: /Teglia tonda Ø 32 · Ø 32 cm/ }).click();
   await expect(page.getByLabel("Diametro teglia")).toHaveValue("32");
 });
 
 test("in the browser the phases go to the phone calendar with an alarm", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
   await page.getByLabel("Nome del piano").fill("Pizza del venerdì");
   await page.getByRole("button", { name: "Programma" }).click();
@@ -690,15 +707,15 @@ test("on iPhone the web app explains how to add it to the home screen", async ({
   await prompt.getByRole("button", { name: /più tardi/ }).click();
   await expect(prompt).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole("heading", { name: /Progetta\. Impasta/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Che pizza facciamo/ })).toBeVisible();
   await expect(page.getByRole("region", { name: "Installa PizzaLab sul telefono" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Profilo", exact: true }).click();
+  await page.getByRole("button", { name: "Profilo", exact: true }).first().click();
   await expect(page.getByRole("region", { name: "Installa PizzaLab sul telefono" })).toBeVisible();
   await context.close();
 });
 
 test("units can be switched to ounces and Fahrenheit without changing the saved recipe", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
   const ball = page.getByLabel("Peso del panetto", { exact: true });
   await ball.fill("300");
@@ -711,7 +728,7 @@ test("units can be switched to ounces and Fahrenheit without changing the saved 
   await expect(page.getByRole("radio", { name: "Fahrenheit (°F)" })).toHaveAttribute("aria-checked", "true");
 
   // Il campo mostra 300 g come once e accetta once: 9 oz = 255,15 g.
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
   await expect(ball).toHaveValue("10.58");
   await ball.fill("9");
@@ -738,7 +755,7 @@ test("units can be switched to ounces and Fahrenheit without changing the saved 
   await page.getByRole("button", { name: "Profilo", exact: true }).click();
   await page.getByRole("radio", { name: "Grammi (g)" }).click();
   await page.getByRole("radio", { name: "Celsius (°C)" }).click();
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).click();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
   await expect(page.getByLabel("Peso del panetto", { exact: true })).toHaveValue("255.15");
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
@@ -746,8 +763,8 @@ test("units can be switched to ounces and Fahrenheit without changing the saved 
 });
 
 test("the language follows the device by default and can be changed from the profile", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: /Progetta\. Impasta\./ })).toBeVisible();
+  await page.goto("/#nuova");
+  await expect(page.getByRole("heading", { name: /Che pizza facciamo/ })).toBeVisible();
   await page.getByRole("button", { name: "Profilo", exact: true }).click();
   await page.getByRole("radio", { name: "English" }).click();
   await expect(page.getByRole("heading", { name: "Your profile." })).toBeVisible();
@@ -756,8 +773,8 @@ test("the language follows the device by default and can be changed from the pro
 
   // La scelta resta dopo aver riaperto l’app e vale anche per date e numeri.
   await page.reload();
-  await page.getByRole("button", { name: "Your dough", exact: true }).click();
-  await expect(page.getByRole("heading", { name: /Design\. Knead\./ })).toBeVisible();
+  await page.getByRole("button", { name: "New pizza", exact: true }).click();
+  await expect(page.getByRole("heading", { name: /What pizza shall we make/ })).toBeVisible();
   await page.getByRole("button", { name: /^4 Summary/ }).click();
   await expect(page.getByText(/1\.\d\d g|\d+\.\d g/).first()).toBeVisible();
 
@@ -768,7 +785,8 @@ test("the language follows the device by default and can be changed from the pro
 });
 
 test("a flour without a declared W shows an estimated range and the advice says so", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
   await page.getByRole("button", { name: "Farine", exact: true }).first().click();
   await page.getByRole("textbox", { name: "Cerca farina" }).fill("King Arthur");
   const card = page.locator(".flour-card, article").filter({ hasText: "Bread Flour" }).first();
@@ -776,7 +794,7 @@ test("a flour without a declared W shows an estimated range and the advice says 
   await expect(card).toContainText("≈");
   await card.getByRole("button", { name: "Usa" }).click();
 
-  await page.getByRole("button", { name: "Il tuo impasto", exact: true }).first().click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).first().click();
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
   await expect(page.locator(".flour-selected-meta")).toContainText("W stimato");
   await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
@@ -785,7 +803,7 @@ test("a flour without a declared W shows an estimated range and the advice says 
 });
 
 test("the planner suggests flours, a start time, people, a hydration fix and keeps templates", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#nuova");
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
 
   // Per quante persone: 6 persone sono 6 pizze; scegliendone 4 tornano 4.
@@ -826,22 +844,23 @@ test("the planner suggests flours, a start time, people, a hydration fix and kee
   await page.getByLabel("Nome del piano").fill("Il mio sabato");
   await page.getByRole("button", { name: "Salva come modello" }).click();
   await page.reload();
-  const templates = page.locator("#templates-title");
-  await expect(templates).toBeVisible();
-  await page.locator(".user-ovens", { has: templates }).getByRole("button", { name: "Usa" }).click();
-  await expect(page.getByRole("heading", { name: "Il tuo impasto" }).or(page.getByText("Modello «Il mio sabato» caricato"))).toBeVisible();
+  await page.getByRole("button", { name: "Oggi", exact: true }).first().click();
+  await expect(page.locator("#templates-title")).toBeVisible();
+  await page.getByRole("button", { name: "Usa il modello Il mio sabato" }).click();
+  await expect(page.getByText("Modello «Il mio sabato» caricato")).toBeVisible();
+  await expect(page.getByLabel("Voglio mangiare")).toBeVisible();
 });
 
 test("narrow phones never scroll sideways, even with a dough in progress", async ({ browser }) => {
   for (const [locale, plan, schedule, tabs] of [
-    ["it-IT", /^4 Riepilogo/, "Programma", ["Il tuo impasto", "Farine", "Condimenti", "Lievito", "Profilo"]],
-    ["en-US", /^4 Summary/, "Schedule", ["Your dough", "Flours", "Toppings", "Yeast", "Profile"]],
+    ["it-IT", /^4 Riepilogo/, "Programma", ["Oggi", "Nuova pizza", "Dispensa", "Condimenti", "Lievito", "Profilo"]],
+    ["en-US", /^4 Summary/, "Schedule", ["Today", "New pizza", "Pantry", "Toppings", "Yeast", "Profile"]],
   ] as const) {
     for (const width of [320, 360]) {
       const context = await browser.newContext({ viewport: { width, height: 760 }, locale });
       await context.addInitScript(() => localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"));
       const page = await context.newPage();
-      await page.goto("/");
+      await page.goto("/#nuova");
       await page.getByRole("button", { name: plan }).click();
       await page.getByRole("button", { name: schedule, exact: true }).click();
       for (const tab of tabs) {
@@ -852,4 +871,23 @@ test("narrow phones never scroll sideways, even with a dough in progress", async
       await context.close();
     }
   }
+});
+
+test("the home shows what to do now and lets a phase be ticked off", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Che pizza facciamo?" })).toBeVisible();
+  await page.locator(".today-hero").getByRole("button", { name: "Nuova pizza" }).click();
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await page.getByLabel("Nome del piano").fill("Sabato sera");
+  await page.getByRole("button", { name: "Programma", exact: true }).click();
+  await page.getByRole("button", { name: "Oggi", exact: true }).first().click();
+
+  const hero = page.locator(".today-hero");
+  await expect(hero).toContainText("Sabato sera");
+  await expect(hero.getByRole("heading")).toContainText("Impasta e sviluppa la struttura");
+  await expect(page.getByRole("heading", { name: "Dopo" })).toBeVisible();
+  await hero.getByRole("button", { name: "Fatto" }).click();
+  await expect(hero.getByRole("heading")).toContainText("Riposo in massa");
+  await hero.getByRole("button", { name: "Apri la guida" }).click();
+  await expect(page.getByText("IMPASTO IN CORSO", { exact: true })).toBeVisible();
 });
