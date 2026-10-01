@@ -956,3 +956,24 @@ test("the home is a single still screen on foldables, with the signature inside 
     await expect(page.locator(".page-footer")).toHaveCount(0);
   }
 });
+
+test("the automatic plan can round the yeast to whole grams and keeps the plan inside the window", async ({ page }) => {
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.getByRole("button", { name: "Automatica" }).click();
+  const yeastBefore = await page.locator(".automatic-yeast-lock > span").textContent();
+  expect(yeastBefore).toMatch(/\d,\d\d g/);
+  await page.getByRole("radiogroup", { name: "Dose del lievito" }).getByRole("radio", { name: "Grammi interi" }).click();
+  await expect(page.locator(".automatic-yeast-lock > span")).toHaveText(/^\d+ g$/);
+  await expect(page.locator(".automatic-yeast-lock")).toContainText("Grammi interi, tempi ricalcolati");
+  const fits = await page.evaluate(() => {
+    const [start, bake] = [...document.querySelectorAll<HTMLInputElement>(".automatic-dates input")].map((input) => new Date(input.value).getTime());
+    return { start, bake };
+  });
+  expect(fits.bake).toBeGreaterThan(fits.start);
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await expect(page.locator(".ingredients").first()).toContainText(/Lievito fresco\s*\d+ g/);
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await page.getByRole("radiogroup", { name: "Dose del lievito" }).getByRole("radio", { name: "Automatico" }).click();
+  await expect(page.locator(".automatic-yeast-lock > span")).toHaveText(/\d,\d\d g/);
+});

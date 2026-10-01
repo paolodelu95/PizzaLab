@@ -76,7 +76,7 @@ import { StarterDoughLink } from "./components/StarterDoughLink";
 import { Diary, type DiaryView } from "./components/Diary";
 import { durationLabel } from "./domain/duration";
 import { strengthLine } from "./domain/flourStrength";
-import { applyAutomaticPlan, configFromTemplate, countForPeople, ratedHistory, recipeStatus, startTiming, suggestStart, yeastLabel } from "./domain/recipes";
+import { applyAutomaticPlan, applyWholeGrams, configFromTemplate, countForPeople, ratedHistory, recipeStatus, startTiming, suggestStart, yeastLabel } from "./domain/recipes";
 import { emptyState, readState, writeState } from "./services/storage";
 import {
   cancelReminders,
@@ -109,7 +109,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.25.2";
+const APP_VERSION = "0.25.3";
 type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [
@@ -273,7 +273,7 @@ export default function App() {
   const history = ratedHistory(state.recipes, c);
   const active = state.recipes.find((r) => r.id === state.activeId);
   function normalizePlanning(config: DoughConfig) {
-    if (config.planMode === "automatic") return applyAutomaticPlan(config);
+    if (config.planMode === "automatic") return applyWholeGrams(applyAutomaticPlan(config), flours);
     if (config.planMode === "duration") {
       const total =
         config.bulkHours +

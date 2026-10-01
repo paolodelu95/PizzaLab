@@ -1,8 +1,8 @@
 import { t } from "../i18n";
-import { buildTimeline, deriveAutomaticSchedule, type calculate } from "./calculator";
+import { buildTimeline, calculate, deriveAutomaticSchedule, MIN_COLD_HOURS } from "./calculator";
 import { localDateTime, styles } from "./styles";
 import { formatWeight } from "../services/units";
-import type { DoughConfig, Recipe, RecipeTemplate, Stage } from "./types";
+import type { DoughConfig, Flour, Recipe, RecipeTemplate, Stage } from "./types";
 
 export type RecipeStatus = "active" | "saved" | "past";
 type GoodResult = Extract<ReturnType<typeof calculate>, { ok: true }>;
@@ -85,6 +85,56 @@ export function applyAutomaticPlan(config: DoughConfig): DoughConfig {
     coldHours: automatic.coldHours,
     proofHours: automatic.proofHours,
   };
+}
+
+/**
+ * Piano automatico con «Grammi interi»: la dose calcolata diventa un numero intero di grammi
+ * e la stessa finestra si ridivide tra ambiente e frigo, così la crescita complessiva resta quella
+ * prevista. Si prova prima per difetto e per eccesso e si tiene la soluzione più vicina al piano.
+ */
+export function applyWholeGrams(config: DoughConfig, flours: Flour[]): DoughConfig {
+  if (config.planMode !== "automatic" || !config.autoWholeGrams || ["sourdough", "licoli"].includes(config.yeast)) return config;
+  const base = calculate({ ...config, yeastMode: "auto" }, flours);
+  if (!base.ok || !(base.yeast > 0)) return config;
+  const roomRate = 2 ** ((config.roomTemp - 22) / 10);
+  const coldRate = 0.08 * 2 ** ((config.fridgeTemp - 4) / 5);
+  const saltFactor = 1 + (config.salt - 2.5) * 0.08;
+  const window = config.bulkHours + config.coldHours + config.proofHours;
+  const warmNow = config.bulkHours + config.proofHours;
+  const proofShare = warmNow > 0 ? config.proofHours / warmNow : 0.5;
+  const minBulk = Math.max(0.5, (config.foldCount * config.foldIntervalMinutes) / 60);
+  const roundHalf = (value: number) => Math.round(value * 2) / 2;
+  let best: { config: DoughConfig; cost: number } | null = null;
+  for (const grams of new Set([Math.floor(base.yeast), Math.ceil(base.yeast)])) {
+    if (grams < 1 || grams > 30) continue;
+    const freshPercent = (grams / base.yeast) * base.yeastPercent * (config.yeast === "instant" ? 3 : 1);
+    const target = 8 * ((0.18 * saltFactor) / freshPercent) ** (1 / 0.85);
+    let warm: number;
+    let cold = 0;
+    if (config.coldHours > 0) {
+      warm = (target - window * coldRate) / (roomRate - coldRate);
+      cold = window - warm;
+      if (cold < MIN_COLD_HOURS || warm < minBulk + 1) continue;
+    } else {
+      warm = target / roomRate;
+      if (warm > window + 0.25 || warm < minBulk + 0.5) continue;
+    }
+    const proof = Math.max(0.5, roundHalf(warm * proofShare));
+    const bulk = Math.max(roundHalf(minBulk), roundHalf(warm - proof));
+    const next: DoughConfig = {
+      ...config,
+      yeastMode: "weighable",
+      weighableYeastGrams: grams,
+      bulkHours: bulk,
+      proofHours: proof,
+      coldHours: cold > 0 ? roundHalf(window - bulk - proof) : 0,
+    };
+    // Meno cambia il piano, meglio è: conta lo scarto dei tempi e un po’ quello della dose.
+    const cost = Math.abs(bulk + proof - warmNow) + Math.abs(grams - base.yeast);
+    if (!calculate(next, flours).ok) continue;
+    if (!best || cost < best.cost) best = { config: next, cost };
+  }
+  return best?.config ?? config;
 }
 
 export type StartTiming = "future" | "now" | "late" | "expired";

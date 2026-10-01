@@ -63,6 +63,13 @@ export function AdvancedPlanner({
       ),
     });
   };
+  // Con i grammi interi il piano può finire prima: quante ore dopo l’orario scelto si può iniziare.
+  const laterStart =
+    Math.round(
+      ((new Date(c.bakeAt).getTime() - new Date(c.startAt).getTime()) / 3600000 -
+        (c.bulkHours + c.coldHours + c.proofHours + 20 / 60 + (c.autolyse ? c.autolyseMinutes / 60 : 0) + (c.preferment === "none" ? 0 : c.prefermentHours))) *
+        2,
+    ) / 2;
   const heading =
     section === "dough"
       ? [msg("Laboratorio impasto"), msg("Metodo, autolisi e temperatura finale.")]
@@ -450,11 +457,36 @@ export function AdvancedPlanner({
             </span>
           </div>
           {c.planMode === "automatic" ? (
-            <div className="automatic-yeast-lock">
-              <MagicWand />
-              <div><strong>{t("Dose sincronizzata con gli orari")}</strong><p>{naturalStarter ? t("PizzaLab stima la quantità dai tempi e dalle temperature. Verifica sempre la vitalità reale della coltura dalla sua crescita.") : t("In modalità automatica PizzaLab calcola il lievito dai tempi e dalle temperature. Passa a Manuale per bloccare grammi o percentuale.")}</p></div>
-              <span>{formatWeight(result.yeast, 2)}</span>
-            </div>
+            <>
+              {!naturalStarter && (
+                <div className="method-toggle" role="radiogroup" aria-label={t("Dose del lievito")}>
+                  <button role="radio" aria-checked={!c.autoWholeGrams} className={!c.autoWholeGrams ? "selected" : ""} onClick={() => onUpdate({ autoWholeGrams: false, yeastMode: "auto" })}>
+                    {t("Automatico")}
+                  </button>
+                  <button role="radio" aria-checked={!!c.autoWholeGrams} className={c.autoWholeGrams ? "selected" : ""} onClick={() => onUpdate({ autoWholeGrams: true })}>
+                    {t("Grammi interi")}
+                  </button>
+                </div>
+              )}
+              <div className="automatic-yeast-lock">
+                <MagicWand />
+                <div>
+                  <strong>{c.autoWholeGrams && !naturalStarter ? t("Grammi interi, tempi ricalcolati") : t("Dose sincronizzata con gli orari")}</strong>
+                  <p>
+                    {naturalStarter
+                      ? t("PizzaLab stima la quantità dai tempi e dalle temperature. Verifica sempre la vitalità reale della coltura dalla sua crescita.")
+                      : c.autoWholeGrams
+                        ? c.yeastMode === "weighable"
+                          ? laterStart >= 0.5
+                            ? t("Il lievito è arrotondato a un numero intero di grammi, comodo con una bilancia senza decimali. Con questa dose puoi iniziare circa {hours} ore più tardi.", { hours: laterStart.toLocaleString(locale()) })
+                            : t("Il lievito è arrotondato a un numero intero di grammi, comodo con una bilancia senza decimali. Puntata, frigo e appretto sono già ricalcolati per restare nella tua finestra.")
+                          : t("Con questa finestra un numero intero di grammi non ci sta: PizzaLab usa la dose precisa. Allunga la finestra o aumenta le pizze.")
+                        : t("In modalità automatica PizzaLab calcola il lievito dai tempi e dalle temperature. Scegli «Grammi interi» se la tua bilancia non pesa i decimali.")}
+                  </p>
+                </div>
+                <span>{formatWeight(result.yeast, c.yeastMode === "weighable" ? 0 : 2)}</span>
+              </div>
+            </>
           ) : naturalStarter ? (
             <div className="field-grid">
               <NumberField

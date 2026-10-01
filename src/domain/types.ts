@@ -75,6 +75,8 @@ export interface DoughConfig {
   yeastMode: "auto" | "weighable" | "manual";
   manualYeastPercent: number;
   weighableYeastGrams: number;
+  /** Piano automatico: arrotonda il lievito ai grammi interi e ricalcola i tempi dentro la stessa finestra. */
+  autoWholeGrams?: boolean;
   starterPercent: number;
   starterHydration: number;
   sourdoughProfileId: string;

@@ -691,3 +691,21 @@ describe("automatic plan uses the fridge for long windows in every style", () =>
     expect(p.ok && p.coldHours).toBeGreaterThanOrEqual(20);
   });
 });
+
+describe("automatic plan with whole grams", () => {
+  it("rounds the yeast to whole grams and keeps the same window", async () => {
+    const { applyAutomaticPlan, applyWholeGrams } = await import("./recipes");
+    for (const [startAt, count] of [["2026-11-13T20:00", 4], ["2026-11-14T08:00", 4], ["2026-11-12T20:00", 10]] as const) {
+      const automatic = applyAutomaticPlan(config({ planMode: "automatic", startAt, count }));
+      const rounded = applyWholeGrams({ ...automatic, autoWholeGrams: true }, flours);
+      const r = calculate(rounded, flours);
+      expect(r.ok).toBe(true);
+      if (!r.ok) continue;
+      expect(Number.isInteger(r.yeast)).toBe(true);
+      expect(rounded.yeastMode).toBe("weighable");
+      const window = (c: DoughConfig) => c.bulkHours + c.coldHours + c.proofHours;
+      expect(Math.abs(window(rounded) - window(automatic))).toBeLessThanOrEqual(0.5);
+      expect(rounded.coldHours === 0 || rounded.coldHours >= 8).toBe(true);
+    }
+  });
+});

@@ -784,7 +784,6 @@ export const en: Record<string, string> = {
   "Automatico o dose bloccata": "Automatic or fixed amount",
   "Dose sincronizzata con gli orari": "Amount synced with the times",
   "PizzaLab stima la quantità dai tempi e dalle temperature. Verifica sempre la vitalità reale della coltura dalla sua crescita.": "PizzaLab estimates the amount from the times and temperatures. Always check the real vitality of the culture from how it rises.",
-  "In modalità automatica PizzaLab calcola il lievito dai tempi e dalle temperature. Passa a Manuale per bloccare grammi o percentuale.": "In automatic mode PizzaLab works out the yeast from the times and temperatures. Switch to Manual to fix grams or percentage.",
   "Licoli sulla farina": "Licoli on the flour",
   "Pasta madre sulla farina": "Sourdough starter on the flour",
   "Percentuale sul peso totale della farina.": "Percentage of the total flour weight.",
@@ -1691,4 +1690,10 @@ export const en: Record<string, string> = {
   "Cosa ti aspettavi?": "What did you expect?",
   "Dati tecnici, lasciali pure": "Technical details, please keep them",
   "PizzaLab {version} · segnalazione": "PizzaLab {version} · problem report",
+  "Dose del lievito": "Yeast amount",
+  "Grammi interi, tempi ricalcolati": "Whole grams, times recalculated",
+  "Il lievito è arrotondato a un numero intero di grammi, comodo con una bilancia senza decimali. Con questa dose puoi iniziare circa {hours} ore più tardi.": "The yeast is rounded to a whole number of grams, handy if your scale has no decimals. With this amount you can start about {hours} hours later.",
+  "Il lievito è arrotondato a un numero intero di grammi, comodo con una bilancia senza decimali. Puntata, frigo e appretto sono già ricalcolati per restare nella tua finestra.": "The yeast is rounded to a whole number of grams, handy if your scale has no decimals. Bulk, fridge and final proof are already recalculated to stay within your window.",
+  "Con questa finestra un numero intero di grammi non ci sta: PizzaLab usa la dose precisa. Allunga la finestra o aumenta le pizze.": "With this window a whole number of grams does not fit: PizzaLab uses the precise amount. Widen the window or make more pizzas.",
+  "In modalità automatica PizzaLab calcola il lievito dai tempi e dalle temperature. Scegli «Grammi interi» se la tua bilancia non pesa i decimali.": "In automatic mode PizzaLab works out the yeast from times and temperatures. Choose «Whole grams» if your scale has no decimals.",
 };
