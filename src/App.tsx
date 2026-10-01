@@ -109,7 +109,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.25.0";
+const APP_VERSION = "0.25.1";
 type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [
@@ -2352,7 +2352,7 @@ export default function App() {
               <Guide
                 onShowTutorial={() => setTutorialOpen(true)}
                 reportUrl={bugReportUrl(APP_VERSION, tab)}
-                rescue={<DoughRescue reportUrl={bugReportUrl(APP_VERSION, tab)} />}
+                rescue={<DoughRescue />}
               />
               <SupportCard />
             </>
@@ -2435,7 +2435,7 @@ export default function App() {
         />
       )}
       {tutorialOpen && ready && <Onboarding onClose={closeTutorial} />}
-      <RescueSheet open={rescueOpen} onClose={closeRescue} reportUrl={bugReportUrl(APP_VERSION, tab)} />
+      <RescueSheet open={rescueOpen} onClose={closeRescue} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { t, msg } from "../i18n";
-import { EnvelopeSimple, FirstAid, Warning, X } from "@phosphor-icons/react";
+import { FirstAid, Warning, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
 const fixes = {
@@ -13,7 +13,7 @@ const fixes = {
 type Issue = keyof typeof fixes;
 
 /** Un tocco sul problema, la risposta subito sotto: niente menu da aprire con le mani in pasta. */
-function RescueBody({ reportUrl }: { reportUrl?: string }) {
+function RescueBody() {
   const [issue, setIssue] = useState<Issue>("sticky");
   const fix = fixes[issue];
   return (
@@ -32,16 +32,11 @@ function RescueBody({ reportUrl }: { reportUrl?: string }) {
           <p>{t(fix[1])}</p>
         </div>
       </div>
-      {reportUrl && (
-        <a className="rescue-report" href={reportUrl}>
-          <EnvelopeSimple /> {t("Il tuo problema non è qui? Scrivimi")}
-        </a>
-      )}
     </>
   );
 }
 
-export function DoughRescue({ reportUrl }: { reportUrl?: string }) {
+export function DoughRescue() {
   return (
     <section className="panel rescue" aria-labelledby="rescue-title">
       <div className="panel-title">
@@ -51,7 +46,7 @@ export function DoughRescue({ reportUrl }: { reportUrl?: string }) {
           <p>{t("Dimmi cosa vedi, non cosa dice l’orologio.")}</p>
         </div>
       </div>
-      <RescueBody reportUrl={reportUrl} />
+      <RescueBody />
     </section>
   );
 }
@@ -66,7 +61,7 @@ export function RescueButton({ className = "", onClick }: { className?: string; 
   );
 }
 
-export function RescueSheet({ open, onClose, reportUrl }: { open: boolean; onClose: () => void; reportUrl?: string }) {
+export function RescueSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
@@ -87,7 +82,7 @@ export function RescueSheet({ open, onClose, reportUrl }: { open: boolean; onClo
           </button>
         </header>
         <div className="rescue-sheet-body">
-          <RescueBody reportUrl={reportUrl} />
+          <RescueBody />
         </div>
       </section>
     </div>

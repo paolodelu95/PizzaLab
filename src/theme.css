@@ -898,16 +898,6 @@ h3 {
   border-color: var(--ink);
   color: var(--bg);
 }
-.rescue-report {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  margin-top: 8px;
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--brand-ink);
-}
 .rescue-sheet-body {
   padding: 4px 20px calc(20px + var(--safe-b, 0px));
   overflow: auto;
@@ -1097,4 +1087,16 @@ details.guide-entry > .source-links {
 }
 main .help-actions {
   padding: 0;
+}
+
+/* Oggi: la foto riempie tutta la prima schermata, fino alla barra in basso (o al bordo, su desktop). */
+.today-hero {
+  min-height: calc(100vh - var(--nav-h) - var(--safe-b) - 8px);
+  min-height: calc(100dvh - var(--nav-h) - var(--safe-b) - 8px);
+}
+@media (min-width: 600px) {
+  .today-hero {
+    min-height: calc(100vh - 48px);
+    min-height: calc(100dvh - 48px);
+  }
 }

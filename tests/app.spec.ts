@@ -923,7 +923,7 @@ test("dough first aid is one tap away on every screen and problems can be report
     await expect(sheet).toBeVisible();
     await sheet.getByRole("radio", { name: "Non sta crescendo" }).click();
     await expect(sheet.getByText(/Porta l’impasto in un punto più tiepido/)).toBeVisible();
-    await expect(sheet.getByRole("link", { name: /Scrivimi/ })).toHaveAttribute("href", /^mailto:paolo\.deluca\.1995@gmail\.com\?subject=/);
+    await expect(sheet.getByRole("link")).toHaveCount(0);
     await page.keyboard.press("Escape");
     await expect(sheet).toHaveCount(0);
   }

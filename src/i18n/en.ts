@@ -1665,7 +1665,6 @@ export const en: Record<string, string> = {
   "Regolazioni avanzate": "Advanced settings",
   "Metodo, autolisi, pieghe, temperatura dell’acqua e profilo dell’impasto": "Method, autolyse, folds, water temperature and dough profile",
   "Dose del lievito: automatica, in grammi interi o in percentuale": "Yeast amount: automatic, whole grams or percentage",
-  "Il tuo problema non è qui? Scrivimi": "Your problem isn't here? Write to me",
   "SOS impasto": "Dough SOS",
   "Chiudi il pronto soccorso": "Close dough first aid",
   "Da approfondire": "Dig deeper",
