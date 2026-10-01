@@ -10,7 +10,7 @@ Dosi, lievitazione e cottura per la pizza fatta in casa, passo dopo passo.
 
 ## Descrizione completa (max 4000 caratteri)
 
-PizzaLab è il tuo laboratorio della pizza: scegli lo stile, dimmi quando vuoi mangiare e l’app calcola dosi, tempi di lievitazione e cottura. Poi ti accompagna fase per fase con i promemoria, fino a quando sforni.
+PizzaLab è il tuo laboratorio della pizza: scegli lo stile, dimmi quando vuoi mangiare e l’app calcola dosi, tempi di lievitazione e cottura. Poi ti accompagna fase per fase con i promemoria, fino a quando sforni. Apri l’app e la schermata Oggi ti dice subito cosa fare adesso.
 
 Pensata per chi inizia e per chi vuole migliorare: ogni termine tecnico è spiegato in una riga, i valori consigliati si impostano da soli e puoi personalizzare tutto quando ti senti pronto.
 
@@ -29,8 +29,11 @@ Premi «Programma»: la pizza parte da sola all’orario impostato e ricevi una 
 📓 DIARIO DELLE TUE PIZZE
 Pizze in corso, salvate da riprendere e già sfornate, ognuna al suo posto. Durante l’impasto hai la bilancia che ti fa pesare un ingrediente alla volta e la guida passo passo con timer. Dopo la cottura dai un voto, annoti cosa cambiare e registri il risultato per tarare le previsioni sul tuo forno.
 
-🌾 CATALOGO DI 175 FARINE
-Farine italiane con forza W e proteine riprese dalle schede dei produttori, più farine generiche, semole e miscele senza glutine. Puoi mescolarne fino a quattro e aggiungere le tue.
+🌾 OLTRE 180 FARINE
+Farine italiane e internazionali con forza W e proteine riprese dalle schede dei produttori, più farine generiche, semole e miscele senza glutine. Quando il produttore non dichiara la forza, l’app mostra un W stimato con un margine prudente. Puoi mescolarne fino a quattro e aggiungere le tue.
+
+🆘 SOS IMPASTO, SEMPRE A PORTATA
+In alto in ogni schermata: troppo appiccicoso, non cresce, si strappa in stesura? Tocchi il problema e trovi subito come rimediare.
 
 🫙 LIEVITO MADRE E LI.CO.LI.
 Un percorso guidato per creare e mantenere la tua coltura: dosi dei rinfreschi, registro della crescita, promemoria e controlli di sicurezza. Quando è pronta, la colleghi al tuo impasto.
@@ -42,7 +45,9 @@ Un percorso guidato per creare e mantenere la tua coltura: dosi dei rinfreschi, 
 • Temperatura dell’acqua consigliata per il tuo impasto
 • Poolish, biga, autolisi e pieghe di rinforzo, con i consigli per ogni stile
 • Grafici di idratazione, lievito e fermentazione
-• Pronto soccorso dell’impasto e glossario per chi inizia
+• Glossario e approfondimenti per chi inizia
+• Grammi o once, gradi Celsius o Fahrenheit, italiano o inglese
+• Modelli da riusare e suggerimento dell’orario in cui iniziare
 • Profilo con i tuoi forni (anche Ariete, G3 Ferrari, Effeuno, Ooni, Gozney), le tue teglie, l’impastatrice e le statistiche
 • Esportazione e importazione del diario
 
@@ -62,18 +67,18 @@ Se PizzaLab ti è stata utile, puoi offrirmi una pizza con un contributo libero:
 - Sito web: facoltativo (per esempio la pagina GitHub del progetto)
 - Informativa sulla privacy: https://paolodelu95.github.io/PizzaLab/privacy/ (sorgente in `docs/privacy/index.md`)
 
-## Note di rilascio 0.21.0 (max 500 caratteri)
+## Note di rilascio 0.25.2 (max 500 caratteri)
 
-Nuova interfaccia per telefoni, pieghevoli e tablet, con tema scuro e tutorial iniziale. Programma una pizza e parte da sola all’orario impostato, con notifiche anche qualche minuto prima; se sei in ritardo sposti la cena o ricalcoli lievito e tempi. Profilo con forni, attrezzatura e statistiche; forni per pizza come Ariete, G3 Ferrari, Effeuno, Ooni e Gozney.
+Nuova grafica «Fuoco e farina»: schermata Oggi a tutto schermo che ti dice cosa fare adesso, foto per ogni stile e navigazione più semplice. Pulsante «SOS impasto» sempre in alto. Lievito, Condimenti, Impara e Profilo riorganizzati; «Segnala un problema» apre una mail già pronta. Ottimizzata anche per gli schermi dei pieghevoli.
 
 ## Grafiche (cartella `store/graphics`)
 
 | File | Uso nella Play Console |
 | --- | --- |
 | `icon-512.png` | Icona dell’app, 512×512 |
-| `feature-graphic-1024x500.png` | Grafica in primo piano, 1024×500 |
-| `phone-01…08-*.png` | Screenshot telefono, 1080×1920 (da 2 a 8) |
-| `tablet-01…03-*.png` | Screenshot tablet da 7" e 10", 2560×1440 |
+| `feature-graphic-{it,en}-1024x500.png` | Grafica in primo piano, 1024×500 |
+| `phone-{it,en}-01…08-*.png` | Screenshot telefono, 1080×1920 (da 2 a 8) |
+| `tablet-{it,en}-*.png` | Screenshot tablet da 7" e 10", 2560×1600 |
 
 ## Sicurezza dei dati (risposte suggerite)
 
