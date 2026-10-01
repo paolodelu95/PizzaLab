@@ -109,7 +109,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.25.1";
+const APP_VERSION = "0.25.2";
 type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [
@@ -2381,9 +2381,11 @@ export default function App() {
               onSaveCalibration={saveCalibration}
             />
           )}
-          <footer className="page-footer">
-            <span>PizzaLab</span> {t("Fatto per chi ama mettere le mani in pasta.")}
-          </footer>
+          {tab !== "oggi" && (
+            <footer className="page-footer">
+              <span>PizzaLab</span> {t("Fatto per chi ama mettere le mani in pasta.")}
+            </footer>
+          )}
         </main>
       </div>
       {deleteId && (

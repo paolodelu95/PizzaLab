@@ -1100,3 +1100,83 @@ main .help-actions {
     min-height: calc(100dvh - 48px);
   }
 }
+
+/* Oggi: una sola schermata ferma. La foto occupa tutto lo spazio tra il bordo
+   e la barra in basso, e la firma di PizzaLab sta dentro la foto. */
+.tab-oggi main {
+  padding-bottom: calc(var(--nav-h) + var(--safe-b));
+}
+.today-hero {
+  justify-content: flex-start;
+  min-height: calc(100vh - var(--nav-h) - var(--safe-b));
+  min-height: calc(100dvh - var(--nav-h) - var(--safe-b));
+  padding-bottom: 14px;
+}
+.today-hero .today-body {
+  margin-top: auto;
+}
+.today-footer {
+  margin-top: 18px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: rgb(255 255 255 / 0.62);
+}
+.today-footer span {
+  font-weight: 700;
+  color: rgb(255 255 255 / 0.85);
+}
+@media (max-width: 599px) {
+  /* Lascia spazio al «+» che sporge sopra la barra. */
+  .today-hero {
+    padding-bottom: 38px;
+  }
+}
+@media (min-width: 600px) {
+  .tab-oggi main {
+    padding-bottom: 24px;
+  }
+  .today-hero {
+    min-height: calc(100vh - 48px);
+    min-height: calc(100dvh - 48px);
+    padding-bottom: 22px;
+  }
+}
+/* Schermi bassi (pieghevole chiuso in orizzontale, telefono ruotato): tutto deve restare in una schermata. */
+@media (max-height: 520px) {
+  .today-live.plain {
+    display: none;
+  }
+  .today-hero {
+    padding-top: calc(var(--safe-t) + 12px);
+  }
+  .today-hero h1 {
+    font-size: clamp(1.5rem, 1rem + 2.4vh, 2rem);
+  }
+  .today-hero p {
+    margin-top: 2px;
+  }
+  .today-footer {
+    margin-top: 10px;
+  }
+}
+@media (min-width: 600px) and (max-height: 520px) {
+  .app-nav {
+    justify-content: safe center;
+    gap: 10px;
+  }
+  .nav-item.nav-impasto .nav-icon {
+    width: 44px;
+    height: 44px;
+  }
+}
+@media (min-width: 600px) and (max-height: 400px) {
+  .app-nav .nav-label {
+    display: none;
+  }
+  .app-nav .nav-item {
+    min-height: 44px;
+  }
+  .app-nav-items {
+    gap: 2px;
+  }
+}

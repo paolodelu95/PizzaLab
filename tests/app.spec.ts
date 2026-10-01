@@ -931,3 +931,28 @@ test("dough first aid is one tap away on every screen and problems can be report
   const report = page.getByRole("link", { name: /Segnala un problema/ });
   await expect(report).toHaveAttribute("href", /^mailto:paolo\.deluca\.1995@gmail\.com\?subject=PizzaLab%20.*&body=.*Schermata%3A%20profilo/);
 });
+
+test("the home is a single still screen on foldables, with the signature inside the photo", async ({ page }) => {
+  for (const size of [
+    { width: 344, height: 882 },
+    { width: 373, height: 838 },
+    { width: 690, height: 829 },
+    { width: 882, height: 344 },
+    { width: 1104, height: 884 },
+  ]) {
+    await page.setViewportSize(size);
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: /Che pizza facciamo/ })).toBeVisible();
+    const layout = await page.evaluate(() => {
+      const hero = document.querySelector(".today-hero")!.getBoundingClientRect();
+      const footer = document.querySelector(".today-footer")!.getBoundingClientRect();
+      return {
+        scroll: document.documentElement.scrollHeight - innerHeight,
+        side: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        inside: footer.top >= hero.top && footer.bottom <= hero.bottom,
+      };
+    });
+    expect(layout, `${size.width}×${size.height}`).toEqual({ scroll: 0, side: 0, inside: true });
+    await expect(page.locator(".page-footer")).toHaveCount(0);
+  }
+});

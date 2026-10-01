@@ -94,6 +94,9 @@ export function Home({ name, now, active, stages, savedCount, templates, onNew, 
             </>
           )}
         </div>
+        <footer className="today-footer">
+          <span>PizzaLab</span> {t("Fatto per chi ama mettere le mani in pasta.")}
+        </footer>
       </section>
 
       <InstallPrompt />
