@@ -1,5 +1,5 @@
 import { t, msg } from "../i18n";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowSquareOut,
   Bug,
@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Trash,
   UploadSimple,
+  Warning,
   Wrench,
 } from "@phosphor-icons/react";
 import { bakeSurfaceLabels } from "../domain/calculator";
@@ -24,7 +25,8 @@ import type { DoughConfig, Flour, Recipe, StoredState, UserOven, UserPan } from 
 import { ovenById } from "../data/ovens";
 import { UserPans } from "./UserPans";
 import { InstallPrompt } from "./InstallPrompt";
-import { usesCalendarReminders } from "../services/platform";
+import { isNativeApp, usesCalendarReminders } from "../services/platform";
+import { askExactReminders, exactRemindersAllowed } from "../services/notifications";
 import { SelectSheet } from "./SelectSheet";
 import { NumberField } from "./Fields";
 import type { Language } from "../i18n";
@@ -236,6 +238,7 @@ export function ProfilePage(props: Props) {
           </div>
         </div>
         <small>{t("Vale per le fasi dell’impasto e per i rinfreschi del lievito madre. Le notifiche già programmate si aggiornano da sole.")}</small>
+        <ExactReminders />
       </section>
 
       <section className="profile-stats" aria-labelledby="stats-title">
@@ -428,5 +431,37 @@ function UserOvens({
         </>
       )}
     </section>
+  );
+}
+
+/** Solo su Android: senza «Sveglie e promemoria» gli avvisi ad app chiusa possono arrivare con ore di ritardo. */
+function ExactReminders() {
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    const check = () => void exactRemindersAllowed().then(setAllowed);
+    check();
+    // Tornando dalle impostazioni di sistema, rilegge lo stato.
+    document.addEventListener("visibilitychange", check);
+    return () => document.removeEventListener("visibilitychange", check);
+  }, []);
+  if (allowed === null) return null;
+  return (
+    <div className={`exact-reminders ${allowed ? "ok" : "off"}`}>
+      {allowed ? <CheckCircle weight="fill" /> : <Warning weight="fill" />}
+      <div>
+        <strong>{allowed ? t("Avvisi puntuali attivi") : t("Avvisi puntuali non attivi")}</strong>
+        <p>
+          {allowed
+            ? t("Le notifiche arrivano all’orario giusto anche ad app chiusa. Se il telefono le blocca lo stesso, togli PizzaLab dalle app in sospensione o dall’ottimizzazione della batteria.")
+            : t("Ad app chiusa Android può rimandare le notifiche anche di ore. Attiva «Sveglie e promemoria» per PizzaLab: serve solo a far suonare gli avvisi in orario.")}
+        </p>
+        {!allowed && (
+          <button className="button primary" onClick={() => void askExactReminders().then(setAllowed)}>
+            <BellRinging /> {t("Attiva gli avvisi puntuali")}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

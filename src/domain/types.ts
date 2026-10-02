@@ -269,4 +269,6 @@ export interface StoredState {
   units?: { weight: "g" | "oz"; temp: "C" | "F" };
   /** Lingua scelta dall’utente; se manca si usa quella del dispositivo. */
   language?: "it" | "en";
+  /** La bozza è già diventata una pizza salvata o avviata: «Nuova pizza» riparte pulita. */
+  draftUsed?: boolean;
 }

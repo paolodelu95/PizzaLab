@@ -1,5 +1,5 @@
 import { detectLanguage, locale, setLocaleState, t, tn, type Language, msg } from "./i18n";
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -93,7 +93,7 @@ import {
 } from "./domain/sourdough";
 import { useCloseOnBack } from "./services/backNavigation";
 import { buildCalendar, downloadCalendar, stagesToEvents } from "./services/calendar";
-import { usesCalendarReminders } from "./services/platform";
+import { isNativeApp, usesCalendarReminders } from "./services/platform";
 import { formatTemp, formatWeight, normalizeUnits, setUnits, type Units } from "./services/units";
 import { WeightValue } from "./components/WeightValue";
 import { FlourSuggestions } from "./components/FlourSuggestions";
@@ -109,7 +109,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.25.3";
+const APP_VERSION = "0.26.0";
 type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [
@@ -119,6 +119,10 @@ const pantryTabs = [
 ] as const;
 const inPantry = (tab: Tab) => pantryTabs.some((item) => item.id === tab);
 /** «#nuova» apre direttamente la creazione di una pizza (scorciatoia e test). */
+/** In quale passaggio si corregge un avviso del calcolatore. */
+const FERMENTATION_ADVICE = new Set(["bulk", "cold", "fridge", "fast-dough", "long-room", "preferment", "preferment-ripe", "proof", "short-cold", "short-proof", "too-fast", "warm", "manual-yeast", "natural-starter", "weighable-yeast", "model-limit"]);
+const adviceStage = (id: string): "dough" | "fermentation" | "baking" =>
+  id === "oven" ? "baking" : FERMENTATION_ADVICE.has(id) ? "fermentation" : "dough";
 const initialTab = (): Tab => (typeof location !== "undefined" && location.hash === "#nuova" ? "impasto" : "oggi");
 type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
 const nav = [
@@ -207,6 +211,13 @@ export default function App() {
       if (!seen) setTutorialOpen(true);
     });
   }, []);
+  /** Dal grafico dell’idratazione: apre le farine consigliate per questa ricetta e ci porta lì. */
+  function openFlourSuggestions() {
+    const box = document.querySelector<HTMLDetailsElement>(".flour-suggestions");
+    if (!box) return;
+    box.open = true;
+    box.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
   function closeTutorial() {
     setTutorialOpen(false);
     void markTutorialSeen();
@@ -233,6 +244,16 @@ export default function App() {
       alive = false;
     };
   }, []);
+  // All’avvio riprogramma in silenzio i promemoria della pizza in corso: chi aggiorna l’app passa
+  // agli avvisi puntuali, e quelli eventualmente persi (riavvio, ottimizzazione batteria) tornano.
+  const rescheduled = useRef(false);
+  useEffect(() => {
+    if (!ready || loadError || rescheduled.current || !isNativeApp()) return;
+    rescheduled.current = true;
+    const running = state.recipes.find((recipe) => recipe.id === state.activeId);
+    if (running) void scheduleReminders(running, state.reminderLeadMinutes ?? 0, false).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, loadError]);
   useEffect(() => {
     if (ready && !loadError)
       void writeState(state).catch(() =>
@@ -267,6 +288,11 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const result = useMemo(() => calculate(c, flours), [c, flours, unitsKey]);
   const automaticPlan = useMemo(() => deriveAutomaticSchedule(c), [c]);
+  // Ogni avviso nel suo passaggio: in «Impasto» non si parla ancora di frigo o di forno.
+  const stageOrder = { dough: 0, fermentation: 1, baking: 2, summary: 3 } as const;
+  const warnings = result.ok ? result.advice.filter((a) => a.level !== "info") : [];
+  const stageAdvice = warnings.filter((a) => adviceStage(a.id) === plannerStage);
+  const laterAdvice = warnings.filter((a) => stageOrder[adviceStage(a.id)] > stageOrder[plannerStage]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const timeline = useMemo(() => buildTimeline(c, flours), [c, flours, unitsKey]);
   const currentStyle = styles.find((s) => s.id === c.styleId)!;
@@ -307,6 +333,7 @@ export default function App() {
     setState((s) => ({
       ...s,
       config: normalizePlanning({ ...s.config, ...patch }),
+      draftUsed: false,
     }));
   }
   /** «Voglio mangiare alle…» al contrario: propone l’orario di inizio con la lievitazione tipica dello stile. */
@@ -334,7 +361,7 @@ export default function App() {
   function useTemplate(id: string) {
     const template = (state.templates ?? []).find((item) => item.id === id);
     if (!template) return;
-    setState((s) => ({ ...s, config: normalizePlanning(configFromTemplate(template, defaultConfig())) }));
+    setState((s) => ({ ...s, config: normalizePlanning(configFromTemplate(template, defaultConfig())), draftUsed: false }));
     setEditingId(null);
     setRecipeName(template.name);
     setPlannerStage("fermentation");
@@ -355,42 +382,66 @@ export default function App() {
     setTab(next);
     window.scrollTo({ top: 0 });
   }
+  /** Lo stile porta con sé acqua, tempi e cottura tipici; forno, farina e attrezzatura restano i tuoi. */
+  function withStyle(config: DoughConfig, id: string): DoughConfig {
+    const style = styles.find((item) => item.id === id) ?? styles[0];
+    const oven = ovenProfiles.find((o) => o.id === config.ovenType);
+    const savedOven = (state.userOvens ?? []).find((o) => o.ovenType === config.ovenType);
+    const ovenMax = savedOven?.temp ?? (oven && oven.id !== "custom" ? oven.maxTemp : undefined);
+    // Alcuni stili nascono in teglia tonda (focaccia barese): si parte da forma e spessore tipici.
+    const panShape = style.panShape ?? config.panShape;
+    const panDiameter = style.panDiameter ?? config.panDiameter;
+    return {
+      ...config,
+      styleId: id,
+      ...(style.pan ? { panShape, panDiameter, panDensity: style.panDensity ?? 0.6 } : {}),
+      ...(id === "focaccia-barese" ? { toppingPresetId: "barese" } : {}),
+      pizzaDiameter: style.pan && panShape === "round" ? panDiameter : id === "padellino" ? 20 : id === "new-york" ? 35 : 32,
+      toppingCount: config.count,
+      toppingWidth: config.panWidth,
+      toppingLength: config.panLength,
+      hydration: style.hydration,
+      ballWeight: style.ballWeight,
+      ...recommendedExtras(id),
+      // Il malto è difficile da trovare: si suggerisce, ma si parte senza.
+      malt: 0,
+      coldHours: style.cold,
+      bulkHours: style.bulk,
+      proofHours: style.proof,
+      ovenTemp: ovenMax !== undefined ? Math.min(style.oven, ovenMax) : style.oven,
+      ...bakingDefaults(id),
+      // Nei forni con pietra fissa l’altezza non si sceglie.
+      ...(oven?.fixedRack ? { ovenRack: "middle" as const } : {}),
+    };
+  }
   function changeStyle(id: string) {
-    const style = styles.find((s) => s.id === id)!;
-    setState((s) => {
-      const oven = ovenProfiles.find((o) => o.id === s.config.ovenType);
-      // Alcuni stili nascono in teglia tonda (focaccia barese): si parte da forma e spessore tipici.
-      const panShape = style.panShape ?? s.config.panShape;
-      const panDiameter = style.panDiameter ?? s.config.panDiameter;
-      return {
-        ...s,
-        config: normalizePlanning({
-          ...s.config,
-          styleId: id,
-          ...(style.pan ? { panShape, panDiameter, panDensity: style.panDensity ?? 0.6 } : {}),
-          ...(id === "focaccia-barese" ? { toppingPresetId: "barese" } : {}),
-          pizzaDiameter: style.pan && panShape === "round" ? panDiameter : id === "padellino" ? 20 : id === "new-york" ? 35 : 32,
-          toppingCount: s.config.count,
-          toppingWidth: s.config.panWidth,
-          toppingLength: s.config.panLength,
-          hydration: style.hydration,
-          ballWeight: style.ballWeight,
-          ...recommendedExtras(id),
-          // Il malto è difficile da trovare: si suggerisce, ma si parte senza.
-          malt: 0,
-          coldHours: style.cold,
-          bulkHours: style.bulk,
-          proofHours: style.proof,
-          ovenTemp:
-            oven && oven.id !== "custom"
-              ? Math.min(style.oven, oven.maxTemp)
-              : style.oven,
-          ...bakingDefaults(id),
-          // Nei forni con pietra fissa l’altezza non si sceglie.
-          ...(oven?.fixedRack ? { ovenRack: "middle" as const } : {}),
-        }),
-      };
-    });
+    setState((s) => ({ ...s, config: normalizePlanning(withStyle(s.config, id)) }));
+  }
+  /**
+   * Una pizza nuova riparte dai valori dello stile e da date future: lievitazione, pieghe, preimpasti,
+   * dose bloccata e cottura della pizza precedente non si trascinano. Restano le tue scelte stabili:
+   * stile, farina, quante pizze, forno, impastatrice, tipo di lievito, temperature di casa e modo di pianificare.
+   */
+  function freshDraft(old: DoughConfig): DoughConfig {
+    const keep: Partial<DoughConfig> = {
+      flourId: flours.some((f) => f.id === old.flourId && f.usable) ? old.flourId : defaultConfig().flourId,
+      count: old.count,
+      yeast: old.yeast,
+      sourdoughProfileId: old.sourdoughProfileId,
+      starterHydration: old.starterHydration,
+      planMode: old.planMode,
+      ovenType: old.ovenType,
+      mixer: old.mixer,
+      mixerProfileId: old.mixerProfileId,
+      roomTemp: old.roomTemp,
+      fridgeTemp: old.fridgeTemp,
+      flourTemp: old.flourTemp,
+      panWidth: old.panWidth,
+      panLength: old.panLength,
+      panShape: old.panShape,
+      panDiameter: old.panDiameter,
+    };
+    return normalizePlanning(withStyle({ ...defaultConfig(), ...keep }, old.styleId));
   }
   function selectFlour(f: Flour) {
     update("flourId", f.id);
@@ -663,6 +714,7 @@ export default function App() {
     const next = {
       ...state,
       config: { ...cfg },
+      draftUsed: true,
       recipes: existing
         ? state.recipes.map((r) => (r.id === recipe.id ? recipe : r))
         : [recipe, ...state.recipes],
@@ -747,7 +799,7 @@ export default function App() {
     }
   }
   function openInPlanner(recipe: Recipe, mode: "edit" | "reschedule" | "copy") {
-    setState((s) => ({ ...s, config: normalizePlanning({ ...recipe.config }) }));
+    setState((s) => ({ ...s, config: normalizePlanning({ ...recipe.config }), draftUsed: false }));
     setEditingId(mode === "copy" ? null : recipe.id);
     setRecipeName(recipe.name);
     setPlannerStage(mode === "reschedule" ? "fermentation" : "dough");
@@ -767,6 +819,10 @@ export default function App() {
     openTab("diario");
   }
   function startNewDough() {
+    setState((s) => {
+      const stale = s.draftUsed || new Date(s.config.bakeAt).getTime() < Date.now() + 2 * 3600000;
+      return stale ? { ...s, config: freshDraft(s.config), draftUsed: false } : s;
+    });
     setEditingId(null);
     setRecipeName("");
     setPlannerStage("dough");
@@ -1492,7 +1548,10 @@ export default function App() {
                           style={currentStyle}
                           w={result.w}
                           wLow={result.wLow}
+                          wHigh={result.wHigh}
                           estimated={result.wEstimated}
+                          config={c}
+                          onChangeFlour={openFlourSuggestions}
                         />
                       )}
                       <details className="extras-details">
@@ -1949,7 +2008,7 @@ export default function App() {
                       </div>
                     </section>
                   )}
-                  {result.ok && (plannerStage === "summary" || result.advice.some((a) => a.level !== "info")) && (
+                  {result.ok && (plannerStage === "summary" || stageAdvice.length > 0 || laterAdvice.length > 0) && (
                     <div className={`advice-section ${plannerStage === "summary" ? "" : "compact"}`}>
                       <div className="section-title">
                         <h3>
@@ -1967,7 +2026,7 @@ export default function App() {
                           </div>
                         </div>
                       ) : (
-                        (plannerStage === "summary" ? result.advice : result.advice.filter((a) => a.level !== "info")).map((a) => (
+                        (plannerStage === "summary" ? result.advice : stageAdvice).map((a) => (
                           <div key={a.id} className={`advice ${a.level}`}>
                             {a.level === "info" ? <Info /> : <Warning />}
                             <div>
@@ -1981,6 +2040,21 @@ export default function App() {
                             </div>
                           </div>
                         ))
+                      )}
+                      {laterAdvice.length > 0 && (
+                        <p className="advice-later">
+                          {t("Da controllare più avanti:")}{" "}
+                          {(["fermentation", "baking"] as const)
+                            .filter((stage) => laterAdvice.some((a) => adviceStage(a.id) === stage))
+                            .map((stage, index) => (
+                              <span key={stage}>
+                                {index > 0 && " · "}
+                                <button className="text-button" onClick={() => goToPlannerStage(stage)}>
+                                  {stage === "fermentation" ? t("Lievitazione") : t("Cottura")} ({laterAdvice.filter((a) => adviceStage(a.id) === stage).length})
+                                </button>
+                              </span>
+                            ))}
+                        </p>
                       )}
                       <div className="style-tip">
                         <Leaf />

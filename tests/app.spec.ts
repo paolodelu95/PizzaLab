@@ -977,3 +977,33 @@ test("the automatic plan can round the yeast to whole grams and keeps the plan i
   await page.getByRole("radiogroup", { name: "Dose del lievito" }).getByRole("radio", { name: "Automatico" }).click();
   await expect(page.locator(".automatic-yeast-lock > span")).toHaveText(/\d,\d\d g/);
 });
+
+test("a flour too weak for the style says to change flour right in the hydration chart", async ({ page }) => {
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: "La tua farina", exact: true }).click();
+  await page.getByRole("textbox", { name: "Cerca per la tua farina" }).fill("Garofalo W 170");
+  await page.getByRole("button", { name: /Garofalo W 170/ }).first().click();
+  const chart = page.locator(".hydration-chart");
+  await expect(chart.locator(".hydration-zone")).toHaveCount(0);
+  await expect(chart.getByText("Farina troppo debole per questo stile")).toBeVisible();
+  await expect(chart.locator(".chart-heading")).toContainText("Cambia farina");
+  await chart.getByRole("button", { name: /Cambia farina/ }).click();
+  await expect(page.locator(".flour-suggestions")).toHaveAttribute("open", "");
+});
+
+test("a new pizza does not carry over the times and settings of the one just saved", async ({ page }) => {
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  const fridge = page.getByLabel("Frigorifero", { exact: true });
+  if (await fridge.count()) await fridge.fill("40");
+  await page.getByRole("button", { name: /^1 Impasto/ }).click();
+  await page.getByLabel("Idratazione", { exact: true }).fill("70");
+  await page.getByLabel("Idratazione", { exact: true }).blur();
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await page.getByRole("button", { name: /Salva per dopo/ }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).first().click();
+  await expect(page.getByLabel("Idratazione", { exact: true })).toHaveValue("63");
+  // In «Impasto» non compaiono avvisi su frigo o forno: hanno il loro passaggio.
+  const advice = page.locator(".advice-section .advice");
+  for (const text of await advice.allTextContents()) expect(text).not.toMatch(/frigo|forno/i);
+});
