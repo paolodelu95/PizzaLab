@@ -40,7 +40,6 @@ import {
   validateConfig,
 } from "./domain/calculator";
 import {
-  bakingDefaults,
   defaultConfig,
   recommendedExtras,
   localDateTime,
@@ -64,7 +63,7 @@ import { HydrationChart, YeastChart } from "./components/DoughCharts";
 import { AdvancedPlanner } from "./components/AdvancedPlanner";
 import { DoughAnalysis } from "./components/DoughAnalysis";
 import { BlendManager } from "./components/BlendManager";
-import { ovenById, ovenProfiles } from "./data/ovens";
+import { ovenById } from "./data/ovens";
 import { ToppingPlanner } from "./components/ToppingPlanner";
 import { DoughRescue, RescueButton, RescueSheet } from "./components/DoughRescue";
 import { bugReportUrl } from "./services/feedback";
@@ -76,7 +75,7 @@ import { StarterDoughLink } from "./components/StarterDoughLink";
 import { Diary, type DiaryView } from "./components/Diary";
 import { durationLabel } from "./domain/duration";
 import { strengthLine } from "./domain/flourStrength";
-import { applyAutomaticPlan, applyWholeGrams, configFromTemplate, countForPeople, ratedHistory, recipeStatus, startTiming, suggestStart, yeastLabel } from "./domain/recipes";
+import { applyAutomaticPlan, applyStyleDefaults, applyWholeGrams, configFromTemplate, countForPeople, ratedHistory, recipeStatus, startTiming, suggestStart, yeastLabel } from "./domain/recipes";
 import { emptyState, readState, writeState } from "./services/storage";
 import {
   cancelReminders,
@@ -97,6 +96,7 @@ import { isNativeApp, usesCalendarReminders } from "./services/platform";
 import { formatTemp, formatWeight, normalizeUnits, setUnits, type Units } from "./services/units";
 import { WeightValue } from "./components/WeightValue";
 import { FlourSuggestions } from "./components/FlourSuggestions";
+import { flourForStyle } from "./domain/flourAdvice";
 import { Home } from "./components/Home";
 import { Adjustments } from "./components/Adjustments";
 import { stylePhoto } from "./data/photos";
@@ -109,7 +109,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.26.0";
+const APP_VERSION = "0.26.1";
 type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [
@@ -384,38 +384,18 @@ export default function App() {
   }
   /** Lo stile porta con sé acqua, tempi e cottura tipici; forno, farina e attrezzatura restano i tuoi. */
   function withStyle(config: DoughConfig, id: string): DoughConfig {
-    const style = styles.find((item) => item.id === id) ?? styles[0];
-    const oven = ovenProfiles.find((o) => o.id === config.ovenType);
-    const savedOven = (state.userOvens ?? []).find((o) => o.ovenType === config.ovenType);
-    const ovenMax = savedOven?.temp ?? (oven && oven.id !== "custom" ? oven.maxTemp : undefined);
-    // Alcuni stili nascono in teglia tonda (focaccia barese): si parte da forma e spessore tipici.
-    const panShape = style.panShape ?? config.panShape;
-    const panDiameter = style.panDiameter ?? config.panDiameter;
-    return {
-      ...config,
-      styleId: id,
-      ...(style.pan ? { panShape, panDiameter, panDensity: style.panDensity ?? 0.6 } : {}),
-      ...(id === "focaccia-barese" ? { toppingPresetId: "barese" } : {}),
-      pizzaDiameter: style.pan && panShape === "round" ? panDiameter : id === "padellino" ? 20 : id === "new-york" ? 35 : 32,
-      toppingCount: config.count,
-      toppingWidth: config.panWidth,
-      toppingLength: config.panLength,
-      hydration: style.hydration,
-      ballWeight: style.ballWeight,
-      ...recommendedExtras(id),
-      // Il malto è difficile da trovare: si suggerisce, ma si parte senza.
-      malt: 0,
-      coldHours: style.cold,
-      bulkHours: style.bulk,
-      proofHours: style.proof,
-      ovenTemp: ovenMax !== undefined ? Math.min(style.oven, ovenMax) : style.oven,
-      ...bakingDefaults(id),
-      // Nei forni con pietra fissa l’altezza non si sceglie.
-      ...(oven?.fixedRack ? { ovenRack: "middle" as const } : {}),
-    };
+    return applyStyleDefaults(config, id, (state.userOvens ?? []).find((o) => o.ovenType === config.ovenType)?.temp);
+  }
+  /** Se la farina non regge lo stile scelto, si parte da quella più adatta e lo si dice. */
+  function withStyleFlour(config: DoughConfig): DoughConfig {
+    const better = flourForStyle(config, flours);
+    if (!better) return config;
+    setMessage(t("Farina impostata su {brand} {name}: regge meglio questo stile. Puoi cambiarla quando vuoi.", { brand: t(better.brand), name: t(better.name) }));
+    return { ...config, flourId: better.id };
   }
   function changeStyle(id: string) {
-    setState((s) => ({ ...s, config: normalizePlanning(withStyle(s.config, id)) }));
+    const next = normalizePlanning(withStyleFlour(withStyle(c, id)));
+    setState((s) => ({ ...s, config: next }));
   }
   /**
    * Una pizza nuova riparte dai valori dello stile e da date future: lievitazione, pieghe, preimpasti,
@@ -441,7 +421,7 @@ export default function App() {
       panShape: old.panShape,
       panDiameter: old.panDiameter,
     };
-    return normalizePlanning(withStyle({ ...defaultConfig(), ...keep }, old.styleId));
+    return normalizePlanning(withStyleFlour(withStyle({ ...defaultConfig(), ...keep }, old.styleId)));
   }
   function selectFlour(f: Flour) {
     update("flourId", f.id);
@@ -819,10 +799,11 @@ export default function App() {
     openTab("diario");
   }
   function startNewDough() {
-    setState((s) => {
-      const stale = s.draftUsed || new Date(s.config.bakeAt).getTime() < Date.now() + 2 * 3600000;
-      return stale ? { ...s, config: freshDraft(s.config), draftUsed: false } : s;
-    });
+    const stale = state.draftUsed || new Date(c.bakeAt).getTime() < Date.now() + 2 * 3600000;
+    if (stale) {
+      const fresh = freshDraft(c);
+      setState((s) => ({ ...s, config: fresh, draftUsed: false }));
+    }
     setEditingId(null);
     setRecipeName("");
     setPlannerStage("dough");

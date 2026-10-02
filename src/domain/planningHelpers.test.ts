@@ -100,9 +100,9 @@ describe("when to start", () => {
     expect(s.hours).toBeGreaterThanOrEqual(8);
   });
 
-  it("keeps a quick style quick: a short window is enough for a style that is short by nature", () => {
+  it("does not squeeze a style into five hours: under eight hours the dough does not mature", () => {
     const s = suggestStart(config({ styleId: "focaccia-barese", bakeAt: "2026-11-14T20:00" }), at("2026-11-14T15:00"))!;
-    expect(s.movedMeal).toBe(false);
+    expect(s.movedMeal).toBe(true);
   });
 });
 

@@ -60,3 +60,18 @@ export function recommendFlours(c: DoughConfig, flours: Flour[], limit = 3): { n
   for (const item of others) if (picked.length < limit && !picked.includes(item)) picked.push(item);
   return { needs, current: currentStrength ? fitsNeeds(currentStrength, needs) : false, suggestions: picked };
 }
+
+/**
+ * Cambiando stile o iniziando una pizza nuova: se la farina scelta non regge la ricetta
+ * (troppo debole, o troppo forte per pochi ore), propone la più adatta del catalogo.
+ * Non tocca miscele, farine senza W né farine speciali: lì decide chi impasta.
+ */
+export function flourForStyle(c: DoughConfig, flours: Flour[]): Flour | null {
+  if (c.secondFlourPercent > 0 || c.thirdFlourPercent > 0 || c.fourthFlourPercent > 0) return null;
+  const current = flours.find((flour) => flour.id === c.flourId);
+  if (!current || !usableForPizza(current)) return null;
+  const strength = flourStrength(current);
+  if (!strength) return null;
+  const { current: fits, suggestions } = recommendFlours(c, flours, 1);
+  return fits ? null : suggestions[0]?.flour ?? null;
+}

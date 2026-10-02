@@ -1,6 +1,7 @@
 import { t } from "../i18n";
 import { buildTimeline, calculate, deriveAutomaticSchedule, MIN_COLD_HOURS } from "./calculator";
-import { localDateTime, styles } from "./styles";
+import { bakingDefaults, localDateTime, recommendedExtras, styles } from "./styles";
+import { ovenProfiles } from "../data/ovens";
 import { formatWeight } from "../services/units";
 import type { DoughConfig, Flour, Recipe, RecipeTemplate, Stage } from "./types";
 
@@ -65,6 +66,41 @@ export function buildScaleItems(config: Recipe["config"], result: GoodResult): S
     ...(result.sugar > 0 ? [{ label: t("Zucchero"), grams: result.sugar }] : []),
     ...(result.malt > 0 ? [{ label: t("Malto"), grams: result.malt }] : []),
   ];
+}
+
+/**
+ * Lo stile porta con sé acqua, tempi e cottura tipici; forno, farina e attrezzatura restano i tuoi.
+ * `savedOvenTemp` è la temperatura reale del forno salvato nel profilo, se c’è.
+ */
+export function applyStyleDefaults(config: DoughConfig, id: string, savedOvenTemp?: number): DoughConfig {
+  const style = styles.find((item) => item.id === id) ?? styles[0];
+  const oven = ovenProfiles.find((o) => o.id === config.ovenType);
+  const ovenMax = savedOvenTemp ?? (oven && oven.id !== "custom" ? oven.maxTemp : undefined);
+  // Alcuni stili nascono in teglia tonda (focaccia barese): si parte da forma e spessore tipici.
+  const panShape = style.panShape ?? config.panShape;
+  const panDiameter = style.panDiameter ?? config.panDiameter;
+  return {
+    ...config,
+    styleId: id,
+    ...(style.pan ? { panShape, panDiameter, panDensity: style.panDensity ?? 0.6 } : {}),
+    ...(id === "focaccia-barese" ? { toppingPresetId: "barese" } : {}),
+    pizzaDiameter: style.pan && panShape === "round" ? panDiameter : id === "padellino" ? 20 : id === "new-york" ? 35 : 32,
+    toppingCount: config.count,
+    toppingWidth: config.panWidth,
+    toppingLength: config.panLength,
+    hydration: style.hydration,
+    ballWeight: style.ballWeight,
+    ...recommendedExtras(id),
+    // Il malto è difficile da trovare: si suggerisce, ma si parte senza.
+    malt: 0,
+    coldHours: style.cold,
+    bulkHours: style.bulk,
+    proofHours: style.proof,
+    ovenTemp: ovenMax !== undefined ? Math.min(style.oven, ovenMax) : style.oven,
+    ...bakingDefaults(id),
+    // Nei forni con pietra fissa l’altezza non si sceglie.
+    ...(oven?.fixedRack ? { ovenRack: "middle" as const } : {}),
+  };
 }
 
 /** Ricava tempi e dose di lievito dalla finestra inizio → cottura (modalità automatica). */

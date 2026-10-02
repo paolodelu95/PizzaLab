@@ -1710,4 +1710,5 @@ export const en: Record<string, string> = {
   "{count} notifiche programmate, {minutes} minuti prima di ogni fase.": "{count} notifications scheduled, {minutes} minutes before each phase.",
   "{count} notifiche programmate.": "{count} notifications scheduled.",
   "{length} notifiche del lievito madre programmate.": "{length} sourdough starter notifications scheduled.",
+  "Farina impostata su {brand} {name}: regge meglio questo stile. Puoi cambiarla quando vuoi.": "Flour set to {brand} {name}: it suits this style better. You can change it whenever you like.",
 };
