@@ -19,6 +19,11 @@ export async function cancelReminders() {
  * Android rimanda gli avvisi «non esatti» anche di molte ore (fino a tre quarti del tempo che manca),
  * soprattutto ad app chiusa e telefono a riposo. Con il permesso «Sveglie e promemoria» arrivano puntuali.
  */
+/*
+ * Nota: si chiede l’avviso esatto al plugin solo quando il permesso c’è già. Con il permesso negato
+ * il plugin aprirebbe la pagina di sistema a ogni programmazione (anche al riavvio dell’app) e
+ * resterebbe in attesa: il permesso si chiede una volta, spiegandolo, con askExactReminders().
+ */
 export async function exactRemindersAllowed(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return true;
   try {
@@ -38,14 +43,6 @@ export async function askExactReminders(): Promise<boolean> {
   }
 }
 
-const ASKED_KEY = 'pizzalab-exact-alarm-asked';
-/** La prima volta che si programma qualcosa, chiede il permesso; poi non insiste più. */
-async function ensureExactReminders(): Promise<boolean> {
-  if (await exactRemindersAllowed()) return true;
-  let asked = false;
-  try { asked = localStorage.getItem(ASKED_KEY) === '1'; localStorage.setItem(ASKED_KEY, '1'); } catch { /* nessuna memoria: chiede ogni volta */ }
-  return asked ? false : askExactReminders();
-}
 const notExactNote = () => t("Per riceverle all’orario giusto anche ad app chiusa, attiva «Sveglie e promemoria» per PizzaLab: lo trovi nel Profilo, alla voce Notifiche.");
 
 const leadText = (minutes: number) => (minutes > 0 ? t("Tra {minutes} minuti: ", { minutes }) : '');
@@ -53,18 +50,18 @@ const leadText = (minutes: number) => (minutes > 0 ? t("Tra {minutes} minuti: ",
 const notifyAt = (at: string | Date, leadMinutes: number) =>
   new Date(Math.max(Date.now() + 5000, new Date(at).getTime() - leadMinutes * 60000));
 
-export async function scheduleReminders(recipe: Recipe, leadMinutes = 0, ask = true): Promise<string> {
+export async function scheduleReminders(recipe: Recipe, leadMinutes = 0): Promise<string> {
   if (!Capacitor.isNativePlatform()) return t("Per ricevere un avviso a ogni fase, premi «Aggiungi al calendario» nella scheda della pizza.");
   const stages = buildTimeline(recipe.config).filter(s => new Date(s.at).getTime() > Date.now());
   if (!stages.length) throw new Error('Questo piano è terminato. Imposta una nuova data.');
   const permission = await LocalNotifications.requestPermissions();
   if (permission.display !== 'granted') throw new Error('Notifiche non autorizzate. Puoi abilitarle nelle impostazioni Android.');
   await LocalNotifications.createChannel({ id: CHANNEL, name: t("Il tuo impasto"), description: t("Promemoria per ogni fase della pizza"), importance: 4, visibility: 1, vibration: true });
-  const exact = ask ? await ensureExactReminders() : await exactRemindersAllowed();
+  const exact = await exactRemindersAllowed();
   await cancelReminders();
   await LocalNotifications.schedule({ notifications: stages.map((stage,index) => ({
     id: 1000+index, title: t("PizzaLab · {title}", { title: stage.title }), body: `${leadText(leadMinutes)}${stage.detail}`,
-    channelId: CHANNEL, isExactNotification: true, schedule: { at: notifyAt(stage.at, leadMinutes), allowWhileIdle: true }, extra: { recipeId: recipe.id },
+    channelId: CHANNEL, isExactNotification: exact, schedule: { at: notifyAt(stage.at, leadMinutes), allowWhileIdle: true }, extra: { recipeId: recipe.id },
   })) });
   const count = leadMinutes
     ? t("{count} notifiche programmate, {minutes} minuti prima di ogni fase.", { count: stages.length, minutes: leadMinutes })
@@ -98,7 +95,7 @@ export async function scheduleStarterReminders(profile: SourdoughProfile, leadMi
     visibility: 1,
     vibration: true,
   });
-  const exact = await ensureExactReminders();
+  const exact = await exactRemindersAllowed();
   await cancelStarterReminders(profile.id);
   const dates = starterReminderDates(profile, profile.storage === 'fridge' ? 8 : 20);
   const base = starterNotificationBase(profile.id);
@@ -109,7 +106,7 @@ export async function scheduleStarterReminders(profile: SourdoughProfile, leadMi
       ? t("Togli il lievito dal frigo, osservalo e procedi con il rinfresco settimanale.")
       : `${leadText(leadMinutes)}${leadMinutes ? 'rinfresco' : 'È il momento del rinfresco'}. Intervallo previsto: ${starterIntervalHours(profile, at)} ore.`,
     channelId: STARTER_CHANNEL,
-    isExactNotification: true,
+    isExactNotification: exact,
     schedule: { at: notifyAt(at, leadMinutes), allowWhileIdle: true },
     extra: { section: 'sourdough', profileId: profile.id },
   })) });

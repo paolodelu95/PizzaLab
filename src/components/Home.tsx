@@ -1,4 +1,4 @@
-import { ArrowRight, BookmarkSimple, Check, ListChecks, Plus, Trash, UserCircle } from "@phosphor-icons/react";
+import { ArrowRight, BellSlash, BookmarkSimple, Check, ListChecks, Plus, Trash, UserCircle } from "@phosphor-icons/react";
 import { durationLabel } from "../domain/duration";
 import { styles } from "../domain/styles";
 import type { Recipe, RecipeTemplate, Stage } from "../domain/types";
@@ -25,6 +25,9 @@ type Props = {
   onNew: () => void;
   onOpenProfile: () => void;
   onOpenRescue: () => void;
+  /** Su Android, con una pizza in corso e senza «Sveglie e promemoria»: le notifiche possono tardare. */
+  remindersMayBeLate?: boolean;
+  onFixReminders?: () => void;
   onOpenDiary: () => void;
   onStageDone: (stageId: string) => void;
   onUseTemplate: (id: string) => void;
@@ -32,7 +35,7 @@ type Props = {
 };
 
 /** «Oggi»: la cosa da fare adesso. Con un impasto in corso mostra la prossima fase, altrimenti invita a crearne uno. */
-export function Home({ name, now, active, stages, savedCount, templates, onNew, onOpenProfile, onOpenRescue, onOpenDiary, onStageDone, onUseTemplate, onDeleteTemplate }: Props) {
+export function Home({ name, now, active, stages, savedCount, templates, onNew, onOpenProfile, onOpenRescue, remindersMayBeLate, onFixReminders, onOpenDiary, onStageDone, onUseTemplate, onDeleteTemplate }: Props) {
   const hour = new Date(now).getHours();
   const greeting = hour < 12 ? t("Buongiorno") : hour < 18 ? t("Buon pomeriggio") : t("Buonasera");
   const firstName = name.trim().split(/\s+/)[0];
@@ -82,6 +85,11 @@ export function Home({ name, now, active, stages, savedCount, templates, onNew, 
                 <button className="button primary" onClick={onOpenDiary}><ListChecks weight="bold" /> {t("Apri la guida")}</button>
                 {current && <button className="button on-photo" onClick={() => onStageDone(current.id)}><Check weight="bold" /> {t("Fatto")}</button>}
               </div>
+              {remindersMayBeLate && (
+                <button className="today-late" onClick={onFixReminders}>
+                  <BellSlash weight="fill" /> {t("Le notifiche potrebbero arrivare in ritardo · Attiva gli avvisi puntuali")}
+                </button>
+              )}
             </>
           ) : (
             <>

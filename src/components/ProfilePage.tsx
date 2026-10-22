@@ -454,7 +454,7 @@ function ExactReminders() {
         <p>
           {allowed
             ? t("Le notifiche arrivano all’orario giusto anche ad app chiusa. Se il telefono le blocca lo stesso, togli PizzaLab dalle app in sospensione o dall’ottimizzazione della batteria.")
-            : t("Ad app chiusa Android può rimandare le notifiche anche di ore. Attiva «Sveglie e promemoria» per PizzaLab: serve solo a far suonare gli avvisi in orario.")}
+            : t("Ad app chiusa Android può ritardare le notifiche fino a un’ora. Attiva «Sveglie e promemoria» per PizzaLab: serve solo a far suonare gli avvisi in orario.")}
         </p>
         {!allowed && (
           <button className="button primary" onClick={() => void askExactReminders().then(setAllowed)}>

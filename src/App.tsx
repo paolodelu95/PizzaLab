@@ -82,6 +82,8 @@ import {
   cancelStarterReminders,
   onReminderOpened,
   scheduleReminders,
+  exactRemindersAllowed,
+  askExactReminders,
   scheduleStarterReminders,
 } from "./services/notifications";
 import {
@@ -109,7 +111,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.26.3";
+const APP_VERSION = "0.26.4";
 type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [
@@ -180,6 +182,16 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [rescueOpen, setRescueOpen] = useState(false);
+  const [exactPrompt, setExactPrompt] = useState(false);
+  // Su Android: gli avvisi puntuali sono attivi? Si rilegge tornando nell’app (per esempio dalle impostazioni).
+  const [exactOk, setExactOk] = useState(true);
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    const check = () => void exactRemindersAllowed().then(setExactOk);
+    check();
+    document.addEventListener("visibilitychange", check);
+    return () => document.removeEventListener("visibilitychange", check);
+  }, []);
   const closeRescue = useCallback(() => setRescueOpen(false), []);
   const [lateStart, setLateStart] = useState<{ source: "planner" } | { source: "recipe"; recipe: Recipe } | null>(null);
   const [diaryView, setDiaryView] = useState<DiaryView>("active");
@@ -251,7 +263,7 @@ export default function App() {
     if (!ready || loadError || rescheduled.current || !isNativeApp()) return;
     rescheduled.current = true;
     const running = state.recipes.find((recipe) => recipe.id === state.activeId);
-    if (running) void scheduleReminders(running, state.reminderLeadMinutes ?? 0, false).catch(() => undefined);
+    if (running) void scheduleReminders(running, state.reminderLeadMinutes ?? 0).catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, loadError]);
   useEffect(() => {
@@ -721,6 +733,8 @@ export default function App() {
     setBusy(true);
     try {
       const note = await scheduleReminders(recipe, leadMinutes);
+      // Senza «Sveglie e promemoria» Android può ritardare gli avvisi fino a un’ora: lo spieghiamo subito.
+      if (isNativeApp() && !(await exactRemindersAllowed())) setExactPrompt(true);
       const startedAt = new Date().toISOString();
       setState((s) => ({
         ...s,
@@ -747,6 +761,15 @@ export default function App() {
     } finally {
       setBusy(false);
     }
+  }
+  /** Apre «Sveglie e promemoria»; al ritorno, se concesso, riprogramma la pizza in corso con avvisi esatti. */
+  async function enableExactReminders() {
+    setExactPrompt(false);
+    const granted = await askExactReminders();
+    setExactOk(granted);
+    const running = state.recipes.find((recipe) => recipe.id === state.activeId);
+    if (granted && running) await scheduleReminders(running, leadMinutes).catch(() => undefined);
+    setMessage(granted ? t("Fatto: le notifiche arriveranno all’orario giusto anche ad app chiusa.") : t("Permesso non attivo: le notifiche potrebbero arrivare in ritardo. Puoi attivarlo quando vuoi dal Profilo."));
   }
   async function deactivate() {
     setBusy(true);
@@ -1097,6 +1120,8 @@ export default function App() {
               onNew={startNewDough}
               onOpenProfile={() => openTab("profilo")}
               onOpenRescue={() => setRescueOpen(true)}
+              remindersMayBeLate={Boolean(active) && !exactOk}
+              onFixReminders={() => void enableExactReminders()}
               onOpenDiary={openDiary}
               onStageDone={(stageId) => active && editRecipe(active.id, { completedStages: [...new Set([...active.completedStages, stageId])] })}
               onUseTemplate={useTemplate}
@@ -2444,6 +2469,28 @@ export default function App() {
           )}
         </main>
       </div>
+      {exactPrompt && (
+        <div className="dialog-backdrop">
+          <div className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="exact-title">
+            <h2 id="exact-title">{t("Vuoi le notifiche in orario?")}</h2>
+            <p>
+              {t("Ad app chiusa Android può ritardare le notifiche fino a un’ora. Nella pagina che si apre attiva «Consenti l’impostazione di sveglie e promemoria» per PizzaLab: serve solo a far arrivare ogni fase all’orario giusto.")}
+            </p>
+            <div>
+              <button className="button secondary" onClick={() => setExactPrompt(false)}>
+                {t("Più tardi")}
+              </button>
+              <button
+                autoFocus
+                className="button primary"
+                onClick={() => void enableExactReminders()}
+              >
+                {t("Attiva")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {deleteId && (
         <div className="dialog-backdrop">
           <div
