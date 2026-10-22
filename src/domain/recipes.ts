@@ -165,6 +165,8 @@ export function applyWholeGrams(config: DoughConfig, flours: Flour[]): DoughConf
       proofHours: proof,
       coldHours: cold > 0 ? roundHalf(window - bulk - proof) : 0,
     };
+    // Gli arrotondamenti a mezz’ora non devono lasciare un frigo sotto il minimo utile.
+    if (next.coldHours > 0 && next.coldHours < MIN_COLD_HOURS) continue;
     // Meno cambia il piano, meglio è: conta lo scarto dei tempi e un po’ quello della dose.
     const cost = Math.abs(bulk + proof - warmNow) + Math.abs(grams - base.yeast);
     if (!calculate(next, flours).ok) continue;

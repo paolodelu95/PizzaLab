@@ -129,6 +129,11 @@ export function deriveAutomaticSchedule(c: DoughConfig): AutomaticSchedule {
   if (coldHours > 0) {
     proofHours = round(proofHours);
     coldHours = round(fermentationHours - bulkHours - proofHours);
+    // L’arrotondamento non deve far scendere il frigo sotto il minimo (7,99 ore invece di 8).
+    if (coldHours < MIN_COLD_HOURS) {
+      proofHours = round(proofHours - (MIN_COLD_HOURS - coldHours));
+      coldHours = round(fermentationHours - bulkHours - proofHours);
+    }
   } else proofHours = round(fermentationHours - bulkHours);
   return {
     ok: true,
