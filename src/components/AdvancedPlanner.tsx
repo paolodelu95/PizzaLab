@@ -461,7 +461,7 @@ export function AdvancedPlanner({
               {!naturalStarter && (
                 <div className="method-toggle" role="radiogroup" aria-label={t("Dose del lievito")}>
                   <button role="radio" aria-checked={!c.autoWholeGrams} className={!c.autoWholeGrams ? "selected" : ""} onClick={() => onUpdate({ autoWholeGrams: false, yeastMode: "auto" })}>
-                    {t("Automatico")}
+                    {t("Dose calcolata")}
                   </button>
                   <button role="radio" aria-checked={!!c.autoWholeGrams} className={c.autoWholeGrams ? "selected" : ""} onClick={() => onUpdate({ autoWholeGrams: true })}>
                     {t("Grammi interi")}
@@ -520,7 +520,7 @@ export function AdvancedPlanner({
                   className={c.yeastMode === "auto" ? "selected" : ""}
                   onClick={() => onUpdate({ yeastMode: "auto" })}
                 >
-                  {t("Automatico")}
+                  {t("Dose calcolata")}
                 </button>
                 <button
                   className={c.yeastMode === "weighable" ? "selected" : ""}

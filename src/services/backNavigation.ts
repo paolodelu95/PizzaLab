@@ -13,6 +13,9 @@ export function useCloseOnBack(open: boolean, onClose: () => void) {
     window.history.pushState({ ...(window.history.state ?? {}), overlay: marker }, "");
     let popped = false;
     const onPop = () => {
+      // Un pannello aperto sopra questo (per esempio un menu dentro la bilancia) si è chiuso e
+      // la cronologia è tornata alla nostra voce: questo pannello resta aperto.
+      if (window.history.state?.overlay === marker) return;
       popped = true;
       closeRef.current();
     };

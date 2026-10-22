@@ -788,7 +788,6 @@ export const en: Record<string, string> = {
   "Percentuale sul peso totale della farina.": "Percentage of the total flour weight.",
   "Idratazione del lievito": "Yeast hydration",
   "In genere 45–55% per pasta madre e 100% per licoli.": "Usually 45–55% for sourdough starter and 100% for licoli.",
-  "Automatico": "Automatic",
   "Grammi interi": "Whole grams",
   "Percentuale": "Percentage",
   "Lievito fresco sulla farina": "Fresh yeast on the flour",
@@ -1711,4 +1710,5 @@ export const en: Record<string, string> = {
   "{count} notifiche programmate.": "{count} notifications scheduled.",
   "{length} notifiche del lievito madre programmate.": "{length} sourdough starter notifications scheduled.",
   "Farina impostata su {brand} {name}: regge meglio questo stile. Puoi cambiarla quando vuoi.": "Flour set to {brand} {name}: it suits this style better. You can change it whenever you like.",
+  "Dose calcolata": "Calculated amount",
 };

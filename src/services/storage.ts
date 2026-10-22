@@ -5,9 +5,11 @@ import type { StoredState } from "../domain/types";
 import { defaultUnits, normalizeUnits } from "./units";
 import { normalizeLanguage } from "../i18n";
 const KEY = "pizzalab-state-v1";
+/** Chi apre l’app la prima volta parte dal piano automatico: orari, frigo e lievito li decide PizzaLab. */
+const firstConfig = () => ({ ...defaultConfig(), planMode: "automatic" as const });
 export const emptyState = (): StoredState => ({
   version: 1,
-  config: defaultConfig(),
+  config: firstConfig(),
   recipes: [],
   activeId: null,
   customFlours: [],
@@ -90,7 +92,7 @@ export async function readState(): Promise<StoredState> {
         }
       : recipe,
   );
-  if (validateConfig(parsed.config).length) parsed.config = defaultConfig();
+  if (validateConfig(parsed.config).length) parsed.config = firstConfig();
   parsed.recipes = parsed.recipes.filter(
     (r) =>
       r &&

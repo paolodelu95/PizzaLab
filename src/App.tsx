@@ -109,7 +109,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.26.1";
+const APP_VERSION = "0.26.2";
 type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [
@@ -409,7 +409,8 @@ export default function App() {
       yeast: old.yeast,
       sourdoughProfileId: old.sourdoughProfileId,
       starterHydration: old.starterHydration,
-      planMode: old.planMode,
+      // Ogni pizza nuova parte in automatico: orari e frigo li decide l’app, poi si può passare a Manuale.
+      planMode: "automatic",
       ovenType: old.ovenType,
       mixer: old.mixer,
       mixerProfileId: old.mixerProfileId,

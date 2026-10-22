@@ -27,6 +27,14 @@ test.beforeEach(async ({ page }, testInfo) => {
   await page.addInitScript(() =>
     (localStorage.setItem("CapacitorStorage.pizzalab-tutorial-v1", "done"), localStorage.setItem("pizzalab-adjustments-open", "1")),
   );
+  // I test più vecchi lavorano sulle fasi a mano: partono da una bozza in pianificazione manuale.
+  // Chi apre l’app per la prima volta parte invece dall’automatico (vedi «a fresh install»).
+  if (testInfo.title.includes("fresh install")) return;
+  await page.addInitScript(() => {
+    const key = "CapacitorStorage.pizzalab-state-v1";
+    if (!localStorage.getItem(key))
+      localStorage.setItem(key, JSON.stringify({ version: 1, config: { planMode: "date" }, recipes: [], activeId: null, customFlours: [] }));
+  });
 });
 test("first launch shows a short tutorial that can be skipped and replayed", async ({ page }) => {
   await page.goto("/#nuova");
@@ -974,7 +982,7 @@ test("the automatic plan can round the yeast to whole grams and keeps the plan i
   await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
   await expect(page.locator(".ingredients").first()).toContainText(/Lievito fresco\s*\d+ g/);
   await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
-  await page.getByRole("radiogroup", { name: "Dose del lievito" }).getByRole("radio", { name: "Automatico" }).click();
+  await page.getByRole("radiogroup", { name: "Dose del lievito" }).getByRole("radio", { name: "Dose calcolata" }).click();
   await expect(page.locator(".automatic-yeast-lock > span")).toHaveText(/\d,\d\d g/);
 });
 
@@ -1006,4 +1014,37 @@ test("a new pizza does not carry over the times and settings of the one just sav
   // In «Impasto» non compaiono avvisi su frigo o forno: hanno il loro passaggio.
   const advice = page.locator(".advice-section .advice");
   for (const text of await advice.allTextContents()) expect(text).not.toMatch(/frigo|forno/i);
+});
+
+test("changing the scale precision keeps the scale open and updates the amount", async ({ page }) => {
+  await page.goto("/#nuova");
+  await startNowFromSummary(page);
+  await page.getByRole("button", { name: "Pesa" }).click();
+  await expect(page.getByText("Modalità bilancia")).toBeVisible();
+  await pick(page, page.getByLabel("Precisione bilancia"), /^0,01 g/);
+  await expect(page.getByText("Modalità bilancia")).toBeVisible();
+  await expect(page.getByLabel("Precisione bilancia")).toContainText("0,01 g");
+  await page.getByRole("button", { name: "Pesato" }).click();
+  await page.getByRole("button", { name: "Pesato" }).click();
+  await expect(page.locator(".scale-value")).toContainText(/\d,\d\d/);
+});
+
+test("a fresh install plans automatically, with the fridge, and new pizzas start in automatic", async ({ page }) => {
+  await page.goto("/#nuova");
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await expect(page.getByRole("button", { name: "Automatica" })).toHaveAttribute("aria-pressed", "true");
+  const day = (offset: number, hour: number) => page.evaluate(([o, h]) => {
+    const d = new Date(); d.setDate(d.getDate() + o); d.setHours(h, 0, 0, 0);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  }, [offset, hour]);
+  await page.getByLabel("Voglio iniziare").fill(await day(1, 19));
+  await page.getByLabel("Voglio mangiare").fill(await day(2, 20));
+  await expect(page.locator(".automatic-phase-grid .cold strong")).not.toHaveText("—");
+  await page.getByRole("button", { name: "Manuale" }).click();
+  await page.getByRole("button", { name: /Tutto fuori frigo/ }).click();
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await page.getByRole("button", { name: /Salva per dopo/ }).click();
+  await page.getByRole("button", { name: "Nuova pizza", exact: true }).first().click();
+  await page.getByRole("button", { name: /^2 Lievitazione/ }).click();
+  await expect(page.getByRole("button", { name: "Automatica" })).toHaveAttribute("aria-pressed", "true");
 });
