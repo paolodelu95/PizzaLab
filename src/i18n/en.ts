@@ -1718,4 +1718,6 @@ export const en: Record<string, string> = {
   "Attiva": "Turn on",
   "Le notifiche potrebbero arrivare in ritardo · Attiva gli avvisi puntuali": "Notifications may arrive late · Turn on on-time alerts",
   "Ad app chiusa Android può ritardare le notifiche fino a un’ora. Attiva «Sveglie e promemoria» per PizzaLab: serve solo a far suonare gli avvisi in orario.": "With the app closed Android can delay notifications by up to an hour. Turn on «Alarms & reminders» for PizzaLab: it is only used to ring the alerts on time.",
+  "Ariete 3901 Da Gennaro": "Ariete 3901 Da Gennaro",
+  "Pietra refrattaria removibile da 32×32 cm, fino a 430 °C, 2200 W. Due resistenze con regolazione separata (sopra 1400 W, sotto 800 W): si può accendere solo il cielo, solo la platea o entrambe. Il produttore indica circa 2 minuti a pizza; il tempo di preriscaldamento non è dichiarato, 20 minuti è una stima prudente.": "Removable 32×32 cm refractory stone, up to 430 °C, 2200 W. Two separately controlled elements (top 1400 W, bottom 800 W): you can run only the top, only the bottom or both. The maker states about 2 minutes per pizza; preheating time is not declared, 20 minutes is a cautious estimate.",
 };
