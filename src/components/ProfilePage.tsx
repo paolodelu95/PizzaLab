@@ -1,4 +1,4 @@
-import { t, msg } from "../i18n";
+import { locale, t, msg } from "../i18n";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowSquareOut,
@@ -26,7 +26,7 @@ import { ovenById } from "../data/ovens";
 import { UserPans } from "./UserPans";
 import { InstallPrompt } from "./InstallPrompt";
 import { isNativeApp, usesCalendarReminders } from "../services/platform";
-import { askExactReminders, exactRemindersAllowed } from "../services/notifications";
+import { askExactReminders, diagnoseReminders, openAppSettings, openBatterySettings, sendTestReminder, type ReminderDiagnosis } from "../services/notifications";
 import { SelectSheet } from "./SelectSheet";
 import { NumberField } from "./Fields";
 import type { Language } from "../i18n";
@@ -434,34 +434,88 @@ function UserOvens({
   );
 }
 
-/** Solo su Android: senza «Sveglie e promemoria» gli avvisi ad app chiusa possono arrivare con ore di ritardo. */
+/** Consigli per le marche che fermano le app in background più delle altre. */
+const MAKER_TIPS: [RegExp, string][] = [
+  [/samsung/i, msg("Samsung: Impostazioni → Batteria → Limiti utilizzo in background. Togli PizzaLab da «App in sospensione» e «App in sospensione profonda» e aggiungila ad «App mai in sospensione».")],
+  [/xiaomi|redmi|poco/i, msg("Xiaomi: Impostazioni → App → PizzaLab → Risparmio batteria → «Nessuna restrizione», e attiva «Avvio automatico».")],
+  [/huawei|honor/i, msg("Huawei/Honor: Impostazioni → Batteria → Avvio app → PizzaLab → gestione manuale, con tutte e tre le opzioni attive.")],
+  [/oneplus|oppo|realme/i, msg("OnePlus/Oppo/Realme: Impostazioni → Batteria → Ottimizzazione batteria → PizzaLab → «Non ottimizzare», e consenti l’attività in background.")],
+  [/vivo|iqoo/i, msg("Vivo: Impostazioni → Batteria → Consumo in background elevato → consenti PizzaLab.")],
+];
+
+/**
+ * Solo su Android: controlla una per una le cose che fermano le notifiche ad app chiusa
+ * e permette di inviare una notifica di prova.
+ */
 function ExactReminders() {
-  const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [report, setReport] = useState<ReminderDiagnosis | null>(null);
+  const [testSent, setTestSent] = useState<string>("");
   useEffect(() => {
     if (!isNativeApp()) return;
-    const check = () => void exactRemindersAllowed().then(setAllowed);
+    const check = () => void diagnoseReminders().then(setReport);
     check();
     // Tornando dalle impostazioni di sistema, rilegge lo stato.
     document.addEventListener("visibilitychange", check);
     return () => document.removeEventListener("visibilitychange", check);
   }, []);
-  if (allowed === null) return null;
+  if (!report) return null;
+  const tip = MAKER_TIPS.find(([pattern]) => pattern.test(report.manufacturer))?.[1];
+  const allGood = report.notificationsAllowed && report.exactAllowed && report.batteryUnrestricted !== false;
+  const rows: { ok: boolean | null; label: string; hint: string; action?: [string, () => void] }[] = [
+    {
+      ok: report.notificationsAllowed,
+      label: t("Notifiche consentite"),
+      hint: report.notificationsAllowed ? t("PizzaLab può mostrare notifiche.") : t("Le notifiche di PizzaLab sono spente nelle impostazioni del telefono."),
+      action: report.notificationsAllowed ? undefined : [t("Apri le impostazioni"), () => void openAppSettings()],
+    },
+    {
+      ok: report.exactAllowed,
+      label: t("Sveglie e promemoria"),
+      hint: report.exactAllowed ? t("Gli avvisi arrivano all’orario esatto.") : t("Senza questo permesso Android può ritardare ogni avviso fino a un’ora."),
+      action: report.exactAllowed ? undefined : [t("Attiva"), () => void askExactReminders().then(() => diagnoseReminders().then(setReport))],
+    },
+    {
+      ok: report.batteryUnrestricted,
+      label: t("Batteria senza restrizioni"),
+      hint: report.batteryUnrestricted ? t("Il risparmio energetico non ferma PizzaLab.") : t("L’ottimizzazione della batteria può bloccare gli avvisi finché non riapri l’app: scegli «Senza restrizioni» o «Non ottimizzare» per PizzaLab."),
+      action: report.batteryUnrestricted === false ? [t("Apri le impostazioni"), () => void openBatterySettings()] : undefined,
+    },
+  ];
   return (
-    <div className={`exact-reminders ${allowed ? "ok" : "off"}`}>
-      {allowed ? <CheckCircle weight="fill" /> : <Warning weight="fill" />}
-      <div>
-        <strong>{allowed ? t("Avvisi puntuali attivi") : t("Avvisi puntuali non attivi")}</strong>
-        <p>
-          {allowed
-            ? t("Le notifiche arrivano all’orario giusto anche ad app chiusa. Se il telefono le blocca lo stesso, togli PizzaLab dalle app in sospensione o dall’ottimizzazione della batteria.")
-            : t("Ad app chiusa Android può ritardare le notifiche fino a un’ora. Attiva «Sveglie e promemoria» per PizzaLab: serve solo a far suonare gli avvisi in orario.")}
-        </p>
-        {!allowed && (
-          <button className="button primary" onClick={() => void askExactReminders().then(setAllowed)}>
-            <BellRinging /> {t("Attiva gli avvisi puntuali")}
-          </button>
-        )}
-      </div>
+    <div className={`reminder-check ${allGood ? "ok" : "off"}`}>
+      <strong className="reminder-check-title">
+        {allGood ? <CheckCircle weight="fill" /> : <Warning weight="fill" />}
+        {allGood ? t("Avvisi puntuali attivi") : t("Qualcosa può bloccare le notifiche")}
+      </strong>
+      <ul>
+        {rows.map((row) => (
+          <li key={row.label} className={row.ok === false ? "bad" : "good"}>
+            {row.ok === false ? <Warning weight="fill" /> : <CheckCircle weight="fill" />}
+            <div>
+              <b>{row.label}</b>
+              <span>{row.hint}</span>
+              {row.action && <button className="text-button" onClick={row.action[1]}>{row.action[0]}</button>}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {tip && <p className="reminder-check-tip">{t(tip)}</p>}
+      <p className="reminder-check-meta">
+        {report.pending
+          ? t("{count} promemoria programmati, il prossimo {when}.", { count: report.pending, when: new Date(report.nextAt!).toLocaleString(locale(), { weekday: "short", hour: "2-digit", minute: "2-digit" }) })
+          : t("Nessun promemoria programmato in questo momento.")}
+      </p>
+      <button
+        className="button secondary"
+        onClick={() =>
+          void sendTestReminder()
+            .then(() => setTestSent(t("Notifica di prova tra un minuto: chiudi l’app e blocca lo schermo, poi controlla che arrivi.")))
+            .catch((error: Error) => setTestSent(error.message))
+        }
+      >
+        <BellRinging /> {t("Invia una notifica di prova")}
+      </button>
+      {testSent && <small className="reminder-check-meta">{testSent}</small>}
     </div>
   );
 }

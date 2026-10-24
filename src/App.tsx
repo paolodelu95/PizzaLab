@@ -111,7 +111,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.26.4";
+const APP_VERSION = "0.27.0";
 type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [

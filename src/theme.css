@@ -1265,3 +1265,72 @@ main .help-actions {
   width: 18px;
   height: 18px;
 }
+
+/* Profilo: diagnostica delle notifiche (Android) */
+.reminder-check {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: var(--r-lg);
+  background: var(--basil-soft);
+}
+.reminder-check.off {
+  background: var(--amber-soft);
+}
+.reminder-check-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+.reminder-check-title svg {
+  width: 22px;
+  height: 22px;
+  color: var(--basil);
+}
+.reminder-check.off .reminder-check-title svg {
+  color: var(--amber);
+}
+.reminder-check ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.reminder-check li {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.reminder-check li > svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--basil);
+}
+.reminder-check li.bad > svg {
+  color: var(--brand);
+}
+.reminder-check li div {
+  display: grid;
+  gap: 2px;
+}
+.reminder-check li span {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.reminder-check li .text-button {
+  justify-self: start;
+  min-height: 40px;
+  color: var(--brand-ink);
+}
+.reminder-check-tip,
+.reminder-check-meta {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}

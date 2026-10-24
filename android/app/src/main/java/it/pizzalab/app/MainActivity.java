@@ -8,6 +8,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(ReminderHealthPlugin.class);
         super.onCreate(savedInstanceState);
         // «Indietro» chiude pannelli e torna alla sezione precedente; esce solo dalla prima schermata.
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {

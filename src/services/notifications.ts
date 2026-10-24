@@ -1,5 +1,5 @@
 import { t } from "../i18n";
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { buildTimeline } from '../domain/calculator';
 import { starterIntervalHours, starterReminderDates } from '../domain/sourdough';
@@ -121,4 +121,62 @@ export function onReminderOpened(handler: (section: 'dough' | 'sourdough') => vo
     handler(action.notification.extra?.section === 'sourdough' ? 'sourdough' : 'dough');
   });
   return () => { void listener.then((item) => item.remove()); };
+}
+
+/** Plugin nativo di PizzaLab (Android): stato della batteria e scorciatoie alle impostazioni. */
+const ReminderHealth = registerPlugin<{
+  status(): Promise<{ batteryUnrestricted: boolean; manufacturer: string; model: string; sdk: number }>;
+  openAppSettings(): Promise<void>;
+  openBatterySettings(): Promise<void>;
+}>('ReminderHealth');
+
+export interface ReminderDiagnosis {
+  notificationsAllowed: boolean;
+  exactAllowed: boolean;
+  batteryUnrestricted: boolean | null;
+  manufacturer: string;
+  pending: number;
+  nextAt: string | null;
+}
+
+/** Tutto quello che può impedire a una notifica di arrivare ad app chiusa, in un colpo d’occhio. */
+export async function diagnoseReminders(): Promise<ReminderDiagnosis | null> {
+  if (!Capacitor.isNativePlatform()) return null;
+  const [permission, exact, pending, health] = await Promise.all([
+    LocalNotifications.checkPermissions().catch(() => ({ display: 'denied' })),
+    exactRemindersAllowed(),
+    LocalNotifications.getPending().catch(() => ({ notifications: [] })),
+    ReminderHealth.status().catch(() => null),
+  ]);
+  const times = pending.notifications
+    .map((item) => (item.schedule?.at ? new Date(item.schedule.at).getTime() : NaN))
+    .filter((time) => Number.isFinite(time) && time > Date.now())
+    .sort((a, b) => a - b);
+  return {
+    notificationsAllowed: permission.display === 'granted',
+    exactAllowed: exact,
+    batteryUnrestricted: health ? health.batteryUnrestricted : null,
+    manufacturer: health?.manufacturer ?? '',
+    pending: times.length,
+    nextAt: times.length ? new Date(times[0]).toISOString() : null,
+  };
+}
+
+export const openAppSettings = () => ReminderHealth.openAppSettings().catch(() => undefined);
+export const openBatterySettings = () => ReminderHealth.openBatterySettings().catch(() => undefined);
+
+/** Notifica di prova tra un minuto, con lo stesso canale e lo stesso tipo di avviso dei promemoria veri. */
+export async function sendTestReminder(): Promise<void> {
+  const permission = await LocalNotifications.requestPermissions();
+  if (permission.display !== 'granted') throw new Error(t("Notifiche non autorizzate. Puoi abilitarle nelle impostazioni Android."));
+  await LocalNotifications.createChannel({ id: CHANNEL, name: t("Il tuo impasto"), description: t("Promemoria per ogni fase della pizza"), importance: 4, visibility: 1, vibration: true });
+  const exact = await exactRemindersAllowed();
+  await LocalNotifications.schedule({ notifications: [{
+    id: 2999,
+    title: t("PizzaLab · Notifica di prova"),
+    body: t("Se la leggi all’orario giusto, i promemoria della pizza funzionano anche ad app chiusa."),
+    channelId: CHANNEL,
+    isExactNotification: exact,
+    schedule: { at: new Date(Date.now() + 60000), allowWhileIdle: true },
+  }] });
 }
