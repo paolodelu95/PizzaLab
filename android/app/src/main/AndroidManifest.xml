@@ -2,11 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Promemoria all’orario esatto anche ad app chiusa (come un timer da cucina): senza, Android
-         può rimandarli fino a un’ora. Da Android 13 USE_EXACT_ALARM è concesso all’installazione;
-         prima si usa SCHEDULE_EXACT_ALARM, che su quelle versioni non richiede nessuna conferma. -->
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <!-- Promemoria all’orario esatto anche ad app chiusa: senza, Android può rimandarli fino a un’ora.
+         Da Android 14 l’utente lo concede con un tocco («Sveglie e promemoria»): l’app lo spiega e
+         apre la pagina giusta. USE_EXACT_ALARM non si usa: Google lo riserva a sveglie e calendari. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:allowBackup="true"

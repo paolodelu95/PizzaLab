@@ -114,7 +114,7 @@ import { HelpTip } from "./components/HelpTip";
 import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
-const APP_VERSION = "0.27.0";
+const APP_VERSION = "0.27.1";
 type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [
@@ -783,6 +783,9 @@ export default function App() {
     const running = state.recipes.find((recipe) => recipe.id === state.activeId);
     if (granted && running) await scheduleReminders(running, leadMinutes).catch(() => undefined);
     setMessage(granted ? t("Fatto: le notifiche arriveranno all’orario giusto anche ad app chiusa.") : t("Permesso non attivo: le notifiche potrebbero arrivare in ritardo. Puoi attivarlo quando vuoi dal Profilo."));
+    // Su Samsung, Xiaomi e simili serve anche togliere PizzaLab dal risparmio batteria: lo si spiega subito dopo.
+    const report = await diagnoseReminders();
+    if (report && report.batteryUnrestricted === false && makerBatteryTip(report.manufacturer)) setBatteryTip(makerBatteryTip(report.manufacturer)!);
   }
   async function deactivate() {
     setBusy(true);
