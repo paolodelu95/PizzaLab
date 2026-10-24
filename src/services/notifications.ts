@@ -1,4 +1,4 @@
-import { t } from "../i18n";
+import { t, msg } from "../i18n";
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { buildTimeline } from '../domain/calculator';
@@ -58,11 +58,13 @@ export async function scheduleReminders(recipe: Recipe, leadMinutes = 0): Promis
   if (permission.display !== 'granted') throw new Error('Notifiche non autorizzate. Puoi abilitarle nelle impostazioni Android.');
   await LocalNotifications.createChannel({ id: CHANNEL, name: t("Il tuo impasto"), description: t("Promemoria per ogni fase della pizza"), importance: 4, visibility: 1, vibration: true });
   const exact = await exactRemindersAllowed();
-  await cancelReminders();
   await LocalNotifications.schedule({ notifications: stages.map((stage,index) => ({
     id: 1000+index, title: t("PizzaLab · {title}", { title: stage.title }), body: `${leadText(leadMinutes)}${stage.detail}`,
     channelId: CHANNEL, isExactNotification: exact, schedule: { at: notifyAt(stage.at, leadMinutes), allowWhileIdle: true }, extra: { recipeId: recipe.id },
   })) });
+  // Prima si programmano i nuovi avvisi (stessi id: sostituiscono i vecchi), poi si tolgono solo quelli
+  // rimasti in più. Se la programmazione fallisce, i promemoria esistenti restano dove sono.
+  await cancelRange(1000 + stages.length, 1999);
   const count = leadMinutes
     ? t("{count} notifiche programmate, {minutes} minuti prima di ogni fase.", { count: stages.length, minutes: leadMinutes })
     : t("{count} notifiche programmate.", { count: stages.length });
@@ -96,7 +98,6 @@ export async function scheduleStarterReminders(profile: SourdoughProfile, leadMi
     vibration: true,
   });
   const exact = await exactRemindersAllowed();
-  await cancelStarterReminders(profile.id);
   const dates = starterReminderDates(profile, profile.storage === 'fridge' ? 8 : 20);
   const base = starterNotificationBase(profile.id);
   await LocalNotifications.schedule({ notifications: dates.map((at, index) => ({
@@ -110,6 +111,8 @@ export async function scheduleStarterReminders(profile: SourdoughProfile, leadMi
     schedule: { at: notifyAt(at, leadMinutes), allowWhileIdle: true },
     extra: { section: 'sourdough', profileId: profile.id },
   })) });
+  // Come per l’impasto: prima i nuovi avvisi, poi si tolgono solo quelli in più.
+  await cancelRange(base + dates.length, base + 31);
   const count = t("{length} notifiche del lievito madre programmate.", { length: dates.length });
   return exact ? count : `${count} ${notExactNote()}`;
 }
@@ -180,3 +183,15 @@ export async function sendTestReminder(): Promise<void> {
     schedule: { at: new Date(Date.now() + 60000), allowWhileIdle: true },
   }] });
 }
+
+/** Consigli per le marche che fermano le app in background più delle altre. */
+export const MAKER_TIPS: [RegExp, string][] = [
+  [/samsung/i, msg("Samsung: Impostazioni → Batteria → Limiti utilizzo in background. Togli PizzaLab da «App in sospensione» e «App in sospensione profonda» e aggiungila ad «App mai in sospensione».")],
+  [/xiaomi|redmi|poco/i, msg("Xiaomi: Impostazioni → App → PizzaLab → Risparmio batteria → «Nessuna restrizione», e attiva «Avvio automatico».")],
+  [/huawei|honor/i, msg("Huawei/Honor: Impostazioni → Batteria → Avvio app → PizzaLab → gestione manuale, con tutte e tre le opzioni attive.")],
+  [/oneplus|oppo|realme/i, msg("OnePlus/Oppo/Realme: Impostazioni → Batteria → Ottimizzazione batteria → PizzaLab → «Non ottimizzare», e consenti l’attività in background.")],
+  [/vivo|iqoo/i, msg("Vivo: Impostazioni → Batteria → Consumo in background elevato → consenti PizzaLab.")],
+];
+
+/** Il consiglio per la batteria della marca del telefono, se è una di quelle che fermano le app in background. */
+export const makerBatteryTip = (manufacturer: string) => MAKER_TIPS.find(([pattern]) => pattern.test(manufacturer))?.[1];

@@ -84,6 +84,9 @@ import {
   scheduleReminders,
   exactRemindersAllowed,
   askExactReminders,
+  diagnoseReminders,
+  makerBatteryTip,
+  openBatterySettings,
   scheduleStarterReminders,
 } from "./services/notifications";
 import {
@@ -183,6 +186,7 @@ export default function App() {
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [rescueOpen, setRescueOpen] = useState(false);
   const [exactPrompt, setExactPrompt] = useState(false);
+  const [batteryTip, setBatteryTip] = useState("");
   // Su Android: gli avvisi puntuali sono attivi? Si rilegge tornando nell’app (per esempio dalle impostazioni).
   const [exactOk, setExactOk] = useState(true);
   useEffect(() => {
@@ -734,7 +738,16 @@ export default function App() {
     try {
       const note = await scheduleReminders(recipe, leadMinutes);
       // Senza «Sveglie e promemoria» Android può ritardare gli avvisi fino a un’ora: lo spieghiamo subito.
-      if (isNativeApp() && !(await exactRemindersAllowed())) setExactPrompt(true);
+      // Sui telefoni con risparmio energetico aggressivo, una volta sola, si spiega come escludere PizzaLab.
+      if (isNativeApp()) {
+        const report = await diagnoseReminders();
+        if (report && !report.exactAllowed) setExactPrompt(true);
+        else if (report && report.batteryUnrestricted === false && makerBatteryTip(report.manufacturer)) {
+          let shown = false;
+          try { shown = localStorage.getItem("pizzalab-battery-tip") === "1"; localStorage.setItem("pizzalab-battery-tip", "1"); } catch { /* nessuna memoria */ }
+          if (!shown) setBatteryTip(makerBatteryTip(report.manufacturer)!);
+        }
+      }
       const startedAt = new Date().toISOString();
       setState((s) => ({
         ...s,
@@ -2469,6 +2482,23 @@ export default function App() {
           )}
         </main>
       </div>
+      {batteryTip && (
+        <div className="dialog-backdrop">
+          <div className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="battery-title">
+            <h2 id="battery-title">{t("Un’ultima cosa per le notifiche")}</h2>
+            <p>{t("Il tuo telefono può mettere in pausa le app chiuse per risparmiare batteria, e le notifiche arriverebbero solo quando riapri PizzaLab.")}</p>
+            <p>{t(batteryTip)}</p>
+            <div>
+              <button className="button secondary" onClick={() => setBatteryTip("")}>
+                {t("Più tardi")}
+              </button>
+              <button autoFocus className="button primary" onClick={() => { setBatteryTip(""); void openBatterySettings(); }}>
+                {t("Apri le impostazioni")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {exactPrompt && (
         <div className="dialog-backdrop">
           <div className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="exact-title">

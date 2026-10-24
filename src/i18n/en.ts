@@ -1739,4 +1739,6 @@ export const en: Record<string, string> = {
   "Notifiche non autorizzate. Puoi abilitarle nelle impostazioni Android.": "Notifications not allowed. You can enable them in Android settings.",
   "PizzaLab · Notifica di prova": "PizzaLab · Test notification",
   "Se la leggi all’orario giusto, i promemoria della pizza funzionano anche ad app chiusa.": "If you read this at the right time, your pizza reminders work even with the app closed.",
+  "Un’ultima cosa per le notifiche": "One last thing for notifications",
+  "Il tuo telefono può mettere in pausa le app chiuse per risparmiare batteria, e le notifiche arriverebbero solo quando riapri PizzaLab.": "Your phone may pause closed apps to save battery, and notifications would only arrive when you reopen PizzaLab.",
 };

@@ -26,7 +26,7 @@ import { ovenById } from "../data/ovens";
 import { UserPans } from "./UserPans";
 import { InstallPrompt } from "./InstallPrompt";
 import { isNativeApp, usesCalendarReminders } from "../services/platform";
-import { askExactReminders, diagnoseReminders, openAppSettings, openBatterySettings, sendTestReminder, type ReminderDiagnosis } from "../services/notifications";
+import { askExactReminders, diagnoseReminders, makerBatteryTip, openAppSettings, openBatterySettings, sendTestReminder, type ReminderDiagnosis } from "../services/notifications";
 import { SelectSheet } from "./SelectSheet";
 import { NumberField } from "./Fields";
 import type { Language } from "../i18n";
@@ -434,15 +434,6 @@ function UserOvens({
   );
 }
 
-/** Consigli per le marche che fermano le app in background più delle altre. */
-const MAKER_TIPS: [RegExp, string][] = [
-  [/samsung/i, msg("Samsung: Impostazioni → Batteria → Limiti utilizzo in background. Togli PizzaLab da «App in sospensione» e «App in sospensione profonda» e aggiungila ad «App mai in sospensione».")],
-  [/xiaomi|redmi|poco/i, msg("Xiaomi: Impostazioni → App → PizzaLab → Risparmio batteria → «Nessuna restrizione», e attiva «Avvio automatico».")],
-  [/huawei|honor/i, msg("Huawei/Honor: Impostazioni → Batteria → Avvio app → PizzaLab → gestione manuale, con tutte e tre le opzioni attive.")],
-  [/oneplus|oppo|realme/i, msg("OnePlus/Oppo/Realme: Impostazioni → Batteria → Ottimizzazione batteria → PizzaLab → «Non ottimizzare», e consenti l’attività in background.")],
-  [/vivo|iqoo/i, msg("Vivo: Impostazioni → Batteria → Consumo in background elevato → consenti PizzaLab.")],
-];
-
 /**
  * Solo su Android: controlla una per una le cose che fermano le notifiche ad app chiusa
  * e permette di inviare una notifica di prova.
@@ -459,8 +450,11 @@ function ExactReminders() {
     return () => document.removeEventListener("visibilitychange", check);
   }, []);
   if (!report) return null;
-  const tip = MAKER_TIPS.find(([pattern]) => pattern.test(report.manufacturer))?.[1];
-  const allGood = report.notificationsAllowed && report.exactAllowed && report.batteryUnrestricted !== false;
+  const tip = makerBatteryTip(report.manufacturer);
+  // Su Android «puro» l’ottimizzazione standard non ferma gli avvisi esatti; sulle marche con risparmio
+  // energetico aggressivo (quelle con un consiglio dedicato) invece può bloccarli finché non si riapre l’app.
+  const batteryRisk = report.batteryUnrestricted === false && Boolean(tip);
+  const allGood = report.notificationsAllowed && report.exactAllowed && !batteryRisk;
   const rows: { ok: boolean | null; label: string; hint: string; action?: [string, () => void] }[] = [
     {
       ok: report.notificationsAllowed,
@@ -475,10 +469,10 @@ function ExactReminders() {
       action: report.exactAllowed ? undefined : [t("Attiva"), () => void askExactReminders().then(() => diagnoseReminders().then(setReport))],
     },
     {
-      ok: report.batteryUnrestricted,
+      ok: report.batteryUnrestricted || !batteryRisk,
       label: t("Batteria senza restrizioni"),
-      hint: report.batteryUnrestricted ? t("Il risparmio energetico non ferma PizzaLab.") : t("L’ottimizzazione della batteria può bloccare gli avvisi finché non riapri l’app: scegli «Senza restrizioni» o «Non ottimizzare» per PizzaLab."),
-      action: report.batteryUnrestricted === false ? [t("Apri le impostazioni"), () => void openBatterySettings()] : undefined,
+      hint: report.batteryUnrestricted || !batteryRisk ? t("Il risparmio energetico non ferma PizzaLab.") : t("L’ottimizzazione della batteria può bloccare gli avvisi finché non riapri l’app: scegli «Senza restrizioni» o «Non ottimizzare» per PizzaLab."),
+      action: batteryRisk ? [t("Apri le impostazioni"), () => void openBatterySettings()] : undefined,
     },
   ];
   return (
