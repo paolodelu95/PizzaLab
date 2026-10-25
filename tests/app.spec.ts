@@ -17,6 +17,24 @@ async function newPizza(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: /Personalizza in 4 passaggi/ }).click();
 }
 
+/** I condimenti stanno nel riepilogo della pizza (passaggio 4). */
+async function openToppings(page: import("@playwright/test").Page, labels = { steps: /^4 Riepilogo/, title: "Condimenti" }) {
+  if (!(await page.locator("#planner-steps").isVisible())) {
+    await page.getByRole("button", { name: labels.title === "Condimenti" ? "Nuova pizza" : "New pizza", exact: true }).first().click();
+    await page.getByRole("button", { name: /Personalizza in 4 passaggi|Customize in 4 steps/ }).click();
+  }
+  await page.getByRole("button", { name: labels.steps }).click();
+  const box = page.locator(".summary-toppings");
+  if ((await box.getAttribute("open")) === null) await box.locator(":scope > summary").click();
+}
+
+/** In Dispensa il lievito madre ha la sua scheda solo per chi lo usa; altrimenti si apre dall’invito. */
+async function openStarter(page: import("@playwright/test").Page) {
+  const tab = page.locator(".segmented").getByRole("button", { name: "Lievito", exact: true });
+  if (await tab.count()) await tab.click();
+  else await page.getByRole("button", { name: /Hai un lievito madre/ }).click();
+}
+
 async function startNowFromSummary(page: import("@playwright/test").Page) {
   const soon = await page.evaluate(() => {
     const d = new Date(Date.now() + 3 * 3600000);
@@ -129,7 +147,6 @@ test("flour search, source details, custom flour and no overflow", async ({
 }) => {
   await page.goto("/#nuova");
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Farine", exact: true }).first().click();
   await page.getByRole("textbox", { name: "Cerca farina" }).fill("Garofalo");
   await expect(page.locator(".flour-row")).toHaveCount(5);
   await page.getByRole("button", { name: "W 260", exact: true }).click();
@@ -279,7 +296,7 @@ test("mobile workflow exposes starter, scale, guide, toppings, equipment and res
     page.getByText(/Le quantità di farina e acqua da pesare/),
   ).toBeVisible();
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
+  await openToppings(page);
   await expect(page.getByRole("heading", { name: "Condimenti classici" })).toBeVisible();
   await newPizza(page);
   await page.getByRole("button", { name: /^1 Impasto/ }).click();
@@ -367,7 +384,7 @@ test("predicts crust, crumb and base from the baking setup", async ({ page }) =>
 test("offers classic toppings and guides a starter to maturity", async ({ page }) => {
   await page.goto("/#nuova");
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
+  await openToppings(page);
   await expect(page.getByLabel("Diametro")).toHaveValue("32");
   await expect(page.locator(".topping-area")).toContainText("3217 cm²");
   await page.getByLabel("Cerca pizza o ingrediente").fill("diavola");
@@ -379,7 +396,7 @@ test("offers classic toppings and guides a starter to maturity", async ({ page }
 
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
 
-  await page.getByRole("button", { name: "Lievito", exact: true }).first().click();
+  await openStarter(page);
   await expect(page.getByRole("heading", { name: "Coltiva il tuo lievito madre." })).toBeVisible();
   const liquidCard = page.locator(".starter-kind-card").filter({ hasText: "Li.Co.Li." });
   await liquidCard.getByRole("button", { name: "Ne ho già uno" }).click();
@@ -399,7 +416,7 @@ test("offers classic toppings and guides a starter to maturity", async ({ page }
 test("scales toppings from round and tray dimensions", async ({ page }) => {
   await page.goto("/#nuova");
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
+  await openToppings(page);
   const tomato = page.locator(".topping-ingredients > div").filter({ hasText: "Pomodoro" });
   await expect(tomato).toContainText("300 g");
   await page.getByLabel("Diametro").fill("40");
@@ -408,7 +425,7 @@ test("scales toppings from round and tray dimensions", async ({ page }) => {
   await newPizza(page);
   await page.getByRole("button", { name: "In teglia Da condividere" }).click();
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
+  await openToppings(page);
   await expect(page.getByLabel("Larghezza")).toHaveValue("30");
   await expect(page.getByLabel("Lunghezza")).toHaveValue("40");
   await page.getByRole("button", { name: "Riduci numero di teglie" }).click();
@@ -419,7 +436,6 @@ test("scales toppings from round and tray dimensions", async ({ page }) => {
 test("selects gluten-free mixes and manages multiple named starters", async ({ page }) => {
   await page.goto("/#nuova");
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Farine", exact: true }).first().click();
   await page.getByLabel("Senza glutine", { exact: true }).check();
   await expect(page.getByText("Mix universale per pizza", { exact: true })).toBeVisible();
   await expect(page.getByText("Farina di riso", { exact: true })).toBeVisible();
@@ -432,7 +448,7 @@ test("selects gluten-free mixes and manages multiple named starters", async ({ p
 
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
 
-  await page.getByRole("button", { name: "Lievito", exact: true }).first().click();
+  await openStarter(page);
   await page.getByLabel("Come vuoi chiamarlo?").fill("Gino");
   await page.locator(".starter-kind-card").filter({ hasText: "Pasta madre solida" }).getByRole("button", { name: "Ne ho già uno" }).click();
   await expect(page.getByRole("heading", { name: "Gino" })).toBeVisible();
@@ -465,10 +481,7 @@ test("reserves enough room-temperature time for every fold and keeps toppings se
   await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
   await expect(page.getByText("Piega 3 di 3", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
-  await expect(
-    page.getByRole("heading", { name: "Condimenti." }),
-  ).toBeVisible();
+  await openToppings(page);
   await expect(page.getByRole("heading", { name: "Condimenti classici" })).toBeVisible();
 });
 
@@ -490,7 +503,7 @@ test("automatic planning derives phases and yeast from start and meal time", asy
 test("opening sourdough care does not focus the name field", async ({ page }) => {
   await page.goto("/#nuova");
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Lievito", exact: true }).first().click();
+  await openStarter(page);
   await expect(page.getByLabel("Come vuoi chiamarlo?")).not.toBeFocused();
 });
 
@@ -509,7 +522,12 @@ test("stays responsive across small phones, large phones and tablets", async ({ 
     await page.setViewportSize(viewport);
     await page.goto("/#nuova");
     for (const section of ["Oggi", "Dispensa", "Condimenti", "Lievito", "Diario", "Impara", "Profilo"]) {
-      await page.getByRole("button", { name: section, exact: true }).first().click();
+      if (section === "Condimenti") await openToppings(page);
+      else if (section === "Lievito") {
+        await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
+        await openStarter(page);
+      }
+      else await page.getByRole("button", { name: section, exact: true }).first().click();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (section === "Condimenti" && [320, 768].includes(viewport.width))
         await page.screenshot({ path: `test-results/responsive-condimenti-${viewport.width}.png`, fullPage: true });
@@ -535,7 +553,7 @@ test("stays responsive across small phones, large phones and tablets", async ({ 
 test("links a named starter, toppings, shopping, live checks and oven calibration", async ({ page }) => {
   await page.goto("/#nuova");
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Lievito", exact: true }).first().click();
+  await openStarter(page);
   await page.getByLabel("Come vuoi chiamarlo?").fill("Levain sabato");
   await page.locator(".starter-kind-card").filter({ hasText: "Li.Co.Li." }).getByRole("button", { name: "Ne ho già uno" }).click();
 
@@ -548,7 +566,7 @@ test("links a named starter, toppings, shopping, live checks and oven calibratio
 
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
 
-  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
+  await openToppings(page);
   await page.getByRole("button", { name: /Bufala/ }).click();
   await page.getByText("Lista della spesa completa", { exact: true }).click();
   await expect(page.getByText("Impasto + Bufala", { exact: true })).toBeVisible();
@@ -672,7 +690,7 @@ test("pan styles work with round pans and focaccia barese starts in a round pan"
   await expect(page.getByLabel("Larghezza teglia", { exact: true })).toHaveCount(0);
   await page.getByLabel("Diametro teglia").fill("28");
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
+  await openToppings(page);
   await expect(page.getByRole("heading", { name: "Quanto misura ogni teglia?" })).toBeVisible();
   await expect(page.getByLabel("Diametro teglia")).toHaveValue("28");
   await expect(page.locator(".topping-area")).toContainText("2463 cm²");
@@ -682,7 +700,7 @@ test("pan styles work with round pans and focaccia barese starts in a round pan"
   await expect(page.getByRole("button", { name: "Tonda", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByLabel("Diametro teglia")).toHaveValue("28");
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Condimenti", exact: true }).first().click();
+  await openToppings(page);
   await expect(page.locator(".selected-topping-heading")).toContainText("Focaccia barese");
   await expect(page.locator(".topping-ingredients")).toContainText("Pomodorini");
 
@@ -814,7 +832,6 @@ test("the language follows the device by default and can be changed from the pro
 test("a flour without a declared W shows an estimated range and the advice says so", async ({ page }) => {
   await page.goto("/#nuova");
   await page.getByRole("button", { name: "Dispensa", exact: true }).first().click();
-  await page.getByRole("button", { name: "Farine", exact: true }).first().click();
   await page.getByRole("textbox", { name: "Cerca farina" }).fill("King Arthur");
   const card = page.locator(".flour-card, article").filter({ hasText: "Bread Flour" }).first();
   await expect(card).toContainText("W STIMATO");
@@ -880,8 +897,8 @@ test("the planner suggests flours, a start time, people, a hydration fix and kee
 
 test("narrow phones never scroll sideways, even with a dough in progress", async ({ browser }) => {
   for (const [locale, plan, schedule, tabs] of [
-    ["it-IT", /^4 Riepilogo/, "Programma", ["Oggi", "Nuova pizza", "Dispensa", "Condimenti", "Lievito", "Profilo"]],
-    ["en-US", /^4 Summary/, "Schedule", ["Today", "New pizza", "Pantry", "Toppings", "Yeast", "Profile"]],
+    ["it-IT", /^4 Riepilogo/, "Programma", ["Oggi", "Nuova pizza", "Dispensa", "Profilo"]],
+    ["en-US", /^4 Summary/, "Schedule", ["Today", "New pizza", "Pantry", "Profile"]],
   ] as const) {
     for (const width of [320, 360]) {
       const context = await browser.newContext({ viewport: { width, height: 760 }, locale });
@@ -1096,4 +1113,52 @@ test("fresh install: a quick pizza needs only people and meal time, and a past p
   await expect(quick).toBeVisible();
   const bakeAt = await quick.getByLabel("Quando vuoi mangiare?").inputValue();
   expect(new Date(bakeAt).getTime()).toBeGreaterThan(Date.now());
+});
+
+test("a recipe is shared with a QR code and a link that opens it in the quick plan", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]).catch(() => undefined);
+  await page.goto("/#nuova");
+  await page.getByLabel("Idratazione", { exact: true }).fill("68");
+  await page.getByRole("button", { name: /^4 Riepilogo/ }).click();
+  await page.getByLabel("Nome del piano").fill("Pizza di Gino");
+  await page.getByRole("button", { name: /Salva per dopo/ }).click();
+  await page.getByRole("button", { name: "Condividi" }).first().click();
+  const sheet = page.getByRole("dialog", { name: "Pizza di Gino" });
+  await expect(sheet.getByRole("img", { name: "Codice QR della ricetta" })).toBeVisible();
+  const link = (await sheet.locator(".share-link").textContent())!;
+  expect(link).toMatch(/^https:\/\/paolodelu95\.github\.io\/PizzaLab\/app\/#ricetta=/);
+  await sheet.getByRole("button", { name: "Chiudi" }).click();
+
+  await page.goto("/" + link.slice(link.indexOf("#")));
+  await expect(page.getByText("Ricetta «Pizza di Gino» ricevuta: scegli quando vuoi mangiare.")).toBeVisible();
+  await expect(page.locator(".quick-plan")).toBeVisible();
+  expect(new URL(page.url()).hash).toBe("");
+  await page.getByRole("button", { name: /Personalizza in 4 passaggi/ }).click();
+  await expect(page.getByLabel("Idratazione", { exact: true })).toHaveValue("68");
+
+  await page.goto("/#ricetta=rotto");
+  await expect(page.getByText("Questo link non contiene una ricetta valida.")).toBeVisible();
+});
+
+test("a finished pizza keeps a photo taken with the phone, stored locally", async ({ page }) => {
+  await page.addInitScript(() => {
+    const key = "CapacitorStorage.pizzalab-state-v1";
+    if (localStorage.getItem("photo-test-seeded")) return;
+    localStorage.setItem("photo-test-seeded", "1");
+    const past = { id: "old", name: "Margherita di ieri", createdAt: "2026-01-09T10:00:00.000Z", config: {}, notes: "", rating: 5, completedStages: [], finishedAt: "2026-01-10T22:00:00.000Z" };
+    localStorage.setItem(key, JSON.stringify({ version: 1, config: { planMode: "date" }, recipes: [past], activeId: null, customFlours: [] }));
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Diario", exact: true }).first().click();
+  await page.getByRole("tab", { name: /Passate/ }).click();
+  // Un PNG 2×2 generato al momento: la foto viene ridotta e salvata come JPEG.
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg==", "base64");
+  await page.locator(".recipe-photo input[type=file]").setInputFiles({ name: "pizza.png", mimeType: "image/png", buffer: png });
+  await expect(page.getByRole("img", { name: "Foto di Margherita di ieri" })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Diario", exact: true }).first().click();
+  await page.getByRole("tab", { name: /Passate/ }).click();
+  await expect(page.getByRole("img", { name: "Foto di Margherita di ieri" })).toHaveAttribute("src", /^data:image\/jpeg/);
+  await page.getByRole("button", { name: "Togli la foto di Margherita di ieri" }).click();
+  await expect(page.getByRole("img", { name: "Foto di Margherita di ieri" })).toHaveCount(0);
 });

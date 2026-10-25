@@ -1,4 +1,4 @@
-import { t, msg } from "../i18n";
+import { locale, t, msg } from "../i18n";
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { buildTimeline } from '../domain/calculator';
@@ -14,6 +14,38 @@ async function cancelRange(min: number, max: number) {
 }
 export async function cancelReminders() {
   await cancelRange(1000, 1999);
+}
+
+/*
+ * Notifica fissa della pizza in corso (come quella di un timer): elenca le prossime fasi con l’orario,
+ * così basta abbassare la tendina. Un elenco con gli orari resta vero anche se l’app non viene riaperta
+ * per ore; si aggiorna quando si apre l’app o si spunta una fase, e sparisce a pizza conclusa.
+ */
+const ONGOING_ID = 2997;
+const ONGOING_CHANNEL = 'impasto-in-corso';
+export async function showOngoing(recipe: Recipe, completed: string[]): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+  const now = Date.now();
+  const next = buildTimeline(recipe.config).filter(stage => !completed.includes(stage.id) && new Date(stage.until).getTime() > now);
+  if (!next.length) return hideOngoing();
+  if ((await LocalNotifications.checkPermissions()).display !== 'granted') return;
+  await LocalNotifications.createChannel({ id: ONGOING_CHANNEL, name: t("Pizza in corso"), description: t("Le prossime fasi della pizza, sempre a portata di tendina"), importance: 2, visibility: 1, vibration: false });
+  const today = new Date().toDateString();
+  const clock = (iso: string) => {
+    const date = new Date(iso);
+    const time = date.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
+    return date.toDateString() === today ? time : `${date.toLocaleDateString(locale(), { weekday: 'short' })} ${time}`;
+  };
+  const lines = next.slice(0, 4).map(stage => `${clock(stage.at)} · ${stage.title}`);
+  await LocalNotifications.schedule({ notifications: [{
+    id: ONGOING_ID, title: t("{name} · in corso", { name: recipe.name }), body: lines.join('  ·  '), largeBody: lines.join('\n'),
+    channelId: ONGOING_CHANNEL, ongoing: true, autoCancel: false, extra: { recipeId: recipe.id },
+  }] });
+}
+export async function hideOngoing(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+  await LocalNotifications.cancel({ notifications: [{ id: ONGOING_ID }] }).catch(() => undefined);
+  await LocalNotifications.removeDeliveredNotifications({ notifications: [{ id: ONGOING_ID, title: '', body: '' }] }).catch(() => undefined);
 }
 /**
  * Android rimanda gli avvisi «non esatti» anche di molte ore (fino a tre quarti del tempo che manca),

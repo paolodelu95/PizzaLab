@@ -206,6 +206,8 @@ export interface Recipe {
   finishedAt?: string;
   /** Taratura del forno registrata a partire da questa pizza. */
   calibrationId?: string;
+  /** Foto della pizza sfornata (JPEG ridotto, data URL), salvata solo sul telefono. */
+  photo?: string;
 }
 export interface StarterFeeding {
   id: string;
@@ -265,6 +267,8 @@ export interface StoredState {
   templates?: RecipeTemplate[];
   /** Minuti di anticipo delle notifiche rispetto a ogni fase (0 = all’orario esatto). */
   reminderLeadMinutes?: number;
+  /** Notifica fissa con le prossime fasi della pizza in corso (Android). Attiva salvo scelta diversa. */
+  ongoingNotification?: boolean;
   /** Unità mostrate all’utente: i dati restano sempre salvati in grammi e °C. */
   units?: { weight: "g" | "oz"; temp: "C" | "F" };
   /** Lingua scelta dall’utente; se manca si usa quella del dispositivo. */

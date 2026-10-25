@@ -82,6 +82,8 @@ import {
   cancelStarterReminders,
   onReminderOpened,
   scheduleReminders,
+  showOngoing,
+  hideOngoing,
   exactRemindersAllowed,
   askExactReminders,
   diagnoseReminders,
@@ -103,6 +105,8 @@ import { WeightValue } from "./components/WeightValue";
 import { FlourSuggestions } from "./components/FlourSuggestions";
 import { QuickPlan } from "./components/QuickPlan";
 import { KitchenMode } from "./components/KitchenMode";
+import { ShareSheet } from "./components/ShareSheet";
+import { decodeRecipe, encodeRecipe, SHARE_PREFIX } from "./domain/shareLink";
 import { flourForStyle } from "./domain/flourAdvice";
 import { Home } from "./components/Home";
 import { Adjustments } from "./components/Adjustments";
@@ -117,12 +121,11 @@ import { SupportCard } from "./components/SupportCard";
 import pizzaLabLogo from "./assets/pizzalab-logo.png";
 
 const APP_VERSION = "0.27.1";
-type Tab = "oggi" | "impasto" | "farine" | "condimenti" | "madre" | "diario" | "guida" | "profilo";
+type Tab = "oggi" | "impasto" | "farine" | "madre" | "diario" | "guida" | "profilo";
 /** Farine, lievito madre e condimenti stanno insieme nella «Dispensa». */
 const pantryTabs = [
   { id: "farine", label: msg("Farine") },
   { id: "madre", label: msg("Lievito") },
-  { id: "condimenti", label: msg("Condimenti") },
 ] as const;
 const inPantry = (tab: Tab) => pantryTabs.some((item) => item.id === tab);
 /** «#nuova» apre direttamente la creazione di una pizza (scorciatoia e test). */
@@ -188,6 +191,7 @@ export default function App() {
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [rescueOpen, setRescueOpen] = useState(false);
   const [kitchenId, setKitchenId] = useState<string | null>(null);
+  const [shareFor, setShareFor] = useState<Recipe | null>(null);
   const [exactPrompt, setExactPrompt] = useState(false);
   const [batteryTip, setBatteryTip] = useState("");
   // Su Android: gli avvisi puntuali sono attivi? Si rilegge tornando nell’app (per esempio dalle impostazioni).
@@ -263,6 +267,38 @@ export default function App() {
       alive = false;
     };
   }, []);
+  // Notifica fissa della pizza in corso: si aggiorna a ogni fase spuntata e sparisce a pizza conclusa.
+  const ongoing = state.ongoingNotification !== false ? state.recipes.find((r) => r.id === state.activeId) : undefined;
+  const ongoingKey = ongoing ? `${ongoing.id}|${ongoing.name}|${ongoing.completedStages.join()}|${JSON.stringify(ongoing.config)}` : "";
+  useEffect(() => {
+    if (!ready || loadError) return;
+    if (ongoing) void showOngoing(ongoing, ongoing.completedStages).catch(() => undefined);
+    else void hideOngoing();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, loadError, ongoingKey]);
+  // Una ricetta ricevuta con un link («#ricetta=…»): si apre nella pizza rapida, con date nuove.
+  useEffect(() => {
+    if (!ready || loadError) return;
+    const receive = () => {
+      const shared = decodeRecipe(location.hash, [...catalog, ...state.customFlours].map((f) => f.id));
+      if (!location.hash.startsWith(SHARE_PREFIX)) return;
+      window.history.replaceState(window.history.state, "", location.pathname + location.search);
+      if (!shared) {
+        setMessage(t("Questo link non contiene una ricetta valida."));
+        return;
+      }
+      setState((s) => ({ ...s, config: normalizePlanning({ ...shared.config, planMode: "automatic" }), draftUsed: false }));
+      setEditingId(null);
+      setRecipeName(shared.name);
+      setPlannerStage("quick");
+      openTab("impasto");
+      setMessage(shared.name ? t("Ricetta «{name}» ricevuta: scegli quando vuoi mangiare.", { name: shared.name }) : t("Ricetta ricevuta: scegli quando vuoi mangiare."));
+    };
+    receive();
+    window.addEventListener("hashchange", receive);
+    return () => window.removeEventListener("hashchange", receive);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, loadError]);
   // All’avvio riprogramma in silenzio i promemoria della pizza in corso: chi aggiorna l’app passa
   // agli avvisi puntuali, e quelli eventualmente persi (riavvio, ottimizzazione batteria) tornano.
   const rescheduled = useRef(false);
@@ -681,25 +717,20 @@ export default function App() {
       );
     }
   }
-  async function shareRecipe(recipe: Recipe) {
+  /** Testo della ricetta per chat ed email; il link per riaprirla in PizzaLab lo aggiunge il pannello. */
+  function recipeText(recipe: Recipe) {
     const r = calculate(recipe.config, flours);
-    if (!r.ok) return;
+    if (!r.ok) return "";
     const flourLines = r.flourBreakdown
       .map(
         (item) =>
           `• ${item.name}: ${formatWeight(item.grams)} (${fmt(item.percent, 1)}%)`,
       )
       .join("\n");
-    const text = `${recipe.name}\n${t(r.style.name)}\n${t("Farina totale: {flour}", { flour: formatWeight(r.flour) })}\n${flourLines}\n${t("Acqua: {water} · Sale: {salt} · Lievito: {yeast}.", { water: formatWeight(r.water), salt: formatWeight(r.salt, 1), yeast: formatWeight(r.yeast, 2) })}\n${t("Cottura: {when}.", { when: dateLabel(recipe.config.bakeAt) })}`;
-    try {
-      if (navigator.share) await navigator.share({ title: recipe.name, text });
-      else {
-        await navigator.clipboard.writeText(text);
-        setMessage(t("Ricetta copiata negli appunti."));
-      }
-    } catch {
-      /* L’utente può chiudere il pannello di condivisione senza conseguenze. */
-    }
+    return `${recipe.name}\n${t(r.style.name)}\n${t("Farina totale: {flour}", { flour: formatWeight(r.flour) })}\n${flourLines}\n${t("Acqua: {water} · Sale: {salt} · Lievito: {yeast}.", { water: formatWeight(r.water), salt: formatWeight(r.salt, 1), yeast: formatWeight(r.yeast, 2) })}`;
+  }
+  function shareRecipe(recipe: Recipe) {
+    if (calculate(recipe.config, flours).ok) setShareFor(recipe);
   }
   /** Salva il piano del calcolatore: "later" lo mette tra le salvate, "start" lo avvia con i promemoria. */
   async function saveRecipe(mode: "later" | "start", configOverride?: DoughConfig) {
@@ -1019,6 +1050,8 @@ export default function App() {
     Math.abs(c.sugar - recommended.sugar) < 0.05;
   const editingRecipe = editingId ? state.recipes.find((r) => r.id === editingId) : undefined;
   const activeRecipe = state.recipes.find((r) => r.id === state.activeId);
+  // Il lievito madre ha la sua scheda in Dispensa solo per chi lo usa; gli altri la trovano da un invito.
+  const usesStarter = state.sourdoughProfiles.length > 0 || ["sourdough", "licoli"].includes(c.yeast) || tab === "madre";
   const kitchenRecipe = state.recipes.find((r) => r.id === kitchenId);
   const kitchenResult = kitchenRecipe ? calculate(kitchenRecipe.config, flours) : null;
   const lastPizza = state.recipes
@@ -1169,7 +1202,7 @@ export default function App() {
               onDeleteTemplate={(id) => setState((s) => ({ ...s, templates: (s.templates ?? []).filter((item) => item.id !== id) }))}
             />
           )}
-          {inPantry(tab) && (
+          {inPantry(tab) && usesStarter && (
             <div className="segmented" role="group" aria-label={t("Dispensa")}>
               {pantryTabs.map((item) => (
                 <button key={item.id} className={tab === item.id ? "selected" : ""} aria-pressed={tab === item.id} onClick={() => openTab(item.id)}>
@@ -1780,29 +1813,6 @@ export default function App() {
                           <p>{t("Fasi calde e fredde, con i ritmi che scegli tu.")}</p>
                         </div>
                       </div>
-                      <div className="planning-mode-card">
-                        <div>
-                          <span className="eyebrow">{t("COME VUOI PIANIFICARE?")} <HelpTip topic="pianificazione" /></span>
-                          <strong>{c.planMode === "automatic" ? t("L’app costruisce il piano") : t("Decidi tu ogni fase")}</strong>
-                          <p>{c.planMode === "automatic" ? t("Indica quando inizi e quando vuoi mangiare: tempi e lievito li calcola PizzaLab.") : t("Scegli tu le ore di ogni riposo. Consigliato se conosci già il tuo impasto.")}</p>
-                        </div>
-                        <div className="method-toggle" aria-label={t("Modalità di pianificazione")}>
-                          <button
-                            className={c.planMode !== "automatic" ? "selected" : ""}
-                            aria-pressed={c.planMode !== "automatic"}
-                            onClick={() => update("planMode", "date")}
-                          >
-                            <Timer /> {t("Manuale")}
-                          </button>
-                          <button
-                            className={c.planMode === "automatic" ? "selected" : ""}
-                            aria-pressed={c.planMode === "automatic"}
-                            onClick={() => updateMany({ planMode: "automatic", yeastMode: "auto" })}
-                          >
-                            <Sparkle /> {t("Automatica")}
-                          </button>
-                        </div>
-                      </div>
                       {c.planMode === "automatic" && (
                         <div className="automatic-window">
                           <div className="automatic-dates">
@@ -1978,13 +1988,6 @@ export default function App() {
                           }
                         />
                       </div>
-                      {result.ok &&
-                        !["sourdough", "licoli"].includes(c.yeast) && (
-                          <YeastChart
-                            config={c}
-                            currentPercent={result.yeastPercent}
-                          />
-                        )}
                       {result.ok && ["sourdough", "licoli"].includes(c.yeast) && (
                         <StarterDoughLink profiles={state.sourdoughProfiles} config={c} starterGrams={result.starter.grams} onUpdate={updateMany} onManage={() => openTab("madre")} />
                       )}
@@ -1996,9 +1999,39 @@ export default function App() {
                       <DoughAnalysis config={c} result={result} />
                     </Adjustments>
                   )}
-                  {result.ok && plannerStage === "fermentation" && (
-                    <Adjustments title={t("Regolazioni avanzate")} hint={t("Dose del lievito: automatica, in grammi interi o in percentuale")}>
-                      <AdvancedPlanner config={c} flours={flours} result={result} section="fermentation" onUpdate={updateMany} userOvens={state.userOvens} />
+                  {plannerStage === "fermentation" && (
+                    <Adjustments title={t("Regolazioni avanzate")} hint={t("Pianificazione manuale, dose del lievito e grafico della lievitazione")}>
+                      <div className="planning-mode-card">
+                        <div>
+                          <span className="eyebrow">{t("COME VUOI PIANIFICARE?")} <HelpTip topic="pianificazione" /></span>
+                          <strong>{c.planMode === "automatic" ? t("L’app costruisce il piano") : t("Decidi tu ogni fase")}</strong>
+                          <p>{c.planMode === "automatic" ? t("Indica quando inizi e quando vuoi mangiare: tempi e lievito li calcola PizzaLab.") : t("Scegli tu le ore di ogni riposo. Consigliato se conosci già il tuo impasto.")}</p>
+                        </div>
+                        <div className="method-toggle" aria-label={t("Modalità di pianificazione")}>
+                          <button
+                            className={c.planMode !== "automatic" ? "selected" : ""}
+                            aria-pressed={c.planMode !== "automatic"}
+                            onClick={() => update("planMode", "date")}
+                          >
+                            <Timer /> {t("Manuale")}
+                          </button>
+                          <button
+                            className={c.planMode === "automatic" ? "selected" : ""}
+                            aria-pressed={c.planMode === "automatic"}
+                            onClick={() => updateMany({ planMode: "automatic", yeastMode: "auto" })}
+                          >
+                            <Sparkle /> {t("Automatica")}
+                          </button>
+                        </div>
+                      </div>
+                      {result.ok &&
+                        !["sourdough", "licoli"].includes(c.yeast) && (
+                          <YeastChart
+                            config={c}
+                            currentPercent={result.yeastPercent}
+                          />
+                        )}
+                      {result.ok && <AdvancedPlanner config={c} flours={flours} result={result} section="fermentation" onUpdate={updateMany} userOvens={state.userOvens} />}
                     </Adjustments>
                   )}
                   {result.ok && plannerStage === "baking" && (
@@ -2074,6 +2107,18 @@ export default function App() {
                         ))}
                       </div>
                     </section>
+                  )}
+                  {plannerStage === "summary" && result.ok && (
+                    <details className="panel summary-toppings">
+                      <summary>
+                        <span className="section-icon"><Pizza /></span>
+                        <span>
+                          <strong>{t("Condimenti")}</strong>
+                          <small>{t("Quanto pomodoro, mozzarella e il resto per {count} {what}", { count: c.count, what: isPan ? t("teglie") : t("pizze") })}</small>
+                        </span>
+                      </summary>
+                      <ToppingPlanner config={c} result={result} onUpdate={updateMany} />
+                    </details>
                   )}
                   {result.ok && (plannerStage === "summary" || stageAdvice.length > 0 || laterAdvice.length > 0) && (
                     <div className={`advice-section ${plannerStage === "summary" ? "" : "compact"}`}>
@@ -2399,40 +2444,12 @@ export default function App() {
               }}
             />
           )}
-          {tab === "condimenti" && (
-            <>
-              <div className="page-heading toppings-heading">
-                <div>
-                  <span className="eyebrow">{t("DOPO L’IMPASTO, IL GUSTO")}</span>
-                  <h1>{t("Condimenti.")}</h1>
-                  <p>
-                    {t("Quantità, bilanciamento e ordine di aggiunta in uno spazio dedicato.")}
-                  </p>
-                </div>
-                <div className="heading-illustration" aria-hidden="true">
-                  <Pizza weight="duotone" />
-                  <span>
-                    {t("Parti dal tuo stile")}
-                    <br />{t("e completa la pizza.")}
-                  </span>
-                </div>
-              </div>
-              {result.ok ? (
-                <div className="standalone-toppings">
-                  <ToppingPlanner config={c} result={result} onUpdate={updateMany} />
-                </div>
-              ) : (
-                <div className="notice warning">
-                  <Warning />
-                  <div>
-                    <strong>{t("Prima completa l’impasto")}</strong>
-                    <p>
-                      {t("Le quantità dei condimenti dipendono dal numero e dalla dimensione delle pizze.")}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </>
+          {tab === "farine" && !usesStarter && (
+            <button className="today-row starter-invite" onClick={() => openTab("madre")}>
+              <span className="today-row-icon"><Jar weight="duotone" /></span>
+              <span><strong>{t("Hai un lievito madre?")}</strong><small>{t("Segui rinfreschi e forza, e usalo nelle tue pizze.")}</small></span>
+              <ArrowRight />
+            </button>
           )}
           {tab === "madre" && (
             <SourdoughCare
@@ -2484,6 +2501,7 @@ export default function App() {
               onImport={(file) => void importArchive(file)}
               onShowTutorial={() => setTutorialOpen(true)}
               onLeadChange={(minutes) => void changeLeadMinutes(minutes)}
+              onOngoingChange={(enabled) => setState((s) => ({ ...s, ongoingNotification: enabled }))}
               onLanguageChange={(next: Language) => setState((s) => ({ ...s, language: next }))}
               language={language}
               onUnitsChange={(patch: Partial<Units>) => setState((s) => ({ ...s, units: { ...normalizeUnits(s.units), ...patch } }))}
@@ -2620,6 +2638,15 @@ export default function App() {
       )}
       {tutorialOpen && ready && <Onboarding onClose={closeTutorial} />}
       <RescueSheet open={rescueOpen} onClose={closeRescue} />
+      {shareFor && (
+        <ShareSheet
+          name={shareFor.name}
+          link={encodeRecipe(shareFor.name, shareFor.config)}
+          text={recipeText(shareFor)}
+          onClose={() => setShareFor(null)}
+          onMessage={setMessage}
+        />
+      )}
       {kitchenRecipe && (
         <KitchenMode
           title={kitchenRecipe.name}

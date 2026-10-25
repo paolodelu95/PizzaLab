@@ -56,6 +56,7 @@ type Props = {
   onImport: (file: File) => void;
   onShowTutorial: () => void;
   onLeadChange: (minutes: number) => void;
+  onOngoingChange: (enabled: boolean) => void;
   onUnitsChange: (patch: Partial<Units>) => void;
   language: Language;
   onLanguageChange: (language: Language) => void;
@@ -238,6 +239,15 @@ export function ProfilePage(props: Props) {
           </div>
         </div>
         <small>{t("Vale per le fasi dell’impasto e per i rinfreschi del lievito madre. Le notifiche già programmate si aggiornano da sole.")}</small>
+        {!usesCalendarReminders() && (
+          <label className="check-label ongoing-option">
+            <input type="checkbox" checked={state.ongoingNotification !== false} onChange={(event) => props.onOngoingChange(event.target.checked)} />
+            <span>
+              <strong>{t("Prossime fasi nella tendina")}</strong>
+              <small>{t("Con una pizza in corso, una notifica fissa mostra gli orari delle prossime fasi.")}</small>
+            </span>
+          </label>
+        )}
         <ExactReminders />
       </section>
 

@@ -70,6 +70,7 @@ export async function readState(): Promise<StoredState> {
   parsed.units = normalizeUnits(parsed.units);
   parsed.language = normalizeLanguage(parsed.language);
   parsed.reminderLeadMinutes = [0, 5, 10, 15, 30].includes(parsed.reminderLeadMinutes ?? 0) ? parsed.reminderLeadMinutes ?? 0 : 0;
+  if (typeof parsed.ongoingNotification !== "boolean") delete parsed.ongoingNotification;
   const legacyStarter = (parsed as StoredState & { sourdoughProfile?: StoredState["sourdoughProfiles"][number] }).sourdoughProfile;
   parsed.sourdoughProfiles = Array.isArray(parsed.sourdoughProfiles)
     ? parsed.sourdoughProfiles

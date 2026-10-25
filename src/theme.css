@@ -1508,3 +1508,115 @@ main .help-actions {
   vertical-align: -1px;
   color: var(--amber);
 }
+
+/* ---------- Condividi la ricetta: QR e link ---------- */
+.share-body {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 4px 20px calc(20px + var(--safe-b));
+  text-align: center;
+}
+.share-qr {
+  width: min(240px, 70vw);
+  height: auto;
+  border-radius: var(--r-md);
+}
+.share-body p {
+  max-width: 40ch;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.share-link {
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  font-size: 12px;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.share-actions {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+/* ---------- Foto della pizza nel diario ---------- */
+.recipe-photo {
+  display: grid;
+  gap: 10px;
+}
+.recipe-photo img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
+.recipe-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.recipe-photo-actions .button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 16px;
+  cursor: pointer;
+}
+.recipe-photo-actions .button:focus-within {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.ongoing-option {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+}
+.ongoing-option input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  accent-color: var(--brand);
+}
+.ongoing-option span {
+  display: grid;
+  gap: 2px;
+}
+.ongoing-option small {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+/* ---------- Condimenti nel riepilogo ---------- */
+.summary-toppings > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.summary-toppings > summary::-webkit-details-marker {
+  display: none;
+}
+.summary-toppings > summary > span:last-child {
+  display: grid;
+  gap: 2px;
+}
+.summary-toppings > summary small {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.summary-toppings[open] > summary {
+  margin-bottom: 14px;
+}
+.starter-invite {
+  margin-top: 16px;
+}

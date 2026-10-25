@@ -40,7 +40,7 @@ test("english mode shows no Italian text across the app", async ({ page }) => {
   await page.getByRole("button", { name: /^3 Baking/ }).click();
   await visit(page, "baking", found);
 
-  for (const tab of ["Today", "Pantry", "Toppings", "Yeast", "Diary", "Learn", "Profile"]) {
+  for (const tab of ["Today", "Pantry", "Diary", "Learn", "Profile"]) {
     await page.getByRole("button", { name: tab, exact: true }).first().click();
     await visit(page, `tab ${tab}`, found);
   }
@@ -82,12 +82,14 @@ test("english mode also covers dialogs, pickers, the running plan and the tools"
   await page.getByRole("button", { name: "Close In the kitchen" }).click();
 
   // Condimenti, lievito, farine, profilo.
-  await page.getByRole("button", { name: "Pantry", exact: true }).first().click();
-  await page.getByRole("button", { name: "Toppings", exact: true }).first().click();
+  await page.getByRole("button", { name: "New pizza", exact: true }).first().click();
+  await page.getByRole("button", { name: /Customize in 4 steps/ }).click();
+  await page.getByRole("button", { name: /^4 Summary/ }).click();
+  await page.locator(".summary-toppings > summary").click();
   await page.getByRole("button", { name: /Diavola/ }).click();
   await visit(page, "toppings", found);
   await page.getByRole("button", { name: "Pantry", exact: true }).first().click();
-  await page.getByRole("button", { name: "Yeast", exact: true }).first().click();
+  await page.getByRole("button", { name: /Do you have a sourdough starter/ }).click();
   await page.getByLabel("What do you want to call it?").fill("Gino");
   await page.locator(".starter-kind-card").filter({ hasText: "Solid sourdough starter" }).getByRole("button", { name: "I already have one" }).click();
   await visit(page, "starter", found);

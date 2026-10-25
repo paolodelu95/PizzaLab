@@ -12,6 +12,7 @@ import {
   FlagCheckered,
   Notebook,
   PencilSimple,
+  Camera,
   CookingPot,
   ShareNetwork,
   Star,
@@ -27,6 +28,7 @@ import { OvenCalibration } from "./OvenCalibration";
 import { usesCalendarReminders } from "../services/platform";
 import { formatWeight } from "../services/units";
 import { SupportCard } from "./SupportCard";
+import { compressPhoto } from "../services/photo";
 
 export type DiaryView = RecipeStatus;
 
@@ -365,12 +367,12 @@ function SavedCard({ recipe, activeRecipe, flours, now, busy, onEdit, onDelete, 
   );
 }
 
-function PastCard({ recipe, flours, calibrations, onEdit, onDelete, onOpenInPlanner, onShare, onSaveCalibration }: Props & { recipe: Recipe }) {
+function PastCard({ recipe, flours, calibrations, onEdit, onDelete, onOpenInPlanner, onShare, onSaveCalibration, onMessage }: Props & { recipe: Recipe }) {
   const calibration = calibrations.find((item) => item.id === recipe.calibrationId);
   return (
     <article className="journal-card past-recipe">
       <CardHeader recipe={recipe} eyebrow={t("Sfornata il {dayLabel}", { dayLabel: dayLabel(recipe.finishedAt ?? recipe.config.bakeAt) })} meta={describe(recipe)} onEdit={onEdit} onDelete={onDelete} />
-      <RecipeOutcome recipe={recipe} onEdit={(patch) => onEdit(recipe.id, patch)} />
+      <RecipeOutcome recipe={recipe} onEdit={(patch) => onEdit(recipe.id, patch)} onMessage={onMessage} />
       <OvenCalibration recipe={recipe} calibration={calibration} onSave={(item) => onSaveCalibration(recipe, item)} />
       <details>
         <summary><span>{t("Dosi usate")}</span></summary>
@@ -388,9 +390,37 @@ function PastCard({ recipe, flours, calibrations, onEdit, onDelete, onOpenInPlan
   );
 }
 
-function RecipeOutcome({ recipe, onEdit }: { recipe: Recipe; onEdit: (patch: Partial<Recipe>) => void }) {
+function RecipePhoto({ recipe, onEdit, onMessage }: { recipe: Recipe; onEdit: (patch: Partial<Recipe>) => void; onMessage: (message: string) => void }) {
+  const choose = async (file?: File) => {
+    if (!file) return;
+    try {
+      onEdit({ photo: await compressPhoto(file) });
+    } catch {
+      onMessage(t("Non riesco a leggere questa foto. Prova con un’altra immagine."));
+    }
+  };
+  return (
+    <div className={`recipe-photo ${recipe.photo ? "has-photo" : ""}`}>
+      {recipe.photo && <img src={recipe.photo} alt={t("Foto di {name}", { name: recipe.name })} />}
+      <div className="recipe-photo-actions">
+        <label className="button secondary">
+          <Camera /> {recipe.photo ? t("Cambia foto") : t("Aggiungi una foto")}
+          <input className="visually-hidden" type="file" accept="image/*" capture="environment" onChange={(event) => void choose(event.target.files?.[0])} />
+        </label>
+        {recipe.photo && (
+          <button className="icon-button" aria-label={t("Togli la foto di {name}", { name: recipe.name })} onClick={() => onEdit({ photo: undefined })}>
+            <Trash />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RecipeOutcome({ recipe, onEdit, onMessage }: { recipe: Recipe; onEdit: (patch: Partial<Recipe>) => void; onMessage: (message: string) => void }) {
   return (
     <div className="recipe-outcome-fields">
+      <RecipePhoto recipe={recipe} onEdit={onEdit} onMessage={onMessage} />
       <div className="recipe-review">
         <span>{t("Com’è venuta?")}</span>
         <div className="stars">
