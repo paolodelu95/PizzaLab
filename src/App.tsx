@@ -75,7 +75,7 @@ import { StarterDoughLink } from "./components/StarterDoughLink";
 import { Diary, type DiaryView } from "./components/Diary";
 import { durationLabel } from "./domain/duration";
 import { strengthLine } from "./domain/flourStrength";
-import { applyAutomaticPlan, applyStyleDefaults, applyWholeGrams, configFromTemplate, countForPeople, ratedHistory, recipeStatus, startTiming, suggestStart, yeastLabel } from "./domain/recipes";
+import { applyAutomaticPlan, applyStyleDefaults, applyWholeGrams, buildScaleItems, configFromTemplate, countForPeople, ratedHistory, recipeStatus, startTiming, suggestStart, yeastLabel } from "./domain/recipes";
 import { emptyState, readState, writeState } from "./services/storage";
 import {
   cancelReminders,
@@ -101,6 +101,8 @@ import { isNativeApp, usesCalendarReminders } from "./services/platform";
 import { formatTemp, formatWeight, normalizeUnits, setUnits, type Units } from "./services/units";
 import { WeightValue } from "./components/WeightValue";
 import { FlourSuggestions } from "./components/FlourSuggestions";
+import { QuickPlan } from "./components/QuickPlan";
+import { KitchenMode } from "./components/KitchenMode";
 import { flourForStyle } from "./domain/flourAdvice";
 import { Home } from "./components/Home";
 import { Adjustments } from "./components/Adjustments";
@@ -129,7 +131,7 @@ const FERMENTATION_ADVICE = new Set(["bulk", "cold", "fridge", "fast-dough", "lo
 const adviceStage = (id: string): "dough" | "fermentation" | "baking" =>
   id === "oven" ? "baking" : FERMENTATION_ADVICE.has(id) ? "fermentation" : "dough";
 const initialTab = (): Tab => (typeof location !== "undefined" && location.hash === "#nuova" ? "impasto" : "oggi");
-type PlannerStage = "dough" | "fermentation" | "baking" | "summary";
+type PlannerStage = "quick" | "dough" | "fermentation" | "baking" | "summary";
 const nav = [
   { id: "oggi", label: msg("Oggi"), short: msg("Oggi"), icon: Fire },
   { id: "diario", label: msg("Diario"), short: msg("Diario"), icon: Notebook },
@@ -185,6 +187,7 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [rescueOpen, setRescueOpen] = useState(false);
+  const [kitchenId, setKitchenId] = useState<string | null>(null);
   const [exactPrompt, setExactPrompt] = useState(false);
   const [batteryTip, setBatteryTip] = useState("");
   // Su Android: gli avvisi puntuali sono attivi? Si rilegge tornando nell’app (per esempio dalle impostazioni).
@@ -305,7 +308,7 @@ export default function App() {
   const result = useMemo(() => calculate(c, flours), [c, flours, unitsKey]);
   const automaticPlan = useMemo(() => deriveAutomaticSchedule(c), [c]);
   // Ogni avviso nel suo passaggio: in «Impasto» non si parla ancora di frigo o di forno.
-  const stageOrder = { dough: 0, fermentation: 1, baking: 2, summary: 3 } as const;
+  const stageOrder = { quick: -1, dough: 0, fermentation: 1, baking: 2, summary: 3 } as const;
   const warnings = result.ok ? result.advice.filter((a) => a.level !== "info") : [];
   const stageAdvice = warnings.filter((a) => adviceStage(a.id) === plannerStage);
   const laterAdvice = warnings.filter((a) => stageOrder[adviceStage(a.id)] > stageOrder[plannerStage]);
@@ -364,6 +367,14 @@ export default function App() {
           ? t("L’orario ideale è già passato: si parte adesso, con una lievitazione più breve (circa {hours}).", { hours: durationLabel(suggestion.hours) })
           : t("Si parte {when}: circa {hours} di lievitazione.", { when: dateLabel(suggestion.startAt), hours: durationLabel(suggestion.hours) }),
     );
+  }
+  /** Pizza rapida: dall’ora del pasto si ricava da soli l’inizio, con la lievitazione tipica dello stile. */
+  function eatAt(bakeAt: string) {
+    const draft = { ...c, planMode: "automatic" as const, bakeAt };
+    const suggestion = suggestStart(draft, Date.now());
+    updateMany({ planMode: "automatic", bakeAt: suggestion?.bakeAt ?? bakeAt, startAt: suggestion?.startAt ?? c.startAt });
+    if (suggestion?.movedMeal)
+      setMessage(t("Con quell’orario non c’è tempo per una buona lievitazione: ho spostato il pasto a {bake} e si parte {start} (circa {hours} di lievitazione). Se vuoi mangiare prima, rimetti l’orario e accetta una lievitazione breve.", { bake: dateLabel(suggestion.bakeAt), start: dateLabel(suggestion.startAt), hours: durationLabel(suggestion.hours) }));
   }
   function saveTemplate() {
     if (!result.ok) return;
@@ -819,14 +830,20 @@ export default function App() {
     }
   }
   function openInPlanner(recipe: Recipe, mode: "edit" | "reschedule" | "copy") {
-    setState((s) => ({ ...s, config: normalizePlanning({ ...recipe.config }), draftUsed: false }));
+    // «Rifai»: stesse dosi, stesso forno, ma date nuove e piano automatico; si sceglie solo quando mangiare.
+    const fresh = defaultConfig();
+    const config =
+      mode === "copy"
+        ? { ...recipe.config, planMode: "automatic" as const, bakeAt: fresh.bakeAt, startAt: fresh.startAt, autoWholeGrams: recipe.config.autoWholeGrams }
+        : { ...recipe.config };
+    setState((s) => ({ ...s, config: normalizePlanning(config), draftUsed: false }));
     setEditingId(mode === "copy" ? null : recipe.id);
     setRecipeName(recipe.name);
-    setPlannerStage(mode === "reschedule" ? "fermentation" : "dough");
+    setPlannerStage(mode === "reschedule" ? "fermentation" : mode === "copy" ? "quick" : "dough");
     openTab("impasto");
     setMessage(
       mode === "copy"
-        ? t("Ricetta caricata: scegli la nuova data nel passaggio 2 e salva un nuovo piano.")
+        ? t("Stessa pizza, nuove date: scegli quando vuoi mangiare.")
         : mode === "reschedule"
           ? t("Scegli una nuova data di cottura, poi conferma dal riepilogo.")
           : t("Stai modificando «{name}»: le modifiche si salvano dal riepilogo.", { name: recipe.name }),
@@ -846,7 +863,7 @@ export default function App() {
     }
     setEditingId(null);
     setRecipeName("");
-    setPlannerStage("dough");
+    setPlannerStage("quick");
     openTab("impasto");
   }
   function startSourdough(kind: "licoli" | "solid", existing: boolean, name: string) {
@@ -1002,6 +1019,11 @@ export default function App() {
     Math.abs(c.sugar - recommended.sugar) < 0.05;
   const editingRecipe = editingId ? state.recipes.find((r) => r.id === editingId) : undefined;
   const activeRecipe = state.recipes.find((r) => r.id === state.activeId);
+  const kitchenRecipe = state.recipes.find((r) => r.id === kitchenId);
+  const kitchenResult = kitchenRecipe ? calculate(kitchenRecipe.config, flours) : null;
+  const lastPizza = state.recipes
+    .filter((r) => recipeStatus(r, state.activeId, now) === "past")
+    .sort((a, b) => (b.finishedAt ?? b.config.bakeAt).localeCompare(a.finishedAt ?? a.config.bakeAt))[0];
   if (!ready)
     return (
       <div className="loading">
@@ -1141,6 +1163,9 @@ export default function App() {
               onOpenDiary={openDiary}
               onStageDone={(stageId) => active && editRecipe(active.id, { completedStages: [...new Set([...active.completedStages, stageId])] })}
               onUseTemplate={useTemplate}
+              lastPizza={lastPizza}
+              onOpenKitchen={() => active && setKitchenId(active.id)}
+              onRedo={(recipe) => openInPlanner(recipe, "copy")}
               onDeleteTemplate={(id) => setState((s) => ({ ...s, templates: (s.templates ?? []).filter((item) => item.id !== id) }))}
             />
           )}
@@ -1155,7 +1180,7 @@ export default function App() {
           )}
           {tab === "impasto" && (
             <>
-              {plannerStage === "dough" && (
+              {(plannerStage === "dough" || plannerStage === "quick") && (
                 <>
               <div className="page-heading create-heading">
                 <div>
@@ -1186,7 +1211,23 @@ export default function App() {
               </section>
                 </>
               )}
-              {result.ok && plannerStage !== "summary" && (
+              {plannerStage === "quick" && (
+                <QuickPlan
+                  config={c}
+                  result={result}
+                  timeline={timeline}
+                  timing={timing}
+                  isPan={Boolean(currentStyle.pan)}
+                  busy={busy || loadError}
+                  activeName={activeRecipe && activeRecipe.id !== editingId ? activeRecipe.name : undefined}
+                  onPeople={(count) => update("count", count)}
+                  onEat={eatAt}
+                  onStart={() => (timing === "late" ? setLateStart({ source: "planner" }) : void saveRecipe("start"))}
+                  onSave={() => void saveRecipe("later")}
+                  onCustomize={() => goToPlannerStage("dough")}
+                />
+              )}
+              {result.ok && plannerStage !== "summary" && plannerStage !== "quick" && (
                 <div
                   className="mobile-dose"
                   aria-label={t("Dosi rapide")}
@@ -1224,6 +1265,7 @@ export default function App() {
                 </div>
               )}
               <span id="planner-anchor" className="planner-anchor" aria-hidden="true" />
+              {plannerStage !== "quick" && (
               <nav id="planner-steps" className="planner-steps" aria-label={t("Fasi di progettazione")}>
                 {plannerSteps.map(([id, number, label, detail, Icon]) => (
                   <button
@@ -1241,6 +1283,8 @@ export default function App() {
                   </button>
                 ))}
               </nav>
+              )}
+              {plannerStage !== "quick" && (
               <div className={`planner-grid ${plannerStage === "summary" ? "is-summary" : ""}`}>
                 <div className="planner-fields">
                   {!result.ok && plannerStage !== "summary" && (
@@ -2338,6 +2382,7 @@ export default function App() {
                 </aside>
                 )}
               </div>
+              )}
             </>
           )}
           {tab === "farine" && (
@@ -2470,6 +2515,7 @@ export default function App() {
               onStop={() => void deactivate()}
               onFinish={(recipe) => void finishRecipe(recipe)}
               onEdit={editRecipe}
+              onKitchen={(recipe) => setKitchenId(recipe.id)}
               onDelete={setDeleteId}
               onOpenInPlanner={openInPlanner}
               onShare={(recipe) => void shareRecipe(recipe)}
@@ -2574,6 +2620,16 @@ export default function App() {
       )}
       {tutorialOpen && ready && <Onboarding onClose={closeTutorial} />}
       <RescueSheet open={rescueOpen} onClose={closeRescue} />
+      {kitchenRecipe && (
+        <KitchenMode
+          title={kitchenRecipe.name}
+          stages={buildTimeline(kitchenRecipe.config, flours)}
+          items={kitchenResult?.ok ? buildScaleItems(kitchenRecipe.config, kitchenResult) : []}
+          completed={kitchenRecipe.completedStages}
+          onStageDone={(stageId) => editRecipe(kitchenRecipe.id, { completedStages: [...new Set([...kitchenRecipe.completedStages, stageId])] })}
+          onClose={() => setKitchenId(null)}
+        />
+      )}
     </div>
   );
 }

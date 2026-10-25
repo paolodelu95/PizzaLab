@@ -70,19 +70,16 @@ test("english mode also covers dialogs, pickers, the running plan and the tools"
     await page.getByRole("dialog").last().getByRole("button", { name: /^Close/ }).first().click();
   }
 
-  // Un piano in corso: diario, bilancia e modalità guidata.
+  // Un piano in corso: diario e «In cucina».
   await page.getByRole("button", { name: /^4 Summary/ }).click();
   await visit(page, "summary", found);
   await page.getByLabel("Plan name").fill("Saturday pizza");
   await page.getByRole("button", { name: "Schedule" }).click();
   await expect(page.getByText("DOUGH IN PROGRESS", { exact: true })).toBeVisible();
   await visit(page, "diary active", found);
-  await page.getByRole("button", { name: /Weigh/ }).first().click();
-  await visit(page, "scale mode", found);
-  await page.getByRole("button", { name: "Close scale mode" }).click();
-  await page.getByRole("button", { name: /Guide/ }).first().click();
-  await visit(page, "guided mode", found);
-  await page.getByRole("button", { name: "Close guided mode" }).click();
+  await page.getByRole("button", { name: /^In the kitchen/ }).first().click();
+  await visit(page, "kitchen mode", found);
+  await page.getByRole("button", { name: "Close In the kitchen" }).click();
 
   // Condimenti, lievito, farine, profilo.
   await page.getByRole("button", { name: "Pantry", exact: true }).first().click();

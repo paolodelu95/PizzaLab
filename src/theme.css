@@ -1334,3 +1334,177 @@ main .help-actions {
   font-size: 13.5px;
   color: var(--ink-2);
 }
+
+/* ---------- Pizza rapida: una schermata, una decisione ---------- */
+.quick-plan {
+  display: grid;
+  gap: 18px;
+  margin-top: 4px;
+}
+.quick-row {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 720px) {
+  .quick-row {
+    grid-template-columns: 1fr minmax(240px, 300px);
+    align-items: end;
+  }
+}
+.quick-eat input {
+  min-height: 48px;
+}
+.quick-result {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
+.quick-start {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.quick-start > svg {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  color: var(--brand);
+}
+.quick-start div {
+  display: grid;
+  gap: 2px;
+}
+.quick-start span {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.quick-start strong {
+  font-family: var(--display);
+  font-size: 21px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.quick-start strong::first-letter {
+  text-transform: uppercase;
+}
+.quick-phases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.quick-phases span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.quick-phases svg {
+  width: 15px;
+  height: 15px;
+}
+.quick-doses {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.quick-doses div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.quick-doses dt {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.quick-doses dd {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.quick-flour {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.quick-warnings {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+}
+.quick-warnings > svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+}
+.quick-warnings div {
+  display: grid;
+  gap: 4px;
+}
+.quick-warnings strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.quick-warnings .text-button {
+  justify-self: start;
+  min-height: 36px;
+  color: var(--amber-ink);
+  text-decoration: underline;
+}
+.quick-actions {
+  display: grid;
+  gap: 10px;
+}
+@media (min-width: 520px) {
+  .quick-actions {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+.quick-customize {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+}
+.quick-customize > svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--ink-2);
+}
+.quick-customize span {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+.quick-customize strong {
+  font-size: 15px;
+}
+.quick-customize small {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.today-row small svg {
+  width: 13px;
+  height: 13px;
+  vertical-align: -1px;
+  color: var(--amber);
+}

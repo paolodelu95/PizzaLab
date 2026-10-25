@@ -184,6 +184,19 @@ export async function sendTestReminder(): Promise<void> {
   }] });
 }
 
+/** Fine del timer di «In cucina» (pieghe, cottura): suona anche se nel frattempo il telefono è in tasca. */
+export async function scheduleTimerAlert(title: string, body: string, seconds: number): Promise<void> {
+  if (!Capacitor.isNativePlatform() || seconds <= 0) return;
+  const permission = await LocalNotifications.requestPermissions();
+  if (permission.display !== 'granted') return;
+  await LocalNotifications.createChannel({ id: CHANNEL, name: t("Il tuo impasto"), description: t("Promemoria per ogni fase della pizza"), importance: 4, visibility: 1, vibration: true });
+  await LocalNotifications.schedule({ notifications: [{
+    id: 2998, title, body, channelId: CHANNEL, isExactNotification: await exactRemindersAllowed(),
+    schedule: { at: new Date(Date.now() + seconds * 1000), allowWhileIdle: true },
+  }] });
+}
+export const cancelTimerAlert = () => cancelRange(2998, 2998).catch(() => undefined);
+
 /** Consigli per le marche che fermano le app in background più delle altre. */
 export const MAKER_TIPS: [RegExp, string][] = [
   [/samsung/i, msg("Samsung: Impostazioni → Batteria → Limiti utilizzo in background. Togli PizzaLab da «App in sospensione» e «App in sospensione profonda» e aggiungila ad «App mai in sospensione».")],

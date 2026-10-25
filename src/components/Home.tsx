@@ -1,4 +1,4 @@
-import { ArrowRight, BellSlash, BookmarkSimple, Check, ListChecks, Plus, Trash, UserCircle } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowRight, BellSlash, BookmarkSimple, Check, CookingPot, Plus, Star, Trash, UserCircle } from "@phosphor-icons/react";
 import { durationLabel } from "../domain/duration";
 import { styles } from "../domain/styles";
 import type { Recipe, RecipeTemplate, Stage } from "../domain/types";
@@ -32,10 +32,14 @@ type Props = {
   onStageDone: (stageId: string) => void;
   onUseTemplate: (id: string) => void;
   onDeleteTemplate: (id: string) => void;
+  /** L’ultima pizza conclusa: si rifà con le stesse dosi scegliendo solo quando mangiare. */
+  lastPizza?: Recipe;
+  onOpenKitchen: () => void;
+  onRedo?: (recipe: Recipe) => void;
 };
 
 /** «Oggi»: la cosa da fare adesso. Con un impasto in corso mostra la prossima fase, altrimenti invita a crearne uno. */
-export function Home({ name, now, active, stages, savedCount, templates, onNew, onOpenProfile, onOpenRescue, remindersMayBeLate, onFixReminders, onOpenDiary, onStageDone, onUseTemplate, onDeleteTemplate }: Props) {
+export function Home({ name, now, active, stages, savedCount, templates, onNew, onOpenProfile, onOpenRescue, remindersMayBeLate, onFixReminders, onOpenDiary, onStageDone, onUseTemplate, onDeleteTemplate, lastPizza, onRedo, onOpenKitchen }: Props) {
   const hour = new Date(now).getHours();
   const greeting = hour < 12 ? t("Buongiorno") : hour < 18 ? t("Buon pomeriggio") : t("Buonasera");
   const firstName = name.trim().split(/\s+/)[0];
@@ -82,7 +86,7 @@ export function Home({ name, now, active, stages, savedCount, templates, onNew, 
                 {stages.map((stage) => <i key={stage.id} className={done.has(stage.id) ? "done" : stage.id === current?.id ? "current" : ""} />)}
               </div>
               <div className="today-actions">
-                <button className="button primary" onClick={onOpenDiary}><ListChecks weight="bold" /> {t("Apri la guida")}</button>
+                <button className="button primary" onClick={onOpenKitchen}><CookingPot weight="bold" /> {t("In cucina")}</button>
                 {current && <button className="button on-photo" onClick={() => onStageDone(current.id)}><Check weight="bold" /> {t("Fatto")}</button>}
               </div>
               {remindersMayBeLate && (
@@ -130,6 +134,20 @@ export function Home({ name, now, active, stages, savedCount, templates, onNew, 
         <button className="today-row" onClick={onNew}>
           <span className="today-row-icon"><Plus weight="bold" /></span>
           <span><strong>{t("Prepara un’altra pizza")}</strong><small>{t("La salvi per dopo, o prende il posto di quella in corso.")}</small></span>
+          <ArrowRight />
+        </button>
+      )}
+
+      {!active && lastPizza && onRedo && (
+        <button className="today-row" onClick={() => onRedo(lastPizza)}>
+          <span className="today-row-icon"><ArrowClockwise weight="bold" /></span>
+          <span>
+            <strong>{t("Rifai «{name}»", { name: lastPizza.name })}</strong>
+            <small>
+              {lastPizza.rating > 0 && <><Star weight="fill" aria-hidden="true" /> {lastPizza.rating}/5 · </>}
+              {t("Stesse dosi, scegli solo quando mangiare.")}
+            </small>
+          </span>
           <ArrowRight />
         </button>
       )}

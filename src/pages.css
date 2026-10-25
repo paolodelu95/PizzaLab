@@ -3326,3 +3326,187 @@ details > summary > svg:first-child + span {
 .lead-options > small {
   color: var(--ink-3);
 }
+
+/* ==========================================================================
+   In cucina: fasi, pesata e timer in una schermata
+   ========================================================================== */
+.guided-top i.current {
+  background: color-mix(in srgb, var(--brand) 45%, var(--surface-3));
+}
+.kitchen-stage {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.kitchen-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.kitchen-icon svg {
+  width: 28px;
+  height: 28px;
+}
+.kitchen-stage > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.kitchen-stage h2 {
+  font-size: clamp(24px, 6.5vw, 32px);
+  line-height: 1.15;
+}
+.kitchen-weigh {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.kitchen-weigh-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.kitchen-precision {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+.kitchen-precision button {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+.kitchen-precision button.selected {
+  background: var(--ink);
+  color: var(--bg);
+}
+.kitchen-weigh ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kitchen-weigh li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+.kitchen-weigh li:first-child {
+  border-top: 0;
+}
+.kitchen-weigh li > button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--ink-3);
+}
+.kitchen-weigh li > button svg {
+  width: 28px;
+  height: 28px;
+}
+.kitchen-weigh li.weighed > button {
+  color: var(--basil);
+}
+.kitchen-weigh li > span {
+  display: grid;
+  gap: 2px;
+  font-weight: 600;
+}
+.kitchen-weigh li > span small {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+.kitchen-weigh li > span .kitchen-too-small {
+  color: var(--amber-ink);
+}
+.kitchen-weigh li > strong {
+  font-family: var(--display);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.kitchen-weigh li > strong small {
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--ink-3);
+}
+.kitchen-weigh li.weighed > span,
+.kitchen-weigh li.weighed > strong {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+.guided-timer small {
+  font-size: 13px;
+  color: var(--on-night-2);
+}
+.guided-timer.ringing {
+  background: var(--brand);
+  animation: kitchen-ring 0.8s ease-in-out infinite alternate;
+}
+@keyframes kitchen-ring {
+  to {
+    transform: scale(1.02);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guided-timer.ringing {
+    animation: none;
+  }
+}
+.kitchen-next {
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  font-weight: 600;
+}
+.kitchen-help {
+  padding: 12px 14px;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.kitchen-help summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.kitchen-help summary svg {
+  color: var(--brand);
+}
+.kitchen-help[open] {
+  display: grid;
+  gap: 12px;
+}
+.kitchen-help article {
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.kitchen-help article p {
+  font-size: 14px;
+}

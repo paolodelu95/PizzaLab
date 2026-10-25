@@ -1,5 +1,4 @@
 import { locale, t, tn, msg } from "../i18n";
-import { useState } from "react";
 import {
   ArrowRight,
   Bell,
@@ -13,8 +12,7 @@ import {
   FlagCheckered,
   Notebook,
   PencilSimple,
-  Play,
-  Scales as Scale,
+  CookingPot,
   ShareNetwork,
   Star,
   Trash,
@@ -22,12 +20,10 @@ import {
 } from "@phosphor-icons/react";
 import { buildTimeline, calculate } from "../domain/calculator";
 import { styles } from "../domain/styles";
-import { buildScaleItems, recipeStatus, startTiming, yeastLabel, type RecipeStatus } from "../domain/recipes";
+import { recipeStatus, startTiming, yeastLabel, type RecipeStatus } from "../domain/recipes";
 import type { BakeCalibration, Flour, Recipe, Stage } from "../domain/types";
 import { ActiveDoughJournal } from "./ActiveDoughJournal";
-import { GuidedMode } from "./GuidedMode";
 import { OvenCalibration } from "./OvenCalibration";
-import { ScaleMode } from "./ScaleMode";
 import { usesCalendarReminders } from "../services/platform";
 import { formatWeight } from "../services/units";
 import { SupportCard } from "./SupportCard";
@@ -88,18 +84,17 @@ type Props = {
   onCalendar: (recipe: Recipe) => void;
   onMessage: (message: string) => void;
   onSaveCalibration: (recipe: Recipe, calibration: BakeCalibration) => void;
+  onKitchen: (recipe: Recipe) => void;
 };
 
 export function Diary(props: Props) {
-  const { recipes, activeId, flours, now, view, onViewChange } = props;
-  const [tool, setTool] = useState<{ kind: "scale" | "guide"; recipe: Recipe } | null>(null);
+  const { recipes, activeId, now, view, onViewChange } = props;
   const grouped: Record<DiaryView, Recipe[]> = { active: [], saved: [], past: [] };
   for (const recipe of recipes) grouped[recipeStatus(recipe, activeId, now)].push(recipe);
   grouped.saved.sort((a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)) || a.config.bakeAt.localeCompare(b.config.bakeAt));
   grouped.past.sort((a, b) => (b.finishedAt ?? b.config.bakeAt).localeCompare(a.finishedAt ?? a.config.bakeAt));
   const active = grouped.active[0];
   const current = views.find((item) => item.id === view)!;
-  const toolResult = tool ? calculate(tool.recipe.config, flours) : null;
 
   return (
     <>
@@ -151,7 +146,7 @@ export function Diary(props: Props) {
           </div>
         ) : view === "active" ? (
           grouped.active.map((recipe) => (
-            <ActiveCard key={recipe.id} {...props} recipe={recipe} onTool={(kind) => setTool({ kind, recipe })} />
+            <ActiveCard key={recipe.id} {...props} recipe={recipe} />
           ))
         ) : view === "saved" ? (
           grouped.saved.map((recipe) => <SavedCard key={recipe.id} {...props} recipe={recipe} activeRecipe={active} />)
@@ -162,12 +157,6 @@ export function Diary(props: Props) {
 
       {view === "past" && grouped.past.length > 0 && <SupportCard />}
 
-      {tool?.kind === "guide" && (
-        <GuidedMode title={tool.recipe.name} stages={buildTimeline(tool.recipe.config, flours)} onClose={() => setTool(null)} />
-      )}
-      {tool?.kind === "scale" && toolResult?.ok && (
-        <ScaleMode items={buildScaleItems(tool.recipe.config, toolResult)} onClose={() => setTool(null)} />
-      )}
     </>
   );
 }
@@ -234,7 +223,7 @@ function StagesList({ stages, completed }: { stages: Stage[]; completed: string[
   );
 }
 
-function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFinish, onShare, onCalendar, onMessage, onTool }: Props & { recipe: Recipe; onTool: (kind: "scale" | "guide") => void }) {
+function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFinish, onShare, onCalendar, onMessage, onKitchen }: Props & { recipe: Recipe }) {
   const stages = buildTimeline(recipe.config, flours);
   const baked = new Date(recipe.config.bakeAt).getTime() <= now;
   // Programmata finché manca più di un quarto d’ora all’inizio (come per il pulsante «Programma»).
@@ -267,13 +256,9 @@ function ActiveCard({ recipe, flours, now, busy, onEdit, onDelete, onStop, onFin
         onMessage={onMessage}
         tools={
           <div className="recipe-tools" aria-label={t("Strumenti per preparare l’impasto")}>
-            <button className="tool-button" onClick={() => onTool("scale")}>
-              <Scale weight="duotone" />
-              <span><strong>{t("Pesa")}</strong><small>{t("Un ingrediente alla volta")}</small></span>
-            </button>
-            <button className="tool-button" onClick={() => onTool("guide")}>
-              <Play weight="duotone" />
-              <span><strong>{t("Guida")}</strong><small>{t("Fase per fase, con timer")}</small></span>
+            <button className="tool-button kitchen-button" onClick={() => onKitchen(recipe)}>
+              <CookingPot weight="duotone" />
+              <span><strong>{t("In cucina")}</strong><small>{t("Pesi, fasi e timer in una schermata")}</small></span>
             </button>
           </div>
         }
